@@ -149,7 +149,18 @@ PY
 
 ## Publishing (optional)
 
-An external write, so it goes through the **preview → "go"** gate. Check repo, account, and visibility in `tools.proto_publish` (for an internal screen, confirm visibility without fail). When the setting is `null`, ask where it should go first. Being a single HTML file, **one file** goes up with no screen folder. Being a code rebuild, there is no need for automatic pixel-diff refreshes — edit the source, re-verify, re-push.
+An external write, so it goes through the **preview → "go"** gate — and it happens only when the user asks for it. Never put it in the completion report as a remaining item or a next step.
+
+Read `tools.proto_publish` first. When it is `null`, stop at local and ask where it should go rather than guessing a destination. Otherwise it carries `repo`, `account` (the gh keyring name, which can differ from the actual login), `local` (the working copy), `visibility`, `pages_url`, and `landing` (the file that holds the project cards).
+
+1. **When `visibility` is `public`, confirm the exposure.** An internal admin screen, with figures on it that are not settled yet, goes out to anyone holding the URL. Name what is in it and get the go — earlier publishes to the same repo are not standing consent.
+2. **Pull the working copy** at `local` first, so the landing page is not rewritten from a stale copy.
+3. **Place the file** as `<local>/<slug>/index.html` — one HTML file, one folder. The slug becomes the URL, so keep it short and in English.
+4. **Add one card** to `landing`, matching the markup of the cards already there. Write what actually works in it, not what the screen is about.
+5. **Switch the account, push, and switch back inside the same call.** `gh auth switch` is global and nothing restores it for you; leaving it switched makes the next write in another namespace fail with a 404 that reads like a missing repo.
+6. **Verify through the published URL**, not the local file. Pages takes a moment to build, so a 404 straight after the push means wait and retry — not that it failed.
+
+Being a code rebuild there is no pixel-diff refresh to run: edit the source, verify in the browser again, push again.
 
 ## Constraints
 
