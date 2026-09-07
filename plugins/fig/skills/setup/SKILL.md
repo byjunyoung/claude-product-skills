@@ -166,10 +166,10 @@ carries a pattern, when the person says the team has no conventions yet, or when
 
 Steps ② to ④ give way to S1 to S4; ⑤ and ⑥ change shape.
 
-### S1. Four rules, in plain words
+### S1. Five rules, in plain words
 
 Say what the words mean before using them — a page is a tab, a frame is one screen, a section
-is a labelled area that groups screens, an arrow connects two screens. Then the four rules,
+is a labelled area that groups screens, an arrow connects two screens. Then the five rules,
 each as *the rule · an example · what `/fig:lint` will catch because of it*:
 
 | Rule | Starter | Example | What lint then catches |
@@ -178,25 +178,41 @@ each as *the rule · an example · what `/fig:lint` will catch because of it*:
 | How screens are grouped | one section per feature, named `NN. {domain} - {feature}`; the number is the order a user meets it | `01. Account - Login` | a screen outside any section; two sections overlapping; numbers out of order |
 | How far apart | gaps derived from the screen width — a 1440 screen gets 120 | frames 120 apart, sections 240, domains 480 | uneven gaps; a frame off the grid |
 | How a flow is drawn | an arrow from the edge of one screen to the edge of the next, labelled at a branch; a same-screen result is a dashed `[state]` chain, not an arrow | `Login-Default --> Home-Default` | an arrow entering from the wrong side; an unlabelled branch; a flow passing through a screen |
+| Where a screen lives while it changes | `[UI] ` is what is running; a screen being revised gets a page of its own; released work is collected on `[Update] ` version by version | `[UI] Account`, then `Account @you`, then `[Update] v2.4` | every rule on `[UI] `, the minimum on the rest — and `/fig:sync` gets the three axes it compares on |
 
-And which pages count: the pages engineering builds from start with a prefix — `[Design] ` — and
-every rule applies there; a section named `Template` is never audited.
+**Only the first page has to exist on day one.** `[Update] ` is derived by swapping the word
+inside the prefix that was chosen, so the two read as one family, and it is not needed until
+something has actually been released. A section named `Template` — or one whose name starts with
+`Archive` — is never audited.
+
+**A page being drawn is not found by name.** Whoever revises a screen makes a page for it and
+names it whatever they like, so no pattern reaches it. What marks one as done is *where it sits*:
+an empty page named `## shipped to dev ##` acts as a divider, and dragging a working page under
+it is what says engineering has the change. Everything below that divider is waiting to reach
+canonical, and that band is what `/fig:sync` sweeps. The drag is the whole ceremony.
+
+Why this rule is worth the sentences it takes: **the lag between shipping and updating the
+canonical page is what `/fig:sync` exists to close**, and it can only compare pages it can tell
+apart. A file where every page is just a page has nothing to compare, and the question comes
+back unanswerable on the day somebody finally asks it.
 
 ### S2. Three questions, each with "keep the starter"
 
 One at a time. The screen width — 1440 for desktop, 390 for a phone, or the number. The state
 list — the starter six, or the ones this product needs. The prefix of the pages that count —
-`[Design] `, or the team's own word. Nothing else is asked; everything else is the plugin's opinion
+`[UI] `, or the team's own word. Nothing else is asked; everything else is the plugin's opinion
 until the file has one of its own.
 
 ### S3. Generate
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/starter-conventions.py --width 1440 --states Default,Empty,Loading,Error,Validation,Selected --prefix "[Design] " > draft.yaml
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/starter-conventions.py --width 1440 --states Default,Empty,Loading,Error,Validation,Selected --prefix "[UI] " > draft.yaml
 ```
 
 Every line carries `# starter — …` saying how it was picked. Spacing is derived from the width
-by ratio and says so; nothing in it was measured. Section, placeholder and arrow styles are not
+by ratio and says so; the working and archive prefixes are derived from the one that was chosen;
+nothing in it was measured. A prefix with no word in it — an emoji, a bare symbol — yields no
+siblings, and the three sync axes stay `null` rather than naming a page the team never said. Section, placeholder and arrow styles are not
 written — the bundled defaults carry them, and a line that is not there is a line nobody has
 to maintain.
 
@@ -225,6 +241,19 @@ Close with the loop, in plain words: draw inside the placeholders; duplicate a s
 its next state and rename it by the rule; run `/fig:lint` after each feature and treat what it
 reports as the to-draw list; `/fig:arrows` before handoff; `/fig:sync` after a release. Then
 the three commands, in that order.
+
+**Then where the work sits while it moves** — the rules of S1 say what the pages are; this says
+when a thing moves between them. Four moments, and only one of them is a command:
+
+| When | What happens |
+|---|---|
+| A new screen | Draw it on `[UI] ` directly. There is nothing to preserve yet |
+| An existing screen changes | Make a page for it and revise there. `[UI] ` keeps showing what is running until the change actually ships |
+| It reaches the dev server | Drag that page under the `## shipped to dev ##` divider. Nothing else — the drag is what marks it |
+| It is released | `/fig:sync`. It sweeps the band under the divider against `[UI] `, applies what never landed, and files the page under `[Update] ` with the version it went out in |
+
+The middle two are the ones teams skip, and skipping them is what makes canonical go stale —
+the state this whole convention exists to prevent.
 
 ## Constraints
 

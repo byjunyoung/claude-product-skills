@@ -35,21 +35,61 @@ def leaf_paths(o, prefix=""):
         yield prefix.rstrip(".")
 
 
+def null_paths(o, prefix=""):
+    """The keys the schema leaves null — a slot rather than a value.
+
+    What shape fills one is the business of the skill that reads it: `pages.canonical` takes
+    `{match, pattern}`, and the schema documents that in a comment a parser cannot see. Writing
+    into a slot is filling a documented hole, so it is not the thing this check is looking for —
+    a key nobody declared is.
+    """
+    if isinstance(o, dict) and o:
+        for k, v in o.items():
+            yield from null_paths(v, f"{prefix}{k}.")
+    elif o is None:
+        yield prefix.rstrip(".")
+
+
 import yaml
 schema = yaml.safe_load(SCHEMA.read_text())
 known = set(leaf_paths(schema)) | {p for p in (".".join(x.split(".")[:i]) for x in leaf_paths(schema) for i in range(1, len(x.split(".")))) }
+slots = tuple(s + "." for s in null_paths(schema))
 
 rc, out, err = starter("--width", "1440")
 cfg = yaml.safe_load(out) if rc == 0 else None
 check("1440 → runs and parses", rc == 0 and isinstance(cfg, dict), err)
 if cfg:
-    unknown = sorted(k for k in leaf_paths(cfg) if k not in known)
+    unknown = sorted(k for k in leaf_paths(cfg) if k not in known and not k.startswith(slots))
     check("1440 → every key is in the schema", not unknown, ", ".join(unknown))
     lo = cfg["layout"]
     check("1440 → gap 120, grid 1560", lo["frame_gap"] == 120 and lo["column_grid"] == 1560, str(lo))
-    check("1440 → strict page prefix escaped", cfg["pages"]["strict"] == ["^\\[Design\\]\\ "], str(cfg["pages"]["strict"]))
+    check("1440 → strict page prefix escaped", cfg["pages"]["strict"] == ["^\\[UI\\]\\ "], str(cfg["pages"]["strict"]))
     check("1440 → profile is starter", cfg["meta"]["profile"] == "starter")
     check("1440 → every line of layout says where it came from", all("#" in ln for ln in out.splitlines() if ln.startswith("  ") and ":" in ln and "layout" not in ln and ln.strip().split(":")[0] in lo), out)
+    pg = cfg["pages"]
+    check("1440 → released work is collected on a page derived from the prefix",
+          pg.get("free") == ["^\\[Update\\]\\ "]
+          and pg.get("archive", {}).get("pattern") == "^\\[Update\\]\\ ", str(pg))
+    check("1440 → canonical and archive match by name",
+          all(pg.get(k, {}).get("match") == "name" for k in ("canonical", "archive")), str(pg))
+    check("1440 → queue is a divider band, since a page being drawn has no name to match",
+          pg.get("queue", {}).get("match") == "divider"
+          and pg["queue"]["pattern"] != pg["free"][0], str(pg.get("queue")))
+    check("1440 → canonical is the page engineering builds from",
+          pg.get("canonical", {}).get("pattern") == pg["strict"][0], str(pg.get("canonical")))
+    check("1440 → what was put away is audited by nothing",
+          any("rchive" in x for x in pg["exclude_sections"]), str(pg["exclude_sections"]))
+
+# A prefix with no word in it has nothing to swap. Inventing a page name the team never said is
+# worse than leaving sync unconfigured, so it writes neither.
+rc, out, err = starter("--prefix", "\U0001f3a8 ")
+cfg = yaml.safe_load(out) if rc == 0 else None
+check("a wordless prefix → runs", rc == 0, err)
+if cfg:
+    # readonly and exclude_sections are fixed safety rules, not derivations — they go out whatever
+    # the prefix is. What must not appear is a page name that could only have come from swapping.
+    check("a wordless prefix → nothing derived from it",
+          not ({"free", "canonical", "queue", "archive"} & set(cfg["pages"])), str(cfg["pages"]))
 
 rc, out, err = starter("--width", "390", "--states", "Empty,Error", "--prefix", "[App] ")
 cfg = yaml.safe_load(out) if rc == 0 else None
@@ -75,7 +115,7 @@ with tempfile.TemporaryDirectory() as tmp:
     merged = json.loads(r.stdout) if r.returncode == 0 else {}
     check("merged → layout filled where the bundle had null", merged.get("layout", {}).get("frame_gap") == 120 and merged["layout"]["section_padding"] == 120, r.stderr)
     check("merged → bundled arrow style still there", merged.get("arrows", {}).get("stroke_weight") == 3)
-    check("merged → strict pages set", merged.get("pages", {}).get("strict") == ["^\\[Design\\]\\ "])
+    check("merged → strict pages set", merged.get("pages", {}).get("strict") == ["^\\[UI\\]\\ "])
 
 print()
 if failures:
