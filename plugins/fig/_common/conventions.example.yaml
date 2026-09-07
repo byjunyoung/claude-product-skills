@@ -238,7 +238,13 @@ tools:
   figma_token_env: FIGMA_TOKEN                # env var holding the PAT, for REST paths
   frame_count_guard: 20                       # above this many frames, confirm before collecting screenshots
   proto_output_dir: "."                       # where working prototypes are written
-  proto_publish: null                         # { repo:, account:, visibility: } or null
+  proto_publish:                              # an unset repo stays local and never offers to publish
+    repo: null                                # <owner>/<repo>
+    account: null                             # gh keyring name, which can differ from the login
+    local: null                               # working copy the file is placed into
+    visibility: private                       # public puts the screen behind a URL anyone can hold
+    pages_url: null                           # where the published file is read back from
+    landing: index.html                       # the file holding the project cards
 
 # --- Guide source (optional) ---------------------------------------------------
 # If your team keeps a written guide, point at it here. It is not fetched on

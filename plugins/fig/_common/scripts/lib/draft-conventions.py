@@ -212,7 +212,9 @@ def main():
     L.append("task_tracker:\n  type: none\n  ref: null\n  ui_section_heading: null")
     L.append('  annotation_category: "Changed"\n  scope_tags: []\n')
     L.append("tools:\n  figma_token_env: FIGMA_TOKEN\n  frame_count_guard: 20")
-    L.append('  proto_output_dir: "."\n  proto_publish: null\n')
+    L.append('  proto_output_dir: "."')
+    L.append("  proto_publish:\n    repo: null\n    account: null\n    local: null")
+    L.append("    visibility: private\n    pages_url: null\n    landing: index.html\n")
     L.append("guide_source:\n  type: none\n  ref: null\n")
     L.append("files: {}")
 

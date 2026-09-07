@@ -39,7 +39,7 @@ allowed-tools: AskUserQuestion, Bash, Read, Write, Edit, mcp__plugin_figma_figma
 The path and the publish target are set by the `tools` section of `figma-conventions.yaml` — read with `python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py`.
 
 - The default is a local single HTML file. The location is `tools.proto_output_dir` and the filename is `<name>-prototype.html`. Being one file, it opens on a double click.
-- Publishing (optional) follows `tools.proto_publish` (repo, account, visibility). When it is `null`, stop at local and do not offer to publish. Never hardcode a repo or an account in this document.
+- Publishing (optional) follows `tools.proto_publish`. When its `repo` is unset, stop at local and do not offer to publish. Never hardcode a repo or an account in this document.
 
 ---
 
@@ -151,7 +151,7 @@ PY
 
 An external write, so it goes through the **preview → "go"** gate — and it happens only when the user asks for it. Never put it in the completion report as a remaining item or a next step.
 
-Read `tools.proto_publish` first. When it is `null`, stop at local and ask where it should go rather than guessing a destination. Otherwise it carries `repo`, `account` (the gh keyring name, which can differ from the actual login), `local` (the working copy), `visibility`, `pages_url`, and `landing` (the file that holds the project cards).
+Read `tools.proto_publish` first. When its `repo` is unset, stop at local and ask where it should go rather than guessing a destination. Otherwise it carries `repo`, `account` (the gh keyring name, which can differ from the actual login), `local` (the working copy), `visibility`, `pages_url`, and `landing` (the file that holds the project cards).
 
 1. **When `visibility` is `public`, confirm the exposure.** An internal admin screen, with figures on it that are not settled yet, goes out to anyone holding the URL. Name what is in it and get the go — earlier publishes to the same repo are not standing consent.
 2. **Pull the working copy** at `local` first, so the landing page is not rewritten from a stale copy.

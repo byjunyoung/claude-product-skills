@@ -1,5 +1,9 @@
 # fig
 
+## 3.17.0 — 2026-09-07
+
+- **A comment is not a declaration.** `proto_publish` was one line in the schema with its members named in a trailing comment, so a team that filled the block in got every key back as "present only in the team config" — the checker reads the schema, and the schema said the map had no members. The six keys `/fig:proto` already documents are declared for real now, which is also what tells anyone opening the file what publishing needs before they go looking for it. Whether publishing is on moved with them: it used to be the whole block being `null`, and it is now whether `repo` is set, so a config that names only the repo and the account inherits the rest instead of having to restate it. `/fig:setup` drafts the same shape
+
 ## 3.16.0 — 2026-09-04
 - Layers still carrying `Frame 427` are reported, as a **warning**. The check was worth having before it was worth running: it is a regular expression over the names Figma assigns itself, so it cannot produce a false positive, and a page whose count is zero today is not a page that stays there. Layers **inside a component instance are excluded** — the name came from the library that made the component, no rename on this page can reach it, and reporting it here would put a number in front of the one person who cannot act on it. That the grade exists at all is why this could be added: on the old all-or-nothing verdict, one lazily named group would have withheld a whole section from engineering
 
