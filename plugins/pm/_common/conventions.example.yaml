@@ -66,6 +66,9 @@ prd:
   # The list that keeps a product doc from turning into an engineering doc.
   # Anything here appearing in the body is rejected at verification. The rule
   # behind it: write *what* is required, and leave *how* to engineering.
+  # It reads names and nothing else. A sentence carrying none of these words can
+  # still describe the machine rather than the product, so the skill reads the
+  # sentences separately — that half is a judgement and has no list behind it.
   forbidden_terms: [API, endpoint, websocket, polling, payload, token, JWT, OAuth,
                     schema, migration, cache]
   # Only for what genuinely cannot be settled. Attaching this to something the

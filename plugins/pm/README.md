@@ -12,7 +12,7 @@ claude plugin install pm@byjunyoung
 | Command | What it does |
 |---|---|
 | `/pm:setup` | Reads how your own tools are set up and writes your first settings file |
-| `/pm:prd` | Writes a new requirements document, or extends one |
+| `/pm:prd` | Writes a new requirements document, or extends one — in language its readers can act on |
 | `/pm:task-draft` | Turns a request — a chat thread, a page, a conversation — into a task's context table |
 | `/pm:task-publish` | Files one task as a ticket wherever engineering tracks its work |
 | `/pm:task-sync` | Reconciles the planning list against that tracker |
@@ -131,6 +131,8 @@ Three layers merge, so **only the lines you actually want to change have to be w
 **It leaves no ambiguity.** The unit of judgement and aggregation, the target of filtering and sorting, the criteria for picking a 'representative', the definition of a state transition — a feature does not work with those four left blank, so they get filled with values. One slot left TBD that the material could have settled does not pass verification.
 
 **It does not turn a product spec into an engineering doc.** Anything on the `forbidden_terms` list appearing in the body is rejected. Write as far as "what" (the requirement) and leave "how" (the implementation) to engineering or to a TBD.
+
+**It writes for the person holding the document, not for the one building the thing.** The term list reads names, and a sentence carrying none of those names can still describe a machine: *the view switches depending on whether an active job exists* passes every string check and tells a designer nothing. So the sentences are read separately, against one question — does this say what a person sees, or what the system decided? A number is written with its meaning beside it, a table cell says what happens rather than naming it, and a term the reader may not have is explained where it first appears. What none of that may do is change the document: values, decisions and structure stay put, and only the wording moves.
 
 **It stops before writing.** Verification is read-only, publishing happens only after preview → "go", and even then split into skeleton → user groups → feature entries.
 

@@ -1,6 +1,6 @@
 ---
 name: prd
-description: Writes a product requirements document against a format, or fills out an existing one. Gathers and analyzes code repos, docs, designs, and chat history first, then proposes recommended answers so the interview can be settled with a single "go". Before writing anything it verifies read-only for vague wording, empty definitions, and engineering terms that do not belong in a product doc, then reads the entries against each other for roles nobody defined, entries that contradict, cases nobody wrote, and thresholds nobody can count. Where the doc lives — markdown files, a git repo, or Notion — is decided by config. Triggers - "/pm:prd", "write the PRD", "draft the requirements", "PRD 작성", "PRD 만들어줘", "기능 항목 추가", "PRD 보강", "사용자 그룹 추가".
+description: Writes a product requirements document against a format, or fills out an existing one. Gathers and analyzes code repos, docs, designs, and chat history first, then proposes recommended answers so the interview can be settled with a single "go". Before writing anything it verifies read-only for vague wording, empty definitions, and engineering terms that do not belong in a product doc, then reads the entries against each other for roles nobody defined, entries that contradict, cases nobody wrote, and thresholds nobody can count. It writes for the people who read a spec rather than for the people who build it, so a rule says what somebody sees rather than what the system decided. Where the doc lives — markdown files, a git repo, or Notion — is decided by config. Triggers - "/pm:prd", "write the PRD", "draft the requirements", "PRD 작성", "PRD 만들어줘", "기능 항목 추가", "PRD 보강", "사용자 그룹 추가".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-duplicate-page, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-query-data-sources
 ---
 
@@ -11,6 +11,8 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, mcp__claude
 When a PRD is being written or worked on, the material is gathered and analysed first, and the result becomes a **recommended answer**. The user adopts it with a single "go", or writes a different answer instead. Every question carries the option judged most fitting, marked (recommended).
 
 A PRD keeps growing. Keep the body thin and push the detail out into the entry list, the tickets, and the design file.
+
+**And it is read by people who cannot open the code.** Whoever designs the screens, settles the scope, runs the product once it ships. A requirement is worth what the sentence carrying it is worth to them — 2.4 is the rule, and the second check in 3 is the gate.
 
 **The premise**: external writes happen only after preview → "go". Reading, searching, and gathering come first, without confirmation.
 
@@ -117,6 +119,30 @@ A status of 'under review' means *a concrete proposal has been put up for review
 
 Ask about the gaps **together, in one pass**. Do not scatter the questions. (The exception is 3.1: where one answer changes the next question, they go one at a time.) Attach a material-backed recommendation to each, marked (recommended), so a short answer finishes it. If new ambiguity turns up mid-write, do not settle it yourself — ask again, or mark it TBD.
 
+### 2.4 The language it comes out in
+
+**Who reads a spec is what decides how it is written.** The people who design the screens, settle what is in scope, run the product once it ships and answer for it when it breaks — some of them read code, and none of them should have to. Write at the level the reader is already standing at: the plainest sentence that still carries the whole requirement, and no word they have to look up before they can act on it. Plain is not simplified — the reader knows the product better than anyone, just not its internals, so nothing gets rounded off to make it read easily.
+
+This is not the terminology list. That list reads nouns, and a sentence containing none of them can still describe a machine rather than a product.
+
+**A rule says what a person sees and does** — not what the system decided on their behalf.
+
+| Written from the inside | Written from the reader's side |
+|---|---|
+| The view switches depending on whether an active job exists | While something is being made, the screen stays on the progress view |
+| The evaluation is valid for 30 minutes | If nothing has been confirmed for 30 minutes, it counts as finished and the screen goes back to normal |
+| Applied regardless of the account's state | Everyone sees it, signed in or not |
+
+**A number is written with its meaning beside it.** A threshold, a period or a count on its own is a value, not a requirement — say what it does to the person it happens to. "Locks after 3 failures" becomes *three wrong tries in a row locks it, and one correct entry clears the count*.
+
+**A cell in the behaviour or cases table says what happens** — not a noun standing in for it. Not *Transition*, *Restore*, *Refresh*, but *the banner clears*, *the list goes back to how it was*.
+
+**A word the reader may not have is explained where it first appears**, in three or four words, inside the sentence rather than in a glossary nobody scrolls to. Where the team's own term is the accurate one, keep the term and gloss it; a folksy substitute invented to avoid it reads worse than the term did.
+
+**The guard: changing how it reads must not change what it says.** Values, decisions, section order and table structure stay exactly as they were, and only the sentences move. A pass over the wording that quietly rounds a number or softens a rule has broken the document it was tidying.
+
+Systems vocabulary is a symptom to watch for, not a list to ban — *active*, *trigger*, *threshold*, *evaluate*, *propagate*, *the presence or absence of*, *upon*, *the relevant*, rules chained together with arrows. Meeting one is a reason to read that sentence again from the reader's side; rewritten that way, the word usually has nowhere left to sit. The examples above are English because this file is, and the rule is about the shape of the sentence rather than the language it is in — `meta.language` decides that, and every one of these reads the same way translated.
+
 ---
 
 ## 3. Verify (zero writes)
@@ -124,18 +150,19 @@ Ask about the gaps **together, in one pass**. Do not scatter the questions. (The
 Self-check, read-only. Anything caught sends it back to step 2.
 
 1. **Terminology** — look for `prd.forbidden_terms` in the body. Where they appear, replace with product-side wording. Write as far as "what" (the requirement) and leave "how" (the implementation) to engineering or to a TBD
-2. **Format** — re-read only the places that are easy to break
+2. **Voice** — the check above reads nouns; this one reads sentences, which is where the same problem survives every string check there is. Read the rules, the behaviour rows and the case rows back as somebody who cannot open the code: does each one say what a person sees, or what the system decided? Rewrite whatever fails by 2.4 — and change nothing but the sentence
+3. **Format** — re-read only the places that are easy to break
    - Functional requirements go in a **table** (behaviour │ condition │ input │ result). Not bullet sentences
    - States and cases go in a **table**, with the rows fixed to `structure.cases`. Not applicable is `—`; anything off the list is `other`
    - Sources and evidence collect in the **references** section. Never dissolved into a rule or exception sentence as "source:"
-3. **Evidence** — no facts, quotations, or statistics without a source. Without one, mark it TBD or "evidence needed"
-4. **Completeness** — the `structure.sections` skeleton is all present, and the user groups, domains, and feature entries are not empty. Every blank is explicitly a TBD
-5. **Vague-wording scan** — reject on 'appropriately', 'as the situation requires', 'if needed', 'etc.', a TBD with no reason; on an empty **target** for filtering, search, or sorting; on an undefined **unit** for judgement, dispatch, or aggregation. **One slot left TBD that the material could have settled is not a pass**
-6. **Language and notation** — as `meta.language` and `prd.emoji` have it. On `auto`, follow the conversation's language
+4. **Evidence** — no facts, quotations, or statistics without a source. Without one, mark it TBD or "evidence needed"
+5. **Completeness** — the `structure.sections` skeleton is all present, and the user groups, domains, and feature entries are not empty. Every blank is explicitly a TBD
+6. **Vague-wording scan** — reject on 'appropriately', 'as the situation requires', 'if needed', 'etc.', a TBD with no reason; on an empty **target** for filtering, search, or sorting; on an undefined **unit** for judgement, dispatch, or aggregation. **One slot left TBD that the material could have settled is not a pass**
+7. **Language and notation** — as `meta.language` and `prd.emoji` have it. On `auto`, follow the conversation's language
 
 ### 3.1 Does it hold together
 
-The six above find what is missing or malformed. They do not find a document that is complete and wrong — and a spec with no blank left in it can still contradict itself, skip a case, or name a number nobody can count. Read the entries against each other, in this order.
+The checks above find what is missing, malformed or unreadable. They do not find a document that is complete and wrong — and a spec with no blank left in it can still contradict itself, skip a case, or name a number nobody can count. Read the entries against each other, in this order.
 
 **0. Every role it names is defined.** Collect the roles, permissions and account words the entries actually use, and look each one up in the user-group table. A word with no row there is reported as exactly that — *this role is not defined anywhere* — and never as a contradiction.
 

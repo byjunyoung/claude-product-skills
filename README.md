@@ -373,7 +373,7 @@ A separate plugin covering the document and the work that comes out of it.
 | | |
 |---|---|
 | `/pm:setup` | Read your tool schemas and draft the config, ids included |
-| `/pm:prd` | Write a requirements doc against a format, verify it before it ships |
+| `/pm:prd` | Write a requirements doc against a format, in language its readers can act on |
 | `/pm:task-draft` | Turn a request thread into a task's context table |
 | `/pm:task-publish` | File that task as a ticket in the engineering tracker |
 | `/pm:task-sync` | Reconcile the planning list against that tracker |
@@ -412,11 +412,13 @@ git        writes markdown, then branch and PR
 notion     Notion pages. requires the prd.notion section
 ```
 
-Three things it holds to.
+Four things it holds to.
 
 **No leftover vagueness.** The unit a decision is made in, what a filter or sort acts on, how a "primary" item is chosen, what a state transition means — a feature doesn't hold together without these, so they get concrete values. If any field could have been settled from the material and was left as TBD, verification fails.
 
 **A product doc is not an engineering doc.** Anything in `forbidden_terms` appearing in the body is rejected. It writes *what* is required and leaves *how* to engineering or to a TBD.
+
+**It writes for whoever reads the spec, not for whoever builds the thing.** That term list reads names, and a sentence carrying none of them can still describe a machine — *the view switches depending on whether an active job exists* passes every string check there is and tells a designer nothing. So the sentences get read separately, against one question: does this say what a person sees, or what the system decided? A number arrives with its meaning beside it, a table cell says what happens instead of naming it, and a word the reader may not have is explained where it first appears. None of which is allowed to change the document — values, decisions and structure stay exactly where they were, and only the wording moves.
 
 **It stops before writing.** Verification is read-only, publishing happens only after a preview and an explicit go, and even then in stages — skeleton, then user groups, then feature entries.
 
