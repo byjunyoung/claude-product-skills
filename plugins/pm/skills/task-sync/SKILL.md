@@ -16,7 +16,7 @@ Where `task.mirror.type` is `none` there is no second side and nothing to reconc
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
-  --need task.record.ref,task.link_property --authored task.contract.level
+  --need task.record.ref,task.link_property --authored task.contract.level,task.progress_source
 ```
 
 With a mirror, `task.mirror.ref` belongs on that list too. A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than reconciling against a side that was never named.
@@ -32,6 +32,7 @@ With a mirror, `task.mirror.ref` belongs on that list too. A `null` named on std
 - **The tracker's own template is what a ticket's shape is judged against**, where `task.template` names one. Read it with the rule document, before the first write. A ticket filed before the template existed, or by hand, or by an older version of these skills, sits there with headings nobody will revisit — the contract writer leaves everything it does not own byte for byte, so no later run reaches them. **This skill is the only thing that looks.** It looks and it reports; the sections hold prose somebody wrote, and rewriting them from here would be the bulk edit this whole design refuses.
 - **Closing is not always this skill's to do.** Where the rules gate closing a parent on a person's sign-off — a comment, an approval, a named role — a close from here is reverted by whatever enforces them, and the reopen carries no record of why it was closed. Report it, say who can close it, and leave it open.
 - **A ticket the tracker's own automation closed is not a decision.** Rules that close a ticket for going stale, or for breaking a convention, say nothing about whether the work is still wanted. The rule document names how such a close is marked; those never drive a record to closed on their own.
+- **How far along a task is gets counted, never estimated.** Where `task.progress_source` is `contract`, the only progress figure either side may carry is the ticked fraction of the contract checklist — the one number that already exists on both sides of an approval. Dates come from the day something happened: the column moved, the first box was ticked, the last one was. **With `task.progress_source` null, or the property unnamed in `task.properties`, these diagnoses do not run at all** — a blank field is not a drift when nothing was configured to fill it, and a percentage invented to fill a gap is worse than the gap.
 
 ## When NOT to invoke
 
@@ -89,6 +90,9 @@ It prints the file to read — the bundled one, or yours from `adapters.dirs` wh
 | Ahead of the mirror | Record terminal, ticket still open | **Report, propose nothing.** Where `field_owner.status` is `mirror`, this is what a finished spec waiting on engineering looks like — the normal state, not a drift. Only raise it when the ticket has been open long enough to look forgotten |
 | Record deleted | Ticket exists, record gone | Ask. Work may be in progress, so never auto-close |
 | Field mismatch | The owning side disagrees with the other | Correct toward `task.field_owner` |
+| Progress stale | The record's progress differs from the ticked fraction of the contract checklist, or is blank where the ticket has one | Correct the record toward the checklist. **Where the checklist is the stale one** — boxes ticked before the work behind them actually finished — say which, and ask. Copying a number that was never true is how a task reads as done twice |
+| Schedule blank | Work has started and no start date, or the pair is terminal and no end date — on either side | Fill it from the evidence: the day the column moved or the first condition was ticked, the day the last one was. **Never today's date**, which records only when this happened to run |
+| Schedule past | The end date has gone by and neither side is terminal | **Report, propose nothing.** A date that slipped is a decision somebody has to make, and moving it here makes the slip disappear instead of surfacing it |
 | Policy | Milestone on the wrong level, or a label the rules require that the ticket does not carry | Correct per `task.hierarchy`, and per the rule document where one is configured. **A label the tracker does not have is reported, never created** |
 | Off template | The ticket's headings are not the template's — a section missing, a section the template never had, a different order | **Report, and name the way out.** `/pm:task-publish` fixes one ticket with a person watching. This skill does not, because the same edit across a list would rewrite a hundred tickets on one approval |
 | Held by the rules | The tracker's enforcement has flagged the ticket — a violation, a decision it is waiting on | **Report, propose nothing.** It is waiting on a person, and that person is usually not the one running this |
@@ -120,8 +124,8 @@ This skill writes only a minimal ticket body and **does not add a link back to t
 [reconciled]
 read      : {how} · coverage: {N rows surfaced, exhaustive or not}
 created {n} · relinked {n} · resurrection blocked {n} · duplicates merged {n}
-field-synced {n} · skipped {n} · errors {n}
-reported only: off template {n} · held by the rules {n} · ahead of the mirror {n}
+field-synced {n} · progress-synced {n} · skipped {n} · errors {n}
+reported only: off template {n} · held by the rules {n} · ahead of the mirror {n} · schedule slipped {n}
 ```
 
 The coverage line comes first on purpose. A count with no coverage reads as "everything is now consistent", which is the one claim this skill cannot make on a partial read.

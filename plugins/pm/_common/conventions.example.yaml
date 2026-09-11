@@ -191,6 +191,17 @@ task:
     priority: [low, medium, high, critical]
     projects: []                 # select options; empty means ask each time
     default_assignee: null       # id of whoever owns a task by default
+    # --- how far along, and when ------------------------------------------------
+    # The record's own progress and schedule properties. Null means the record does
+    # not carry one, and that diagnosis is skipped rather than guessed at.
+    progress: null               # a 0-1 ratio or a percent
+    start:    null               # when work actually began
+    end:      null               # when the last done condition was ticked
+
+  # What a progress figure is counted from. `contract` = the ticked fraction of the
+  # contract checklist, the only number neither side has to invent. Null turns the
+  # progress and schedule diagnoses off wherever they would otherwise run.
+  progress_source: contract
 
   # Record status -> the mirror column a task is seated in when it is first filed.
   # Only the statuses a task can be filed *in* need an entry; a status with none leaves

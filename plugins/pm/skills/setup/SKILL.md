@@ -68,6 +68,7 @@ The file speaks in keys. The questions do not.
 | `task.mirror` | Where does engineering watch progress? — the same place, a GitHub repo, somewhere else | the same place |
 | `task.link_property` | Which field on a task should hold the ticket's link? — the url fields the schema has | none exists — it has to be created first |
 | `task.status_map` | When a spec is finished, which board column should its ticket sit in? | leave it blank — whoever runs the board fills it |
+| `task.properties.progress` · `.start` · `.end` | Does a task record say how far along it is, and when it started and finished? — name those properties | leave them blank — the progress and schedule checks stay off |
 | `task.field_owner` | When the two sides disagree on a title or an assignee, which one is right? | leave it blank — it is reported and left alone |
 | `task.hierarchy.parent_kind` | Are tasks grouped under something bigger — an epic, a project? | none — a flat list |
 | `task.context_rows` | The rows your team asks about a task — these defaults, or your own words | the defaults |

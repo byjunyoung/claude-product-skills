@@ -507,8 +507,9 @@ Taken when the link property was already filled.
 3. **A placeholder being filled is the ordinary second pass.** The note comes out, the two sections go in, `contract.incomplete_label` comes off, and the board seating is handed back to `task.status_map`. Say in the report that the ticket now has a contract, because that is the moment it becomes startable
 4. **A ticket already in progress is the delicate case.** Re-draft the two binding sections from the current materials, then reconcile rather than overwrite: a line that survives unchanged keeps its tick, a line the spec dropped is removed and said so in the preview, and a new line arrives unticked. Silently resetting a checklist somebody has been working down destroys the only record of what was verified
 5. Preview → go → edit the ticket, keeping the record link row intact
-6. **Where the body still does not match `task.template`, offer the template pass above** — its own preview, its own "go", after this edit has landed. Two changes, two approvals, and the second one starts from what the first actually wrote
-7. Write back into the record — the spec link only where newly given; the link property is already there. Append the new change summary under the existing one
+6. **Move the record and the board together, in the same "go".** An update that changes what is ticked has changed how far along the task is, and the two sides read that from different fields. Where `task.properties` names them, set the record's progress from the checklist as counted in this run, its start date where work has begun and the field is empty, and its end date where every condition is now ticked; seat the board column by `task.status_map` and set the board's own date fields to the same days. Put the line in the preview beside the body change rather than making it a second approval — **a separate gate is one that gets skipped**, and a ticket whose body moved while its board did not is precisely the drift `/pm:task-sync` then has to go and find. Dates are the days things happened, not the day this ran
+7. **Where the body still does not match `task.template`, offer the template pass above** — its own preview, its own "go", after this edit has landed. Two changes, two approvals, and the second one starts from what the first actually wrote
+8. Write back into the record — the spec link only where newly given; the link property is already there. Append the new change summary under the existing one
 
 ---
 
@@ -531,6 +532,7 @@ Taken when the link property was already filled.
 - **Never name a version that was not pinned.** No handover line means no match line, no comparison steps and no version row — an unverifiable condition reads as satisfied
 - **Never file a task whose done conditions are defaults only.** A list that would fit any sibling says nothing about this one
 - **Read the tracker's current schema before writing** rather than trusting ids pinned in the config — options get renamed
+- **Never edit a checklist and leave the progress and the dates behind.** The tick is what a progress figure is counted from, so an edit that moves one without the other puts the record and the ticket in disagreement the moment it lands. They move in the same approval
 - **Every external write waits for "go"**, including the write-back into the record
 - **Never copy the body across.** The record stays the single source, and the ticket links to it — apart from the two binding sections, which have no copy on the other side
 - Verify after writing, and report what was actually written rather than what was intended
