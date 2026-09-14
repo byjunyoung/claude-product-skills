@@ -364,6 +364,11 @@ Sections     : {n} done ({n} specific · {n} from defaults) · {n} QA
 [to be written back into the record]
 {the text}
 
+{where task.properties.version is named:}
+[version on the record]
+{record}: {current value} → {milestone now in effect, or version_unset}
+{every other record under a parent whose milestone this run set or moved, one line each}
+
 shall I proceed? (go / changes)
 ```
 
@@ -406,6 +411,7 @@ Create it with the assembled title, body, labels and assignee.
 - Add it to the board named in `task.mirror_extras`, capturing the returned item id
 - Set the board's custom fields from `task.mirror_extras` — project field, dates
 - Dates go **on the task only**. A parent's schedule is managed separately and is never touched here
+- **Copy the version back to the record**, where `task.properties.version` is named — the milestone now in effect for this task, which under `milestone_on: parent` is the parent's, or `task.properties.version_unset` where there is none. Where this run set or moved a parent's milestone, every other record whose ticket sits under that parent now shows the old one: they are listed in the preview and move in the same "go". A version left behind on one sibling is the drift `/pm:task-sync` would otherwise have to find
 - **Seat it in the right column.** Where `task.status_map` has an entry for the record's current
   status, set the board's status field to it. Without an entry, leave the board's own default
   alone rather than guessing a column. **A placeholder ticket overrides this and goes to the
@@ -509,7 +515,7 @@ Taken when the link property was already filled.
 5. Preview → go → edit the ticket, keeping the record link row intact
 6. **Move the record and the board together, in the same "go".** An update that changes what is ticked has changed how far along the task is, and the two sides read that from different fields. Where `task.properties` names them, set the record's progress from the checklist as counted in this run, its start date where work has begun and the field is empty, and its end date where every condition is now ticked; seat the board column by `task.status_map` and set the board's own date fields to the same days. Put the line in the preview beside the body change rather than making it a second approval — **a separate gate is one that gets skipped**, and a ticket whose body moved while its board did not is precisely the drift `/pm:task-sync` then has to go and find. Dates are the days things happened, not the day this ran
 7. **Where the body still does not match `task.template`, offer the template pass above** — its own preview, its own "go", after this edit has landed. Two changes, two approvals, and the second one starts from what the first actually wrote
-8. Write back into the record — the spec link only where newly given; the link property is already there. Append the new change summary under the existing one
+8. Write back into the record — the spec link only where newly given; the link property is already there; the version where it no longer matches the milestone the ticket sits under. Append the new change summary under the existing one
 
 ---
 
@@ -534,5 +540,6 @@ Taken when the link property was already filled.
 - **Read the tracker's current schema before writing** rather than trusting ids pinned in the config — options get renamed
 - **Never edit a checklist and leave the progress and the dates behind.** The tick is what a progress figure is counted from, so an edit that moves one without the other puts the record and the ticket in disagreement the moment it lands. They move in the same approval
 - **Every external write waits for "go"**, including the write-back into the record
+- **Never decide a version on the record side.** It is copied from the milestone the ticket sits under, and a different version is set there, on the tracker
 - **Never copy the body across.** The record stays the single source, and the ticket links to it — apart from the two binding sections, which have no copy on the other side
 - Verify after writing, and report what was actually written rather than what was intended

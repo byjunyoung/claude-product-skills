@@ -49,6 +49,10 @@ the file.
 notion-update-page  page_id={id}  command=update_properties
                     properties={"{task.link_property}": "{ticket url}"}
 
+# the version, copied from the milestone the ticket sits under
+notion-update-page  page_id={id}  command=update_properties
+                    properties={"{task.properties.version}": "{milestone, or version_unset}"}
+
 # a change summary, appended under what is already there
 notion-update-page  page_id={id}  command=update_content
                     content_updates=[{old_str: "...", new_str: "..."}]
@@ -65,6 +69,8 @@ line after it. Replacing the section throws away the history the section exists 
   content, not the return value.
 - **A read straight after a write can return the pre-write snapshot.** Verify by content.
 - **Relation properties replace wholesale.** There is no adding one member.
+- **A select value with no option yet (unverified).** Writing a milestone the property has no option for may create the option or be refused. Where refused, add it by rewriting the property's option list with every existing name kept — a list that leaves one out deletes that option, and every row holding it goes blank without an error.
+- **A property write can fire the database's own automations.** A database may move a status or stamp a date when a row changes. After the first write of a batch, read that row back and compare the fields you did not send before writing the rest.
 - **Text typed by hand corrupts.** Copy the existing string and substitute into it.
 - **A table cell edit can push a line break into the cell behind it.** Keep the line count and
   edit row by row.

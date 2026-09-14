@@ -116,6 +116,7 @@ Create the record in `task.record`, writing properties and body in a single writ
 | Assignee | `task.properties.default_assignee`, or ask |
 | Priority | One of `task.properties.priority` |
 | Status | `task.properties.status_initial` |
+| Version | `task.properties.version_unset`, where `task.properties.version` is named. A new record has no ticket and so no milestone to copy — not asked |
 | Link to mirror | Left empty — `/pm:task-publish` fills it |
 
 The calls are in the adapter for `task.record.type`:

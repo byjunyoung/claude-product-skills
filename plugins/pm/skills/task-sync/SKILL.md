@@ -28,6 +28,7 @@ With a mirror, `task.mirror.ref` belongs on that list too. A `null` named on std
 - **Fields have owners.** `task.field_owner` says which side wins for each. A field not listed there is reported as a difference and left alone. "Two-way" means reading both sides to reconcile *existence, closure and duplication* — it does not mean copying every field back and forth.
 - **Closed means closed.** A closed ticket, whatever the reason, and an archived record, are both terminal. **A terminal pair is never recreated.** Archive rather than delete on the planning side, so the id survives.
 - **The backlog boundary** is whatever `task.status_map` maps the initial status onto. No milestone means backlog; a milestone arrives when work starts, at the level `task.hierarchy.milestone_on` names.
+- **The version a task is tied to is the mirror's, copied rather than decided.** Where `task.properties.version` names a record property, it holds the milestone the task's ticket sits under, read at the level `task.hierarchy.milestone_on` names — under `parent`, the parent's milestone, with a task's own ignored and reported as the policy drift it is. A milestone the tracker uses as a backlog bucket is copied by name like any other: whether that counts as a version is the rule document's call, and a record that says *backlog* tells a reader more than a blank one. No milestone at all writes `task.properties.version_unset`. **Which records carry one:** every open record, filed or not, and every filed record whatever its state — a finished ticket's milestone is history worth keeping. A closed record that never had a ticket stays blank, because a placeholder on finished work reads as a decision still pending
 - **Where `task.policy.doc` names a rule document, read it before the first write of the session.** It holds the tracker's own conventions, and where it disagrees with a default here or in the config, **it wins**. It is also what tells this skill which of the two rules below are live on this tracker. The mirror's adapter says how to fetch it; with the key null there is no such document.
 - **The tracker's own template is what a ticket's shape is judged against**, where `task.template` names one. Read it with the rule document, before the first write. A ticket filed before the template existed, or by hand, or by an older version of these skills, sits there with headings nobody will revisit — the contract writer leaves everything it does not own byte for byte, so no later run reaches them. **This skill is the only thing that looks.** It looks and it reports; the sections hold prose somebody wrote, and rewriting them from here would be the bulk edit this whole design refuses.
 - **Closing is not always this skill's to do.** Where the rules gate closing a parent on a person's sign-off — a comment, an approval, a named role — a close from here is reverted by whatever enforces them, and the reopen carries no record of why it was closed. Report it, say who can close it, and leave it open.
@@ -55,8 +56,8 @@ Ask, or take it from the argument.
 
 Read both sides in full where the tools allow it.
 
-- **The mirror** — list every task and parent with title, status, milestone and url. Confirm open or closed separately where the board's status and the ticket's state can disagree. **A board listing can truncate without saying so** — compare the row count against the limit you asked for, and treat equal counts as a partial read
-- **The record side** — query the task list for title, project, group, priority, status, assignee, and the link property
+- **The mirror** — list every task and parent with title, status, milestone and url, and which parent each task sits under — where `task.properties.version` is named, that parent is where a task's version is read. Confirm open or closed separately where the board's status and the ticket's state can disagree. **A board listing can truncate without saying so** — compare the row count against the limit you asked for, and treat equal counts as a partial read
+- **The record side** — query the task list for title, project, group, priority, status, assignee, the link property, and `task.properties.version` where one is named
 
 **Where an exhaustive query is not available**, fall back to search plus fetch: enumerate candidates with several differently-worded queries, dedupe, fetch each, and **keep only the rows whose parent really is the task list** — a search will happily return a sub-page or a row from another database. For a large list, fan the fetches out to sub-agents that each return compact JSON, so the main context stays clear.
 
@@ -93,6 +94,7 @@ It prints the file to read — the bundled one, or yours from `adapters.dirs` wh
 | Progress stale | The record's progress differs from the ticked fraction of the contract checklist, or is blank where the ticket has one | Correct the record toward the checklist. **Where the checklist is the stale one** — boxes ticked before the work behind them actually finished — say which, and ask. Copying a number that was never true is how a task reads as done twice |
 | Schedule blank | Work has started and no start date, or the pair is terminal and no end date — on either side | Fill it from the evidence: the day the column moved or the first condition was ticked, the day the last one was. **Never today's date**, which records only when this happened to run |
 | Schedule past | The end date has gone by and neither side is terminal | **Report, propose nothing.** A date that slipped is a decision somebody has to make, and moving it here makes the slip disappear instead of surfacing it |
+| Version stale | The record's version differs from the milestone resolved for its ticket, or is blank where it should carry one | Correct the record toward the mirror. **Never the other way** — a milestone is moved on the tracker, where the people planning the release can see it, and a version edited on the record is exactly what this row exists to catch. A parent whose milestone moved shows here once for every task under it; they go in one batch. Only runs where `task.properties.version` is named |
 | Policy | Milestone on the wrong level, or a label the rules require that the ticket does not carry | Correct per `task.hierarchy`, and per the rule document where one is configured. **A label the tracker does not have is reported, never created** |
 | Off template | The ticket's headings are not the template's — a section missing, a section the template never had, a different order | **Report, and name the way out.** `/pm:task-publish` fixes one ticket with a person watching. This skill does not, because the same edit across a list would rewrite a hundred tickets on one approval |
 | Held by the rules | The tracker's enforcement has flagged the ticket — a violation, a decision it is waiting on | **Report, propose nothing.** It is waiting on a person, and that person is usually not the one running this |
@@ -102,7 +104,7 @@ It prints the file to read — the bundled one, or yours from `adapters.dirs` wh
 Group the proposed changes by how much damage a wrong one would do.
 
 - **Confirmed one at a time** — creating, closing, deleting, merging duplicates, changing a parent, handling a deleted record. Each gets its own preview and its own "go"
-- **Confirmed in a batch** — plain field updates such as a title or priority. One preview, one "go"
+- **Confirmed in a batch** — plain field updates such as a title, a priority or a version. One preview, one "go"
 
 Only what was approved goes to step 5.
 
@@ -124,7 +126,7 @@ This skill writes only a minimal ticket body and **does not add a link back to t
 [reconciled]
 read      : {how} · coverage: {N rows surfaced, exhaustive or not}
 created {n} · relinked {n} · resurrection blocked {n} · duplicates merged {n}
-field-synced {n} · progress-synced {n} · skipped {n} · errors {n}
+field-synced {n} · version-synced {n} · progress-synced {n} · skipped {n} · errors {n}
 reported only: off template {n} · held by the rules {n} · ahead of the mirror {n} · schedule slipped {n}
 ```
 
@@ -139,4 +141,5 @@ The coverage line comes first on purpose. A count with no coverage reads as "eve
 - **Never read an automated close as a cancelled task.** Ask, and say which rule closed it
 - **Never rewrite a ticket's body to match a template.** The difference is reported and the person is pointed at `/pm:task-publish`, which does it one ticket at a time. This skill sees the drift precisely because nothing else does, and that is a reason to be careful with it, not licence
 - **Never invent a mapping.** An unmapped project, priority or assignee is skipped and reported
+- **Never write a version the tracker does not show.** The record copies the milestone; it does not propose one
 - **Never state coverage you did not have.** Where the read was best-effort, the result says so

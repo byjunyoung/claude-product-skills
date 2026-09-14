@@ -200,6 +200,15 @@ task:
     progress: null               # a 0-1 ratio or a percent
     start:    null               # when work actually began
     end:      null               # when the last done condition was ticked
+    # --- which release, owned by the mirror ------------------------------------
+    # A copy of the milestone the task's ticket sits under, read at the level
+    # hierarchy.milestone_on names. Filled from the tracker, never decided here.
+    # Null means the record carries no version and nothing reads or writes one.
+    version:       null          # e.g. "Target Version"
+    version_unset: null          # what an open task with no milestone shows, e.g. "Unset".
+                                 # Null leaves it blank. A closed task that never had a ticket
+                                 # stays blank either way — a placeholder on finished work
+                                 # reads as a decision still pending
 
   # What a progress figure is counted from. `contract` = the ticked fraction of the
   # contract checklist, the only number neither side has to invent. Null turns the
@@ -238,6 +247,7 @@ task:
     title:    record
     status:   mirror
     assignee: record
+    version:  mirror             # the milestone, copied into properties.version where that is named
 
   # --- Mapping between the two sides ---------------------------------------------
   # Left is what the record says, right is what the mirror calls it. A record value

@@ -235,6 +235,7 @@ One at a time, most consequential first, each with a recommendation grounded in 
 - `hierarchy.parent_kind` — do tasks hang under something, and what is it called. Existing ticket titles usually give this away
 - `hierarchy.milestone_on` — which level carries a version, if any
 - `hierarchy.milestone_projects` — which projects use them. Often only one does
+- `properties.version` and `version_unset` — does the task list have a column showing which milestone a task's ticket sits under, and what an open task with none should say. The tracker owns the value and the skills only copy it, so this is a question about the list's columns, not about who decides a release. Recommend it only where step 3 found such a property; `null` is the ordinary answer
 - `field_owner` — which side wins per field. **The default is deliberately small**; a field nobody claims is reported as a difference and left alone, which is safer than an arbitrary winner
 - `policy.doc` — is this tracker run by written rules of its own, and where do they live. **No schema answers this**, and it is the one setting that outranks everything else in the file: what may carry a version, who may close what, which labels a kind of ticket has to have. A team that has such a document usually knows exactly where it is; a team that does not says so in a word, and `null` is the honest answer
 - `context_rows` — the defaults, or what this team actually asks
