@@ -7,6 +7,13 @@ For a `task.record.type` of `notion`. `{db}` is `task.record.ref` — a `collect
 
 ## Reading the list
 
+**A date property cannot be queried under its own name.** SQL splits it into three columns —
+`date:{name}:start`, `date:{name}:end`, `date:{name}:is_datetime` — and a query naming the
+property itself fails with *no such column*, which reads like a wrong property name rather
+than a shape. The same spelling is what a write uses. So fetch the data source before the
+first query and read its table definition: it also names the properties that cannot be
+queried in SQL at all.
+
 Try the exhaustive query first:
 
 ```
@@ -69,7 +76,7 @@ line after it. Replacing the section throws away the history the section exists 
   content, not the return value.
 - **A read straight after a write can return the pre-write snapshot.** Verify by content.
 - **Relation properties replace wholesale.** There is no adding one member.
-- **A select value with no option yet (unverified).** Writing a milestone the property has no option for may create the option or be refused. Where refused, add it by rewriting the property's option list with every existing name kept — a list that leaves one out deletes that option, and every row holding it goes blank without an error.
+- **A select value with no option yet (unverified).** Writing a milestone the property has no option for may create the option or be refused. Where refused, add it by rewriting the property's option list with every existing name kept — a list that leaves one out deletes that option, and every row holding it goes blank without an error. **So check the option list before the write goes in a proposal** — the schema from the fetch above carries every option, and a value the other side shows that this property has no option for is a finding to report rather than a write to attempt. Whoever adds it should be looking at what else is on that list.
 - **A property write can fire the database's own automations.** A database may move a status or stamp a date when a row changes. After the first write of a batch, read that row back and compare the fields you did not send before writing the rest.
 - **Text typed by hand corrupts.** Copy the existing string and substitute into it.
 - **A table cell edit can push a line break into the cell behind it.** Keep the line count and

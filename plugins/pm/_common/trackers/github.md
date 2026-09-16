@@ -59,6 +59,48 @@ lives. Use the `--paginate` call above for any read a verdict depends on, and ke
 one, because `/pm:task-sync` reads the missing rows as *unfiled* and offers to create
 tickets that already exist.
 
+**For a read a verdict depends on, page the board through GraphQL instead.** `--paginate`
+follows `pageInfo` itself, so there is no limit to guess at and nothing is cut without
+saying so. The same call also carries what `item-list` does not: each task's parent and
+that parent's milestone — where a version is read when `milestone_on` is `parent` — so one
+request replaces a listing plus a second pass over every issue.
+
+```bash
+gh api graphql --paginate --slurp -F query=@board.graphql > board.json
+```
+
+```graphql
+query ($endCursor: String) {
+  organization(login: "{owner}") {            # a personal account: user(login:)
+    projectV2(number: {n}) {
+      items(first: 100, after: $endCursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id
+          content { ... on Issue {
+            number title state stateReason url
+            milestone { title }
+            issueType { name }
+            parent { number title state milestone { title } }
+            assignees(first: 5) { nodes { login } }
+            labels(first: 20) { nodes { name } }
+          } }
+          fieldValues(first: 25) { nodes {
+            ... on ProjectV2ItemFieldSingleSelectValue { name field { ... on ProjectV2SingleSelectField { name } } }
+            ... on ProjectV2ItemFieldDateValue        { date field { ... on ProjectV2Field { name } } }
+          } }
+        }
+      }
+    }
+  }
+}
+```
+
+**Give the query as a file — `-F query=@file`, not an inline `-f query='…'`.** A multi-line
+query inline mis-parses on a brace the shell reflowed, and the error names a line and column
+in a string nobody can see. `--slurp` returns one array whose elements are pages, so flatten
+`nodes` across them, and an item whose `content` is null is a draft rather than an issue.
+
 So: **compare the returned count against the limit you asked for. Equal means truncated —
 say so in the coverage line rather than treating the read as exhaustive.** When you only need
 to confirm one item you already have the id for, address it directly instead of listing:

@@ -1,7 +1,7 @@
 {
   "name": "pm",
   "description": "A bundle for product docs and the tasks that come out of them. Write a spec against a format and verify it before it ships; turn a request thread into a task's context table; file that task in your engineering tracker and keep the two sides reconciled. Where things are stored is decided by config.",
-  "version": "0.24.0",
+  "version": "0.25.0",
   "author": {
     "name": "Junyoung Kim",
     "url": "https://www.linkedin.com/in/byjunyoung/"
