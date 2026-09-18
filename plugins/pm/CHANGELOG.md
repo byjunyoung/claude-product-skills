@@ -1,5 +1,8 @@
 # pm
 
+## 0.25.1 — 2026-09-18
+- **The four checks in `/pm:prd`'s consistency pass read a rule only as far as it was written, never past it.** A vague word, a contradiction, an undefined case, a number with no rule around it — each catches what is on the page, none ask what the page leaves off it. Two more join: **the other half of the switch**, where an entry says how something turns on and never what turning it off, deleting, or undoing it leaves behind; and **what it does outside the screen it is written for**, where a setting reaches an end customer or another surface the entry never names. Same rule as the other three — settle it, turn it into a question, or mark it TBD
+
 ## 0.25.0 — 2026-09-16
 - **A board read a verdict rests on could not be made reliably, and the adapter only warned about it.** `item-list` truncates without a word, raising the limit moves the cut rather than removing it, and a truncated board turns an existing ticket into an *unfiled* finding — which proposes creating the duplicate
 - **The GitHub adapter now carries the paginated GraphQL read.** `--paginate` follows `pageInfo` itself, and the same call returns each task's parent and that parent's milestone, where a version is read when `milestone_on` is `parent`. One request replaces a listing plus a second pass over every issue
