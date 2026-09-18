@@ -174,6 +174,10 @@ This one comes first because the rest cannot be judged without it. Two entries t
 
 **3. A number with no rule around it.** A threshold, a count or a period that is stated but not countable — what resets it, what the boundary is, what unit it is in. "Locks after 3 failures" is not a requirement until it says when the counter goes back to zero.
 
+**4. The other half of the switch.** An entry that says how something is turned on, created or added, but never what happens when it is turned off, deleted or undone. Ask what is left behind — the values that were stored, the places that displayed them, what somebody opening the screen again would find. A rule written in one direction only is half a rule, and the half nobody wrote is the half that gets built by accident.
+
+**5. What it does outside the screen it is written for.** Where an entry's setting reaches somebody it never mentions — the end customer, another surface, a display further down — say in one line what that person sees. Entries are usually split by the screen an operator works in, so a consequence that lands one step away belongs to no entry unless one claims it.
+
 **What to do with what it finds.** Whatever the material settles, settle it and rewrite the entry. What needs a person becomes a question — asked together where the questions are independent, and **one at a time where one answer changes the next**, since resolving a contradiction usually moves other entries with it. What genuinely cannot be answered now becomes a TBD **carrying who decides it and by when**; without those two it does not pass, the same rule every other TBD in this document lives under.
 
 ---
