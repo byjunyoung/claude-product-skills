@@ -29,7 +29,10 @@ works — it is finished when the sentences that describe it are still true.
    convention cannot be assumed at all, the key ships `null` and the check is skipped, rather than
    firing on every file that does it differently. This is the step with no checker behind it: the
    string check below sees names, never framing.
-5. `bash tools/verify-all.sh` — every check CI runs.
+5. `bash tools/verify-all.sh` — every check CI runs. A `pre-push` hook runs this same script and
+   blocks the push on failure, so a missed CHANGELOG entry is caught here rather than in a follow-up
+   commit after CI fails. It only fires once this clone has run `git config core.hooksPath .githooks`
+   — do that once per clone, since git does not read hooks from a versioned path on its own.
 
 ## What the checker catches, and what it cannot
 

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Runs the same check CI runs, before the push leaves this machine — a version
+# bump with no CHANGELOG entry (or any other consistency drift) is caught here
+# instead of after a push, in a follow-up commit.
+#
+# Active only where `git config core.hooksPath .githooks` has been set for
+# this clone (see CLAUDE.md).
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if ! bash tools/verify-all.sh; then
+    echo
+    echo "pre-push: verify-all.sh failed — fix the check above before pushing (or 'git push --no-verify' to override)." >&2
+    exit 1
+fi
