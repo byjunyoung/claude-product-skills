@@ -147,7 +147,7 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 | `/fig:diff` `/pm:setup` `/pm:task-draft` `/pm:task-publish` `/pm:task-sync` | **GitHub** — `task_tracker.type` / `task.mirror.type`이 `github`일 때만. 로그인이 둘입니다 — Claude의 연결 하나, 트래커를 읽는 `gh` 명령 하나. 점검이 둘 다 보고 `gh`가 어느 계정인지 알려줍니다 |
 | `/fig:qa` `/pm:task-draft` | **채팅 도구** — 요청 출처가 스레드일 때만. `pm`은 `sources.chat_type`이 지목하고, `/fig:qa`는 링크에서 도구를 압니다. Slack이 딸려 옵니다 |
 | `/pm:log` | **캘린더와 채팅 도구** — 둘 다 선택. `sources.calendar_type`·`sources.chat_type`이 지목하고, Google Calendar·Slack이 딸려 옵니다. `none`이면 건너뛰고 일지가 그렇게 말합니다. 무인으로 돌리려면 내 컴퓨터의 스케줄러 |
-| `/pm:prd` | **Notion** — `prd.target`이 `notion`일 때만 |
+| `/pm:prd` | **Notion** — `prd.target`이 `notion`일 때만. **웹 검색** — `prd.precedent.enabled`가 true일 때만(기본값), 그것도 기능 항목을 처음 쓸 때만 |
 
 연결 줄은 조건부입니다. 설정을 `none`이나 마크다운으로 두면 스킬은 그대로 돌고 결과만 다른 곳에 씁니다. Chrome 줄은 조건부가 아닙니다 — 저 셋은 브라우저를 엽니다.
 

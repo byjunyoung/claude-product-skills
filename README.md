@@ -147,7 +147,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | `/fig:diff` `/pm:setup` `/pm:task-draft` `/pm:task-publish` `/pm:task-sync` | **GitHub** — only where `task_tracker.type` / `task.mirror.type` is `github`. Two logins are involved: Claude's connection, and the `gh` command the tracker is read through. The check covers both, and names the account `gh` is on |
 | `/fig:qa` `/pm:task-draft` | **A chat tool** — only where the request source is a thread. For `pm`, `sources.chat_type` names it; `/fig:qa` takes the tool from the link. Slack ships |
 | `/pm:log` | **A calendar and a chat tool** — both optional, named by `sources.calendar_type` and `sources.chat_type`; Google Calendar and Slack ship. Named as `none` they are skipped and the log says so. A scheduler on your own machine, if you want it unattended |
-| `/pm:prd` | **Notion** — only where `prd.target` is `notion` |
+| `/pm:prd` | **Notion** — only where `prd.target` is `notion`. **Web search** — only where `prd.precedent.enabled` is true (the default), and only for a feature entry drafted for the first time |
 
 The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The Chrome rows are not — those three open a browser.
 

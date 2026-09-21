@@ -85,6 +85,12 @@ prd:
     range: [5, 7]                # how many to aim for. they must not overlap
     align_with_design: true      # whether to match the design file's page structure one to one
 
+  # --- Precedent, for a feature entry the first time it is drafted ---------------
+  # What this team already decided (1.3) always outranks whatever this turns up.
+  precedent:
+    enabled: true                 # whether a new feature entry gets checked at all
+    archive_dir: null             # a local research archive to check before the web, if you keep one
+
   # --- target: markdown | git ----------------------------------------------------
   markdown:
     dir: "./docs/prd"            # where documents go

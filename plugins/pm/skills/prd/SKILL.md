@@ -1,7 +1,7 @@
 ---
 name: prd
-description: Writes a product requirements document against a format, or fills out an existing one. Gathers and analyzes code repos, docs, designs, and chat history first, then proposes recommended answers so the interview can be settled with a single "go". Before writing anything it verifies read-only for vague wording, empty definitions, and engineering terms that do not belong in a product doc, then reads the entries against each other for roles and state names nobody defined, entries that contradict, cases nobody wrote, and thresholds nobody can count — and reads an entry that claims to describe what already ships against the thing itself. It writes for the people who read a spec rather than for the people who build it, so a rule says what somebody sees rather than what the system decided. Where the doc lives — markdown files, a git repo, or Notion — is decided by config. Triggers - "/pm:prd", "write the PRD", "draft the requirements", "PRD 작성", "PRD 만들어줘", "기능 항목 추가", "PRD 보강", "사용자 그룹 추가".
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-duplicate-page, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-query-data-sources
+description: Writes a product requirements document against a format, or fills out an existing one. Gathers and analyzes code repos, docs, designs, and chat history first, then proposes recommended answers so the interview can be settled with a single "go". Before writing anything it verifies read-only for vague wording, empty definitions, and engineering terms that do not belong in a product doc, then reads the entries against each other for roles and state names nobody defined, entries that contradict, cases nobody wrote, and thresholds nobody can count — and reads an entry that claims to describe what already ships against the thing itself. A feature entry drafted for the first time is checked against precedent — a local research archive, then the web — after what this team already decided, never before it. It writes for the people who read a spec rather than for the people who build it, so a rule says what somebody sees rather than what the system decided. Where the doc lives — markdown files, a git repo, or Notion — is decided by config. Triggers - "/pm:prd", "write the PRD", "draft the requirements", "PRD 작성", "PRD 만들어줘", "기능 항목 추가", "PRD 보강", "사용자 그룹 추가".
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, WebSearch, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-duplicate-page, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-query-data-sources
 ---
 
 # prd — writing and extending a format-based requirements document
@@ -107,10 +107,11 @@ A status of 'under review' means *a concrete proposal has been put up for review
 1. **Product overview** — in `structure.overview` order. Background separates fact from supposition
 2. **User groups** — name groups by **role** (not by team name). Reuse the same persona names across documents so they stay consistent. Each group's body goes in the `structure.user_group_rows` table
 3. **Domains + feature and policy entries** — settle the domains, then each entry in the appendix format below. Where the product has states of its own that several entries will name, settle that vocabulary first as a policy entry — item 0 in 3.1 is what reads it back
+4. **A feature entry, the first time it is drafted, gets a precedent check.** Before its structure is proposed, look for how a comparable product covers the same ground — `prd.precedent.archive_dir` first if one is set, then the web, skipped where `prd.precedent.enabled` is off. **1.3 goes first and outranks whatever this turns up**: a shape this team already decided against, for a reason a document or a prior PRD gives, is not a gap for precedent to fill — it is a decision, and precedent does not reopen one. What precedent does turn up is folded straight into the recommendation offered for that entry, never presented as a separate finding to react to, and its source is logged in the entry's References under a `Precedent —` line, apart from whatever there backs a stated fact. A policy entry does not get this — it is usually a business or legal call, not a shape to compare
 
 ### 2.2 Extend — units of work
 
-- **Adding an entry** — appendix B's format. Status starts at the first value in `properties.status`
+- **Adding an entry** — appendix B's format. Status starts at the first value in `properties.status`. A feature entry gets the same precedent check as 2.1's item 4
 - **Extending or updating an entry** — lay out before and after so the user can see what changes
 - **Adding a user group** — with the `user_group_rows` skeleton
 - **Adding a property option** — where a value is needed that is not on the list, change the config first. Do not let each document grow its own
@@ -239,10 +240,10 @@ Core requirement  one line on what this feature does as a whole
 Detailed behaviour  | behaviour | condition | input | result |
 States and cases    | case | screen, behaviour |   ← rows fixed to structure.cases
 Rules and exceptions  rules and exceptions (sources are not dissolved in here)
-References        source and evidence links
+References        source and evidence links, plus a `Precedent —` line for 2.1 item 4's find
 ```
 
-'Who' and 'when' do not get their own rows — who goes in the target-users property, when is absorbed into the background.
+'Who' and 'when' do not get their own rows — who goes in the target-users property, when is absorbed into the background. A `Precedent —` line is not evidence for a stated fact — it says what this entry's shape was checked against, and reads separately from the evidence lines beside it.
 
 **A policy entry's body** (`structure.policy_sections`): background / rules / references.
 
