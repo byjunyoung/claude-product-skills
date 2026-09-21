@@ -1,6 +1,6 @@
 ---
 name: prd
-description: Writes a product requirements document against a format, or fills out an existing one. Gathers and analyzes code repos, docs, designs, and chat history first, then proposes recommended answers so the interview can be settled with a single "go". Before writing anything it verifies read-only for vague wording, empty definitions, and engineering terms that do not belong in a product doc, then reads the entries against each other for roles nobody defined, entries that contradict, cases nobody wrote, and thresholds nobody can count. It writes for the people who read a spec rather than for the people who build it, so a rule says what somebody sees rather than what the system decided. Where the doc lives — markdown files, a git repo, or Notion — is decided by config. Triggers - "/pm:prd", "write the PRD", "draft the requirements", "PRD 작성", "PRD 만들어줘", "기능 항목 추가", "PRD 보강", "사용자 그룹 추가".
+description: Writes a product requirements document against a format, or fills out an existing one. Gathers and analyzes code repos, docs, designs, and chat history first, then proposes recommended answers so the interview can be settled with a single "go". Before writing anything it verifies read-only for vague wording, empty definitions, and engineering terms that do not belong in a product doc, then reads the entries against each other for roles and state names nobody defined, entries that contradict, cases nobody wrote, and thresholds nobody can count — and reads an entry that claims to describe what already ships against the thing itself. It writes for the people who read a spec rather than for the people who build it, so a rule says what somebody sees rather than what the system decided. Where the doc lives — markdown files, a git repo, or Notion — is decided by config. Triggers - "/pm:prd", "write the PRD", "draft the requirements", "PRD 작성", "PRD 만들어줘", "기능 항목 추가", "PRD 보강", "사용자 그룹 추가".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-duplicate-page, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-query-data-sources
 ---
 
@@ -106,7 +106,7 @@ A status of 'under review' means *a concrete proposal has been put up for review
 
 1. **Product overview** — in `structure.overview` order. Background separates fact from supposition
 2. **User groups** — name groups by **role** (not by team name). Reuse the same persona names across documents so they stay consistent. Each group's body goes in the `structure.user_group_rows` table
-3. **Domains + feature and policy entries** — settle the domains, then each entry in the appendix format below
+3. **Domains + feature and policy entries** — settle the domains, then each entry in the appendix format below. Where the product has states of its own that several entries will name, settle that vocabulary first as a policy entry — item 0 in 3.1 is what reads it back
 
 ### 2.2 Extend — units of work
 
@@ -118,6 +118,8 @@ A status of 'under review' means *a concrete proposal has been put up for review
 ### 2.3 Interview principles
 
 Ask about the gaps **together, in one pass**. Do not scatter the questions. (The exception is 3.1: where one answer changes the next question, they go one at a time.) Attach a material-backed recommendation to each, marked (recommended), so a short answer finishes it. If new ambiguity turns up mid-write, do not settle it yourself — ask again, or mark it TBD.
+
+**The gap list is not the list of blank fields.** A blank is a question the format already knew to ask. The ones that cost a second round are the questions an *answer* creates: adopt *it can be deleted* and two decisions appear that were on no form — what becomes of what was already there, and what somebody on another screen sees. So take each recommendation about to go up and ask what adopting it would settle next, and put whatever that turns up into this pass rather than leaving it for 3.1 to find once a draft exists. A format holds the questions somebody thought to give it a field for, which is why the ones it is missing are the ones nobody asked.
 
 ### 2.4 The language it comes out in
 
@@ -162,11 +164,13 @@ Self-check, read-only. Anything caught sends it back to step 2.
 
 ### 3.1 Does it hold together
 
-The checks above find what is missing, malformed or unreadable. They do not find a document that is complete and wrong — and a spec with no blank left in it can still contradict itself, skip a case, or name a number nobody can count. Read the entries against each other, in this order.
+The checks above find what is missing, malformed or unreadable. They do not find a document that is complete and wrong — and a spec with no blank left in it can still contradict itself, skip a case, or name a number nobody can count. Read the entries against each other, in this order, and then against the thing they describe.
 
-**0. Every role it names is defined.** Collect the roles, permissions and account words the entries actually use, and look each one up in the user-group table. A word with no row there is reported as exactly that — *this role is not defined anywhere* — and never as a contradiction.
+**0. Every role and every state it names is defined.** Collect the roles, permissions and account words the entries actually use, and look each one up in the user-group table. Then collect the product's own state names — whatever the entries call the condition a machine, a screen or an order is in right now — and look those up too. A word with nothing behind it is reported as exactly that — *this one is not defined anywhere* — and never as a contradiction.
 
-This one comes first because the rest cannot be judged without it. Two entries that look like they disagree may be naming the same role twice under different words, or two genuinely different roles; only the group table settles which. Judged without it, the report is confident and wrong, which costs more than saying nothing.
+This one comes first because the rest cannot be judged without it. Two entries that look like they disagree may be naming the same thing twice under different words, or two genuinely different things; only the definition settles which. Judged without it, the report is confident and wrong, which costs more than saying nothing.
+
+**The states need somewhere to be looked up in, and `structure.cases` is not it.** Those rows are the shapes any screen can be in, the same list in every document. A product's own states are its own, they are what entries disagree about, and nothing in the skeleton holds them. One policy entry does, written in `structure.policy_sections` like any other. Where no such entry exists yet and the names have already gone three ways across three entries, propose one and settle it there — reconciling entries against each other pair by pair grows with how many of them there are, and leaves nothing behind for the next entry somebody writes.
 
 **1. Entries that contradict each other.** One entry allows what another forbids, or two say different things about the same object. Quote both, and say which fact would settle it.
 
@@ -178,7 +182,11 @@ This one comes first because the rest cannot be judged without it. Two entries t
 
 **5. What it does outside the screen it is written for.** Where an entry's setting reaches somebody it never mentions — the end customer, another surface, a display further down — say in one line what that person sees. Entries are usually split by the screen an operator works in, so a consequence that lands one step away belongs to no entry unless one claims it.
 
-**What to do with what it finds.** Whatever the material settles, settle it and rewrite the entry. What needs a person becomes a question — asked together where the questions are independent, and **one at a time where one answer changes the next**, since resolving a contradiction usually moves other entries with it. What genuinely cannot be answered now becomes a TBD **carrying who decides it and by when**; without those two it does not pass, the same rule every other TBD in this document lives under.
+**6. An entry that says this is how it works today, against what actually works today.** The five above read the entries against each other; this one reads an entry against the thing it claims to describe. It runs on those entries only — one proposing something not built yet is *supposed* to differ from what ships, and a check that flags those is a check nobody reads twice. Where the material included the code or a running build, take the entries of the first kind and read the values, the cases and the state names off it.
+
+Report what turns up; do not reconcile. A build drifts from a decision somebody approved as easily as a document drifts from a build, and an entry quietly rewritten to match the code is how an approved decision disappears with nobody deciding to drop it. Quote both sides and name the fact that would settle it, exactly as item 1 does. Where the material had no code or build in it, say the check did not run — an entry nobody could check is not an entry that was confirmed.
+
+**What to do with what it finds.** Whatever the material settles, settle it and rewrite the entry — bar item 6, where both sides are reported and which one gives way is somebody's decision rather than this document's. What needs a person becomes a question — asked together where the questions are independent, and **one at a time where one answer changes the next**, since resolving a contradiction usually moves other entries with it. What genuinely cannot be answered now becomes a TBD **carrying who decides it and by when**; without those two it does not pass, the same rule every other TBD in this document lives under.
 
 ---
 

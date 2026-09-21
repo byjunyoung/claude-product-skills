@@ -53,7 +53,10 @@ prd:
     policy_sections:  [Background, Rules, References]
 
     # Fixed rows of the states table. Use '—' when a row does not apply,
-    # 'Other' for anything outside the list.
+    # 'Other' for anything outside the list. These are the shapes any screen can
+    # be in, the same list in every document. A product's own states — what a
+    # machine, a screen or an order is in right now — are not these: they belong
+    # in one policy entry, and the entries using those names are read against it.
     cases: [Normal, Empty, Loading, Error, No permission]
 
   # --- Entry properties. Use the words your team actually uses --------------------
