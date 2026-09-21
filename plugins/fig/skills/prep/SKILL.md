@@ -73,7 +73,9 @@ States and elements that **repeat identically across many screens** — generic 
 2. **Each screen gets an annotation on its Default, not a placeholder** — instead of empty/error/loading frames per screen, put a **Dev Mode annotation** on that screen's Default frame referencing the common page. Write it as a markdown link so it jumps on click (the `commonRef` helper). Nothing invades the layout, and "this screen's empty/error/loading is the common one" survives into handoff.
 3. **If placeholders are already scattered, remove them and convert** — delete the common-natured placeholder frames built per screen, and tidy the `[state]` and `-->` arrows that pointed at what was deleted (reconnect broken flows with `/fig:arrows`). **Before deleting, confirm that screen has its own separate Default** so the only copy is never destroyed → preview → go.
 
-**Deciding common versus screen-specific:** if the state repeats *identically across many screens*, it goes on the common page. If it is *that screen's own* empty message, its own error, its own interaction result, it stays a per-screen placeholder (step 4). When it is ambiguous, ask about scope — do not sweep screen-specific states into the common pile. **A real screen that has already been designed is not a placeholder**, so it is neither deleted nor annotated, even if its name ends in `-Empty`; exclude it and say so.
+**Deciding common versus screen-specific:** if the state repeats *identically across many screens*, it goes on the common page. If it is *that screen's own* empty message, its own error, its own interaction result, it stays a per-screen placeholder (step 4). When it is ambiguous, ask about scope — do not sweep screen-specific states into the common pile.
+
+**The test is what is on screen, not what the state is called.** A state that still shows the screen's own furniture — its table with its own columns and no rows, its filters, its header — belongs to **that screen**, however generic the name sounds, and is drawn per screen. Only a state that replaces the page with a single message carrying nothing of the screen is common. A list's empty state is almost always the first kind; a session-expired page is the second. Reading `Empty`, `Loading`, `Error` as common on the strength of the name is the way this goes wrong, and it takes a whole class of screens out of the to-draw list at once. **A real screen that has already been designed is not a placeholder**, so it is neither deleted nor annotated, even if its name ends in `-Empty`; exclude it and say so.
 
 Canonical state frames on the common page carry the same identifying style as placeholders (dashed border, `Placeholder —` / `TBD`). Once the design is filled in, updating that one place counts as updating every screen that references it.
 
@@ -105,6 +107,7 @@ The criteria are not repeated here. Two copies drift apart at the first revision
 - Collect frame and section names, coordinates, and sizes with page-level `get_metadata`
 - Identify each screen from its screenshot (batched five at a time, in parallel) — never guess from the name alone
 - If sections already exist, read their fill and name pattern and follow them
+- **Read how a finished page in this file covers one screen.** Open a sibling page that is already built and list its frames for a single screen — how many states it carries, which suffixes, whether a modal has its selected state drawn beside it, whether a completion toast exists. **That is the house baseline for step 4, and it outranks the fallback table there.** A file where one screen carries a dozen frames and a file where it carries three are both internally right; the wrong answer is a page that does not match its own neighbours. Name the page it was read from in the report — and say so when there is none, because the first page in a file has no baseline and the fallback table is all there is
 
 ### 2. Propose the plan (preview required)
 
@@ -136,7 +139,7 @@ Never all at once — verify after each step before the next:
 
 Check on two axes:
 
-**(a) State variant checklist** — `naming.required_states` is the basis. Settle the screen type (list, form, search) from the screen's content, then compare against that type's list. If the config has none, use the fallback below and note that in the report:
+**(a) State variant checklist** — `naming.required_states` is the basis. Settle the screen type from the screen's content, then compare against that type's list. **A screen is usually more than one type — run every row that applies and take the union.** A list with an edit card that opens under the selected row is a list *and* a form, so it owes the list's empty and load-failure states *and* the form's validation and leave-confirmation ones; settling on the single type that fits best is how half the list goes missing. If the config has none, use the fallback below and note that in the report:
 
 | Screen type | Expected states |
 |---|---|
@@ -157,6 +160,8 @@ Pick the placeholder's state suffix from `naming.states` — never invent one.
 
 Present the missing list as a table, including which clue each was inferred from → placeholders are created after a go. **Where the policy is undecided, write `TBD (needs confirmation): …` into the placeholder's description** — never draw an invented behaviour as though it were settled.
 
+**A placeholder is work owed, not work done.** Where the case is already settled — the spec describes it, or a sibling page has drawn the same thing — the stub stands in only until the design step fills it, and the report says so in those words. Drawing the real screen is not this skill's job (that is the design step), which is exactly why the report has to hand the list on rather than close on it. A stub counted as coverage is worse than a gap, because a gap is still visible.
+
 ### 5. Verify and hand off
 
 **The mandatory last action of this step — call `/fig:lint` (via the Skill tool).** Once writing is done (creating, duplicating, moving, placing), **always** call `/fig:lint` and get `STRUCT PASS` and `FLOW PASS` — unconditionally if clone or move was involved. Fix what it reports and call again; **never report completion without a PASS.**
@@ -164,6 +169,7 @@ Present the missing list as a table, including which clue each was inferred from
 No inline self-check audit lives here. Holding the same check in two places means one gets fixed and they drift — the verdict always comes from `/fig:lint` alone.
 
 - **Never PASS on an isolated screenshot.** `node.screenshot()` and single-node captures render a frame on its own and **cannot catch a parent or canvas-position error** — the frame looks perfectly fine by itself. The first pass is `/fig:lint`'s measurements; the second is **a screenshot of the whole section node**, not an isolated frame. When clone or move was involved, this is almost always where the accident shows
+- **State the coverage per screen, beside the PASS** — for each screen, which required states are drawn, which are stubbed, and which are still missing. **A `PASS` is structural and says nothing about coverage**: the required-state check is the one item `/fig:lint` deliberately leaves to judgement (its `✋`), so a page of one Default frame passes every check there is. Reporting the PASS on its own reads as "finished" for something nobody counted
 - **Output the per-section handoff URLs** — `https://figma.com/design/{fileKey}/?node-id={section id with : replaced by -}`. This matches the "share section URLs for handoff, not individual frames" checklist
 - End the output with: the list of guessed labels needing confirmation, the list of TBD policies, and what comes next — the flow with `/fig:arrows`, and `/fig:handoff` once the screens are drawn
 

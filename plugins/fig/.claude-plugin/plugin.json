@@ -1,7 +1,7 @@
 {
   "name": "fig",
   "description": "A bundle for the half of Figma work that isn't drawing the screen itself. It builds your to-draw list before you start, and keeps a file several people share in order afterwards.",
-  "version": "3.17.0",
+  "version": "3.18.0",
   "author": {
     "name": "Junyoung Kim",
     "url": "https://www.linkedin.com/in/byjunyoung/"
