@@ -1,5 +1,9 @@
 # pm
 
+## 0.28.0 — 2026-09-21
+
+- **A filled cell is not a settled case.** 3.1's second check read the states-and-cases table for what was left blank, so a row that had answered twice in one cell passed — *nothing registered yet / nothing matched the filter* in the empty row, *save failed / a required field is missing* in the error row. Each of those pairs is two screens, and they are not neighbours: one is a whole page somebody reaches with no data at all, the other is a line beside the field they just typed in. Whoever drew from the row drew one, and nothing downstream could tell that the other was missing — not the document, which was complete, and not the design file, where the frame that was never asked for cannot be counted. The check now reads the cell for how many conditions it names, and asks for the split or for which one the entry means
+
 ## 0.27.0 — 2026-09-21
 - **A recommendation for a new feature had only this team's own material behind it.** 1.3 already searches what exists internally before anything gets proposed, but a feature entry drafted for the first time never looked outside the team for how a comparable product covers the same ground — so the recommendation was only ever as good as what was already on file
 - **A feature entry, the first time it is drafted, now gets a precedent check.** A local research archive first if `prd.precedent.archive_dir` names one, then the web. What 1.3 already found always goes first and outranks it: a shape this team decided against, for a reason a document or a prior PRD gives, is a decision, not a gap for precedent to fill, and precedent does not reopen it

@@ -177,6 +177,8 @@ This one comes first because the rest cannot be judged without it. Two entries t
 
 **2. The case nobody wrote.** A condition with two branches and one outcome. A states-and-cases row left at `—` where the case plainly applies. Ask about the branch, not about the table.
 
+**And the row that holds two cases in one cell.** The same failure inverted, and it survives every check there is because the cell is not blank: an empty state written *nothing registered yet / nothing matched the filter*, an error row written *save failed / a required field is missing*. Each pair becomes two screens — one a whole page somebody reaches with no data at all, the other a line beside the field they just typed in — so whoever draws from that row draws one of them, and the other is never built or ever noticed missing. Split the cell, or say in it which of the two this entry means.
+
 **3. A number with no rule around it.** A threshold, a count or a period that is stated but not countable — what resets it, what the boundary is, what unit it is in. "Locks after 3 failures" is not a requirement until it says when the counter goes back to zero.
 
 **4. The other half of the switch.** An entry that says how something is turned on, created or added, but never what happens when it is turned off, deleted or undone. Ask what is left behind — the values that were stored, the places that displayed them, what somebody opening the screen again would find. A rule written in one direction only is half a rule, and the half nobody wrote is the half that gets built by accident.
