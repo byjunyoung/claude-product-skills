@@ -76,7 +76,15 @@ line after it. Replacing the section throws away the history the section exists 
   content, not the return value.
 - **A read straight after a write can return the pre-write snapshot.** Verify by content.
 - **Relation properties replace wholesale.** There is no adding one member.
-- **A select value with no option yet (unverified).** Writing a milestone the property has no option for may create the option or be refused. Where refused, add it by rewriting the property's option list with every existing name kept — a list that leaves one out deletes that option, and every row holding it goes blank without an error. **So check the option list before the write goes in a proposal** — the schema from the fetch above carries every option, and a value the other side shows that this property has no option for is a finding to report rather than a write to attempt. Whoever adds it should be looking at what else is on that list.
+- **A select value the property has no option for is refused, not created.** The refusal carries the
+  full list of permitted values, so it tells you what is already there. Adding one is a schema write —
+  `ALTER COLUMN "{name}" SET SELECT(...)` redefines the option set wholesale — so every existing option
+  goes back into the statement **with the colour it already has**: a name left out deletes that option
+  and blanks every row holding it without an error, and the same name under a different colour is
+  refused outright. Take the names and the colours from the fetch above rather than from memory.
+  **Count the rows per option first, and compare after** — a name that comes back unchanged keeps its
+  internal id, so matching counts are what shows the set survived. The proposal says which options are
+  being added; the count check belongs in the result.
 - **A property write can fire the database's own automations.** A database may move a status or stamp a date when a row changes. After the first write of a batch, read that row back and compare the fields you did not send before writing the rest.
 - **Text typed by hand corrupts.** Copy the existing string and substitute into it.
 - **A table cell edit can push a line break into the cell behind it.** Keep the line count and

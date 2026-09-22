@@ -1,5 +1,10 @@
 # pm
 
+## 0.29.0 — 2026-09-22
+
+- **Writing a select value the property has no option for was described as possibly creating it, and the entry was marked unverified.** It is refused, and the refusal carries the list of permitted values — which makes the refusal itself the cheapest way to read what is on the list. The entry had put adding the option out of scope, as something to report rather than attempt; it is now part of the path, as a schema write that goes through the proposal like any other
+- **What the rewrite needs, which the entry did not say.** The option set is redefined wholesale, so every existing option goes back in **with the colour it already carries** — the same name under a different colour is refused on its own, and a name left out deletes that option and blanks its rows with no error at all. A name that comes back unchanged keeps its internal id, which is why the rows survive, and why counting rows per option before and after is the check that the set came through rather than a formality
+
 ## 0.28.0 — 2026-09-21
 
 - **A filled cell is not a settled case.** 3.1's second check read the states-and-cases table for what was left blank, so a row that had answered twice in one cell passed — *nothing registered yet / nothing matched the filter* in the empty row, *save failed / a required field is missing* in the error row. Each of those pairs is two screens, and they are not neighbours: one is a whole page somebody reaches with no data at all, the other is a line beside the field they just typed in. Whoever drew from the row drew one, and nothing downstream could tell that the other was missing — not the document, which was complete, and not the design file, where the frame that was never asked for cannot be counted. The check now reads the cell for how many conditions it names, and asks for the split or for which one the entry means
