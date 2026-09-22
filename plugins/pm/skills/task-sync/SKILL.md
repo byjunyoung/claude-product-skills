@@ -96,6 +96,7 @@ It prints the file to read — the bundled one, or yours from `adapters.dirs` wh
 | Schedule past | The end date has gone by and neither side is terminal | **Report, propose nothing.** A date that slipped is a decision somebody has to make, and moving it here makes the slip disappear instead of surfacing it |
 | Version stale | The record's version differs from the milestone resolved for its ticket, or is blank where it should carry one | Correct the record toward the mirror. **Never the other way** — a milestone is moved on the tracker, where the people planning the release can see it, and a version edited on the record is exactly what this row exists to catch. A parent whose milestone moved shows here once for every task under it; they go in one batch. **A value the record's property cannot hold is reported rather than written** — adding the option is a schema change somebody should make where they can see the whole list. **And judge a milestone that looks wrong for the ticket by the ticket's project label, never by its title** — a title naming one product on a ticket filed under another is the ordinary case, not a drift, and only where the label disagrees as well is it worth asking before the copy. Only runs where `task.properties.version` is named |
 | Policy | Milestone on the wrong level, or a label the rules require that the ticket does not carry | Correct per `task.hierarchy`, and per the rule document where one is configured. **A label the tracker does not have is reported, never created** |
+| Reads as internals | A title, or a sentence a person acts on, written in the vocabulary of the system rather than of the people who act on it | **Report, and name the way out.** `/pm:task-publish` rewords one ticket with a person watching. The same reword across a list is a bulk edit of sentences other people wrote, on one approval |
 | Off template | The ticket's headings are not the template's — a section missing, a section the template never had, a different order | **Report, and name the way out.** `/pm:task-publish` fixes one ticket with a person watching. This skill does not, because the same edit across a list would rewrite a hundred tickets on one approval |
 | Held by the rules | The tracker's enforcement has flagged the ticket — a violation, a decision it is waiting on | **Report, propose nothing.** It is waiting on a person, and that person is usually not the one running this |
 
@@ -112,7 +113,7 @@ Only what was approved goes to step 5.
 
 Run the approved changes and nothing else.
 
-**Creating follows the same rules as `/pm:task-publish`** — the parent is resolved and confirmed rather than assumed, the ticket carries the configured title and labels, the milestone lands on the level `task.hierarchy.milestone_on` names, and the link property is written back afterwards. A project with no entry in `task.label_map.project` is skipped, not guessed at.
+**Creating follows the same rules as `/pm:task-publish`** — the parent is resolved and confirmed rather than assumed, the ticket carries the configured title and labels, read once for whether the people who will act on it can read it too, the milestone lands on the level `task.hierarchy.milestone_on` names, and the link property is written back afterwards. A project with no entry in `task.label_map.project` is skipped, not guessed at.
 
 This skill writes only a minimal ticket body and **does not add a link back to the record** — that is `/pm:task-publish`'s job, done with a person in the loop. Where such a link is already in the body, leave it: it is not used for matching and it is not removed either.
 
@@ -127,7 +128,7 @@ This skill writes only a minimal ticket body and **does not add a link back to t
 read      : {how} · coverage: {N rows surfaced, exhaustive or not}
 created {n} · relinked {n} · resurrection blocked {n} · duplicates merged {n}
 field-synced {n} · version-synced {n} · progress-synced {n} · skipped {n} · errors {n}
-reported only: off template {n} · held by the rules {n} · ahead of the mirror {n} · schedule slipped {n}
+reported only: off template {n} · reads as internals {n} · held by the rules {n} · ahead of the mirror {n} · schedule slipped {n}
 ```
 
 The coverage line comes first on purpose. A count with no coverage reads as "everything is now consistent", which is the one claim this skill cannot make on a partial read.

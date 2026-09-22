@@ -1,5 +1,12 @@
 # pm
 
+## 0.30.0 — 2026-09-22
+
+- **A ticket came out written for the system it is built on.** The title carried the internals' own word for the thing — a layer, a gate, a surface — and the grounds for a condition sat inside the condition, ahead of the thing being confirmed. Both pass every check there is: the template was followed, the sections were all there, the labels were right. What they cost is the reader, and the reader is most of who opens a ticket — whoever draws the screens, whoever decides what is in this release, whoever answers for it once it ships
+- **`/pm:task-publish` now writes the title and the sentences under it for the people who will act on them.** The outcome rather than the mechanism, the grounds moved under the notes heading, and plain without being rounded off — the reader knows the product better than anyone, just not its internals. Where the record's title is the one written in that vocabulary, the preview says so and offers a plainer one beside it rather than renaming anything quietly: the title is the record's under `task.field_owner`, and a rename nobody saw is how two sides start disagreeing about what a ticket is called
+- **`/pm:task-sync` gains the matching diagnosis and will not act on it.** `reads as internals` reports and names the way out, the same as `off template` — rewording one ticket is `/pm:task-publish` with a person watching, and the same reword across a list is a bulk edit of sentences other people wrote, on one approval. On the create path the configured title is read once for whether its audience can read it too
+- No new config key
+
 ## 0.29.1 — 2026-09-22
 
 - **A published spec had nowhere to go next.** Whoever writes one usually draws the screens too, and this skill's redirects named the design skills for tidying, auditing and comparing — every step around the drawing, and not the drawing. `/fig:draw` now sits in that list, and the line says the thing worth knowing about it: it takes its copy from the published document instead of writing plausible strings that later harden into a ticket's acceptance conditions

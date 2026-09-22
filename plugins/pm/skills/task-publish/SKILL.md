@@ -244,6 +244,26 @@ With the key null there is no template, and headings come from `task.ticket.sect
 
 **No pointer to the parent is written either.** Where the tracker links a task to its parent, the parent is already on the screen, and a line naming it only adds a second thing to keep correct. It is also where an in-house word for the two binding sections tends to get invented — the ticket is read by people who were not in the conversation that coined it. Link rows come from `task.ticket.link_rows`, and a row whose value is missing is dropped rather than written as an empty bullet.
 
+#### Written for the people who will act on it
+
+A ticket is read by whoever picks the work up, and by everyone downstream who has to know what it
+covers — the person drawing the screens, the one deciding what is in scope this release, the one
+answering for it once it ships. Most of them do not read the system it is built on. So the title and
+the sentences under it say **what somebody will see or do**, not what the machine does underneath.
+
+- **The title names the outcome.** A word only the internals use — a layer, a gate, a flag, a surface
+  — reads as precise to whoever coined it and as nothing at all to everybody else. Where the plain
+  name is longer, it is still the shorter path to somebody knowing what the ticket is
+- **The record's title is the default, not a verdict.** Where it was written in that vocabulary, say
+  so in the preview and offer a plainer one beside it. Never change it quietly: the title is the
+  record's under `task.field_owner`, and a rename nobody saw is how the two sides start disagreeing
+  about what a ticket is called
+- **The grounds go under the notes heading.** A clause number, a spec path, a decision id — these say
+  why a condition is what it is, and whoever chases the reasoning looks for them there. Inside a done
+  condition they crowd out the thing being confirmed
+- **Plain is not simplified.** The reader knows the product better than anyone, just not its
+  internals, so nothing is rounded off to make a sentence read easily
+
 #### The summary is a scope boundary, not a restated title
 
 The one thing a task says that nothing else can. The parent describes the whole feature; this section says which slice is this one's, and where the neighbours start.
