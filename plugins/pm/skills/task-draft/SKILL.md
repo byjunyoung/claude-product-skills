@@ -110,7 +110,7 @@ Create the record in `task.record`, writing properties and body in a single writ
 
 | Property | Value |
 |---|---|
-| Title | A noun phrase. The core of the request, short, confirmed with the user |
+| Title | A noun phrase naming the work, in the grammar the list's other records already use — read a few before writing one. Never a sentence stating the symptom: that is what a defect is called. Short, confirmed with the user |
 | Project | One of `task.properties.projects`, recommended from context. Empty list means ask |
 | Group | The feature grouping. Interview when unsure |
 | Assignee | `task.properties.default_assignee`, or ask |

@@ -1,5 +1,10 @@
 # pm
 
+## 0.30.1 — 2026-09-22
+
+- **0.30.0 said to write the title for its reader and left the grammar open, so titles turned into sentences.** *The setting nobody can reach* is plain, names the outcome, and passes every word of the rule — and it is what a defect is called. A task titled that way stops reading as something somebody is doing, and in a list of names like `<what> <verb-as-noun>` it reads as an import even though nothing in it is jargon
+- **The rule now names the shape as well as the vocabulary.** A title is a noun phrase naming the work; the sibling titles are read before one is written, because a list kept by hand already has a grammar and matching it is what makes a new row look like it belongs. `/pm:task-draft`'s title row carries the same two sentences, since that is where a record's title is first written and `task.field_owner` sends it downstream from there
+
 ## 0.30.0 — 2026-09-22
 
 - **A ticket came out written for the system it is built on.** The title carried the internals' own word for the thing — a layer, a gate, a surface — and the grounds for a condition sat inside the condition, ahead of the thing being confirmed. Both pass every check there is: the template was followed, the sections were all there, the labels were right. What they cost is the reader, and the reader is most of who opens a ticket — whoever draws the screens, whoever decides what is in this release, whoever answers for it once it ships

@@ -251,9 +251,17 @@ covers — the person drawing the screens, the one deciding what is in scope thi
 answering for it once it ships. Most of them do not read the system it is built on. So the title and
 the sentences under it say **what somebody will see or do**, not what the machine does underneath.
 
-- **The title names the outcome.** A word only the internals use — a layer, a gate, a flag, a surface
-  — reads as precise to whoever coined it and as nothing at all to everybody else. Where the plain
-  name is longer, it is still the shorter path to somebody knowing what the ticket is
+- **The title names the work, as a noun phrase.** A word only the internals use — a layer, a gate, a
+  flag, a surface — reads as precise to whoever coined it and as nothing at all to everybody else.
+  Where the plain name is longer, it is still the shorter path to somebody knowing what the ticket is
+- **Plain wording is not licence to write a sentence.** *The setting nobody can reach* states a
+  symptom; it is what a defect is called, and a task named that way stops reading as something
+  somebody is doing. The work is named, and what it is being done to — the grammar the list already
+  uses for that is right there in the neighbours
+- **Read the sibling titles before writing one.** A list that has been kept by hand has a shape —
+  most often `<what> <verb-as-noun>`, and a dash before the part that narrows it. Matching that shape
+  is what makes a new row look like it belongs; a title in a grammar of its own reads as an import
+  even when every word in it is plain
 - **The record's title is the default, not a verdict.** Where it was written in that vocabulary, say
   so in the preview and offer a plainer one beside it. Never change it quietly: the title is the
   record's under `task.field_owner`, and a rename nobody saw is how the two sides start disagreeing
