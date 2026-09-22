@@ -28,6 +28,7 @@ const MIN_N = CA.min_samples != null ? CA.min_samples : 5;
 const DOMINANCE = CA.dominance != null ? CA.dominance : 0.9;
 const BODY = CA.body_offset || { left: 0, top: 0 };
 const LABEL = (C.naming || {}).label_prefix || "[label] ";
+const PATTERN_PAGE = (C.naming || {}).pattern_page_pattern;
 
 const page = figma.root.children.find(p => p.name.indexOf(PAGE) !== -1);
 if (!page) return `page not found: ${PAGE}`;
@@ -60,7 +61,13 @@ if (MODE === "collect") {
 
 // compare — the shared shell (side nav, top bar) is the same instance on every screen, so it is not a target.
 // Only the content area is examined.
+//
+// A pattern page has no shell. Its frames are compositions a few hundred pixels wide, so every
+// instance on one sits inside the offset meant to skip a nav column, and the whole page reads as
+// nothing to check — measured on a live file, where the page came back PASS having examined zero
+// instances. The offset is therefore dropped on a page matching naming.pattern_page_pattern.
 const S = typeof STAT !== "undefined" ? STAT : {};
+const isPatternPage = !!(PATTERN_PAGE && new RegExp(PATTERN_PAGE).test(page.name));
 const issues = [], unknown = {};
 for (const s of page.children.filter(c => c.type === "SECTION")) {
   for (const f of s.children.filter(c => c.type === "FRAME" && !c.name.startsWith(LABEL))) {
@@ -69,7 +76,7 @@ for (const s of page.children.filter(c => c.type === "SECTION")) {
     for (const n of f.findAll(x => x.type === "INSTANCE" && x.componentProperties)) {
       const b = n.absoluteBoundingBox;
       if (!b) continue;
-      if (b.x - fb.x < BODY.left || b.y - fb.y < BODY.top) continue;
+      if (!isPatternPage && (b.x - fb.x < BODY.left || b.y - fb.y < BODY.top)) continue;
       const p = n.componentProperties, keys = boolKeys(p);
       if (!keys.length) continue;
       const cname = await masterName(n);

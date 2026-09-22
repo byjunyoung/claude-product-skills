@@ -62,8 +62,10 @@ naming:
   # between them. That rule is what drifts when two people draw the same kind of
   # thing a fortnight apart, each one internally fine.
   # null means the file has no such page, and /fig:draw then proposes defining
-  # one rather than inventing a one-off. Keep the page out of pages.strict: it
-  # holds compositions, not screens, so the section and flow rules do not apply.
+  # one rather than inventing a one-off.
+  # File the patterns in sections, the same as any other page: the flow rules do
+  # not apply to them (the audit knows to drop a pattern page from coverage), but
+  # a frame sitting loose on a page is reported whatever the page is for.
   pattern_page_pattern: null                  # e.g. '^\[Pattern\]|^Patterns$'
   pattern_frame_prefix: null                  # e.g. "pattern/"
 

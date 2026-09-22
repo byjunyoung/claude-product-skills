@@ -75,6 +75,8 @@ That rule is a third thing, and it needs its own place:
 2. **No pattern, but the file has two or more precedents** → derive the pattern from them, write it to the pattern page, then draw from it. This is the common case and the valuable one: the rule already existed, unwritten, and the second screen is where it either gets recorded or gets forgotten
 3. **Nothing anywhere** → a new pattern has to be defined. It binds every screen after this one, so it is not a detail of this screen: propose it, say what it will bind, and take its own go
 
+**A pattern goes into a section on that page, not loose on the canvas.** The structure audit reports any frame sitting directly on a page, whatever the page is for, and it does not read page strictness to decide; the coverage exception that lets a pattern off the flow requirement only reaches frames that are inside a section. So both rules point the same way — one section per family of patterns, named to `naming.section_pattern` like any other.
+
 **Cases 2 and 3 are a separate write, behind their own preview → go.** The pattern page is a different page from the one being drawn on, and a script may set the current page only once; an error also rolls the whole call back, so a combined write loses the screen along with the pattern. Two gates, two calls, in that order — pattern first, then draw from it.
 
 **Where `naming.pattern_page_pattern` is `null`, propose creating the page.** That is what the setting means here: not a check to skip, but a convention the file has not adopted yet. Drawing on without it is how the next inconsistency gets made.
