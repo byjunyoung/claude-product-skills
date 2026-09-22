@@ -1,5 +1,9 @@
 # pm
 
+## 0.29.1 — 2026-09-22
+
+- **A published spec had nowhere to go next.** Whoever writes one usually draws the screens too, and this skill's redirects named the design skills for tidying, auditing and comparing — every step around the drawing, and not the drawing. `/fig:draw` now sits in that list, and the line says the thing worth knowing about it: it takes its copy from the published document instead of writing plausible strings that later harden into a ticket's acceptance conditions
+
 ## 0.29.0 — 2026-09-22
 
 - **Writing a select value the property has no option for was described as possibly creating it, and the entry was marked unverified.** It is refused, and the refusal carries the list of permitted values — which makes the refusal itself the cheapest way to read what is on the list. The entry had put adding the option out of scope, as something to report rather than attempt; it is now part of the path, as a schema write that goes through the proposal like any other

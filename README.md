@@ -143,7 +143,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | Skill | Also needs |
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — they drive a real browser |
-| `/fig:prep` `/fig:lint` `/fig:sync` `/fig:diff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
+| `/fig:prep` `/fig:draw` `/fig:lint` `/fig:sync` `/fig:diff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
 | `/fig:diff` `/pm:setup` `/pm:task-draft` `/pm:task-publish` `/pm:task-sync` | **GitHub** — only where `task_tracker.type` / `task.mirror.type` is `github`. Two logins are involved: Claude's connection, and the `gh` command the tracker is read through. The check covers both, and names the account `gh` is on |
 | `/fig:qa` `/pm:task-draft` | **A chat tool** — only where the request source is a thread. For `pm`, `sources.chat_type` names it; `/fig:qa` takes the tool from the link. Slack ships |
 | `/pm:log` | **A calendar and a chat tool** — both optional, named by `sources.calendar_type` and `sources.chat_type`; Google Calendar and Slack ship. Named as `none` they are skipped and the log says so. A scheduler on your own machine, if you want it unattended |
@@ -239,14 +239,14 @@ That's setup done. [**fig**](#fig--the-design-file) covers the loop from here.
 
 ## fig — the design file
 
-`fig` is the half of Figma work that isn't drawing the screen itself. Three rhythms: the cycle of drawing and handing off one feature, the per-release pass that keeps the canonical page current, and a health check you can run any time.
+`fig` is for a Figma file several people share. Three rhythms: the cycle of drawing and handing off one feature, the per-release pass that keeps the canonical page current, and a health check you can run any time.
 
 ### The cycle — drawing one feature through handoff
 
 ```
 /fig:setup    First time in a file, observe its conventions and draft a config
 /fig:prep     Lay out the section skeleton, stub missing states as placeholders
-   ·          Draw the screens (official plugins, or by hand)
+/fig:draw     Fill each stub — following your file's own pattern, cloned from canonical
 /fig:arrows   Wire transition arrows and state groups
 /fig:lint     Audit structure, flow, and components in one pass
 /fig:handoff  Gate the passing sections and hand over the links
@@ -256,6 +256,10 @@ That's setup done. [**fig**](#fig--the-design-file) covers the loop from here.
 `prep` comes first because it builds the to-draw list. A list screen needs an empty state; a form needs a validation-failure state. Stub those as dashed placeholders and the gaps become visible. The point is that they surface before engineering asks.
 
 <img src=".github/prep-stubs.png" alt="Three finished screens above five dashed placeholder frames, each named for the state it stands for" width="100%">
+
+`draw` fills them in, but not in isolation — it clones the screen the stub belongs to, so what lands is the actual final screen, not a component floating on its own. It reuses whatever the design system already has for that state before inventing anything, and where one fact is genuinely still undecided, it draws the rest for real and pins the open question as an annotation on the one node it affects, rather than leaving the whole frame blank.
+
+Before it draws anything, though, it asks a question that is easy to skip: **how does this file build this kind of thing already?** Inconsistency is rarely carelessness — draw an alert row today and another one a fortnight from now and both will be defensible, but they will not be the same, because nothing in the file said how that row is arranged here. A design system holds the parts; what it does not hold is the arrangement. So `draw` looks for that rule on a page of its own — a **pattern page**, alongside the one holding your repeated states — and where a rule exists it follows it, where two screens already agree it writes the rule down, and where nothing answers it stops and has you decide, because that decision binds every screen after this one rather than just this one.
 
 `lint` is the gate you have to pass. It never writes to the file, so running it repeatedly is safe.
 
@@ -307,7 +311,7 @@ Neither touches the file. Run one when you inherit a file someone else has been 
 flowchart TD
     setup["fig:setup<br/>observe → config"]
     prep["fig:prep<br/>section skeleton · missing screens"]
-    draw["Draw screens<br/>official plugins or by hand"]
+    draw["fig:draw<br/>pattern → clone canonical → fill each stub"]
     arrows["fig:arrows<br/>flow arrows · state groups"]
     tokens["fig:tokens<br/>color token audit"]
     lint{"fig:lint<br/>audit gate · zero writes"}
@@ -336,6 +340,7 @@ flowchart TD
 | `/fig:setup` | Observe a file's conventions and draft a config |
 | `/fig:read` | Collect the page and screen inventory |
 | `/fig:prep` | Normalize names · place into sections · stub missing screens |
+| `/fig:draw` | Draw a screen or fill a stub — following the file's own pattern, cloned from its nearest canonical screen |
 | `/fig:arrows` | Create and re-sync flow arrows |
 | `/fig:lint` | Read-only audit gate (zero writes) |
 | `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task doc |
@@ -493,9 +498,11 @@ The two plugins never call each other. What they share is two objects, each name
 | The requirements doc | `qa.baseline.prd` | `prd.target`, and the `prd.notion` block |
 | The task record | `task_tracker.ref` | `task.record.ref` |
 
-Those two are the whole of the configuration, and each half of it exists for a reason. `/fig:qa` needs the spec because a defect report is only worth handing over when it reads *this breaks rule X in document Y* — and `/pm:prd` is what wrote document Y. `/fig:diff` needs the task record because an AS-IS/TO-BE table belongs beside the request that caused it — and `/pm:task-draft` is what opened that record.
+Those two are the whole of the configuration, and each half of it exists for a reason. The spec is read twice, at both ends of the same feature: `/fig:draw` reads it while the screens are being drawn, so the words in the file are the words the document settled rather than plausible ones written to fill a label — and `/fig:qa` reads it afterwards, because a defect report is only worth handing over when it reads *this breaks rule X in document Y*. `/pm:prd` is what wrote document Y. `/fig:diff` needs the task record because an AS-IS/TO-BE table belongs beside the request that caused it — and `/pm:task-draft` is what opened that record.
 
-Neither link is required. Leave `qa.baseline.prd` **empty** — written as `null`, which is how these settings say *not set*, and the check that needs it is skipped rather than failed — `/fig:qa` then files everything as needs-checking rather than as a defect. Leave `task_tracker.type` at `none` and `/fig:diff` prints its table as markdown instead. You lose the linkage, not the skill.
+That first read matters more than it sounds. A ticket's acceptance conditions are written from the design's own structure and copy, so a label somebody invented while drawing becomes a line engineering builds against and ticks off. Reading the spec while drawing is what stops a guess from hardening into a requirement.
+
+Neither link is required. Leave `qa.baseline.prd` **empty** — written as `null`, which is how these settings say *not set*, and the check that needs it is skipped rather than failed — `/fig:qa` then files everything as needs-checking rather than as a defect, and `/fig:draw` asks you for a source instead of assuming one. Leave `task_tracker.type` at `none` and `/fig:diff` prints its table as markdown instead. You lose the linkage, not the skill.
 
 **One more thing crosses, and it travels as data rather than as config.** Where `handoff.version` is on, `/fig:handoff` pins the moment it hands over — a Figma named version — and writes its label and date into the task doc. `/pm:task-publish` reads that line to fill the ticket's referenced-version row, and where `contract.design_match_line` is set, the done condition reads *the build matches the {version} design*. Without the pin that condition points at a target that moves the next time somebody opens the file.
 

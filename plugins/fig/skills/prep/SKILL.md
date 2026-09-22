@@ -10,7 +10,7 @@ allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__use_figma, mcp__p
 
 Like *mise en place* in a kitchen: before the design work and the arrows, every ingredient — every frame — gets cut and put where it belongs.
 
-Takes one page of a design file and (1) normalizes frame names to the convention, (2) groups them into feature-level sections and lays them out, and (3) reads what is actually on each screen to find missing cases and stub them as placeholder frames. A tidied page is only half done — connecting the flow with `/fig:arrows` completes the set.
+Takes one page of a design file and (1) normalizes frame names to the convention, (2) groups them into feature-level sections and lays them out, and (3) reads what is actually on each screen to find missing cases and stub them as placeholder frames. A tidied page is only a third done — `/fig:draw` fills the stubs, then connecting the flow with `/fig:arrows` completes the set.
 
 **Prerequisites**: always load the `figma:figma-use` skill before calling `use_figma`.
 
@@ -27,7 +27,7 @@ Takes one page of a design file and (1) normalizes frame names to the convention
 - Creating or syncing flow arrows → `/fig:arrows`
 - Checking for violations only, zero writes → `/fig:lint`
 - Auditing and applying work into the canonical page → `/fig:sync`
-- Designing the screens themselves → `figma:figma-generate-design`
+- Designing the screens themselves → `/fig:draw`
 - Just understanding the file structure → `/fig:read`
 
 ## Inputs
@@ -161,7 +161,7 @@ Pick the placeholder's state suffix from `naming.states` — never invent one.
 
 Present the missing list as a table, including which clue each was inferred from → placeholders are created after a go. **Where the policy is undecided, write `TBD (needs confirmation): …` into the placeholder's description** — never draw an invented behaviour as though it were settled.
 
-**A placeholder is work owed, not work done.** Where the case is already settled — the spec describes it, or a sibling page has drawn the same thing — the stub stands in only until the design step fills it, and the report says so in those words. Drawing the real screen is not this skill's job (that is the design step), which is exactly why the report has to hand the list on rather than close on it. A stub counted as coverage is worse than a gap, because a gap is still visible.
+**A placeholder is work owed, not work done.** Where the case is already settled — the spec describes it, or a sibling page has drawn the same thing — the stub stands in only until `/fig:draw` fills it, and the report says so in those words. Drawing the real screen is not this skill's job, which is exactly why the report has to hand the list on rather than close on it. A stub counted as coverage is worse than a gap, because a gap is still visible.
 
 ### 5. Verify and hand off
 
@@ -172,7 +172,7 @@ No inline self-check audit lives here. Holding the same check in two places mean
 - **Never PASS on an isolated screenshot.** `node.screenshot()` and single-node captures render a frame on its own and **cannot catch a parent or canvas-position error** — the frame looks perfectly fine by itself. The first pass is `/fig:lint`'s measurements; the second is **a screenshot of the whole section node**, not an isolated frame. When clone or move was involved, this is almost always where the accident shows
 - **State the coverage per screen, beside the PASS** — for each screen, which required states are drawn, which are stubbed, and which are still missing. **A `PASS` is structural and says nothing about coverage**: the required-state check is the one item `/fig:lint` deliberately leaves to judgement (its `✋`), so a page of one Default frame passes every check there is. Reporting the PASS on its own reads as "finished" for something nobody counted
 - **Output the per-section handoff URLs** — `https://figma.com/design/{fileKey}/?node-id={section id with : replaced by -}`. This matches the "share section URLs for handoff, not individual frames" checklist
-- End the output with: the list of guessed labels needing confirmation, the list of TBD policies, and what comes next — the flow with `/fig:arrows`, and `/fig:handoff` once the screens are drawn
+- End the output with: the list of guessed labels needing confirmation, the list of TBD policies, and what comes next — `/fig:draw` on each stub, then `/fig:arrows`, and `/fig:handoff` once the screens are drawn
 
 ## Implementation — the tidy helper preamble
 

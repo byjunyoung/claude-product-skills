@@ -29,7 +29,7 @@ Cross that line and something breaks. Tearing up the repo's conventions to match
 - Auditing the design's own structure, flow, and naming → `/fig:lint`
 - Marking AS-IS/TO-BE changes on the design and writing them up → `/fig:diff`
 - Applying into the canonical Figma page rather than into code → `/fig:sync`
-- The reverse direction, code up into Figma → `figma:figma-generate-design`
+- The reverse direction, a screen up into Figma → `/fig:draw`, which places it against this file's own canonical page and patterns before handing the assembly to `figma:figma-generate-design`
 
 ## Inputs
 

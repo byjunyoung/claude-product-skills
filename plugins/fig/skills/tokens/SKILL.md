@@ -24,7 +24,7 @@ Checks whether the colors inside a frame are actually bound to design system var
 - Structure and flow rule violations → `/fig:lint`
 - Flow arrows → `/fig:arrows`
 - Creating the tokens (variables) themselves → `figma:figma-generate-library`
-- Designing screens → `figma:figma-generate-design`
+- Designing screens → `/fig:draw`
 
 ## Inputs
 

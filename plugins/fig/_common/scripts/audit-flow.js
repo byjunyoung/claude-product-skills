@@ -174,11 +174,15 @@ for (const s of allSecs)
     else if (c.name.includes(ARROW))
       c.name.split(ARROW).map(t => t.trim()).forEach(x => connected.add(x));
   }
-// Canonical state frames on a shared page are expected not to appear in per-screen flow.
-// That whole page is dropped from coverage — with the setting null, this exception does not apply.
-const COMMON_RE = N.common_page_pattern ? new RegExp(N.common_page_pattern) : null;
-const isCommonPage = !!(COMMON_RE && COMMON_RE.test(figma.currentPage.name));
-if (!isCommonPage)
+// Canonical state frames on a shared page are expected not to appear in per-screen flow, and
+// neither are the compositions on a pattern page — a pattern is how a row is built, not a screen
+// anybody navigates to. Either page is dropped from coverage whole. With the setting null the
+// exception does not apply, which is why a file that has just adopted a pattern page and not yet
+// recorded it in the config still reports every pattern frame as an orphan.
+const EXEMPT_PAGE = [N.common_page_pattern, N.pattern_page_pattern]
+  .filter(Boolean).map(p => new RegExp(p));
+const isExemptPage = EXEMPT_PAGE.some(re => re.test(figma.currentPage.name));
+if (!isExemptPage)
   for (const f of frames)
     if (!f.excluded && !connected.has(f.name))
       issues.push(`[coverage] orphan frame (absent from the flow): ${f.name} — ${f.sec}`);

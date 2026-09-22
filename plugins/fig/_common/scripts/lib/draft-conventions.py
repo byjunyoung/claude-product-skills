@@ -84,6 +84,9 @@ def main():
     ncommon = [s for s in secnames if re.match(r'^공통|^common', s, re.I)]
     line("common_page_pattern", None, "a shared page may live outside this file, so nothing is inferred" if not ncommon else f"{len(ncommon)} sections observed — needs confirming")
     line("common_frame_prefix", None, "")
+    npat = [p.get("page", "") for p in probes if re.match(r'^\[?패턴|^\[?pattern', p.get("page", "") or "", re.I)]
+    line("pattern_page_pattern", None, "a pattern page is adopted on purpose, so nothing is inferred" if not npat else f"observed: {npat} — needs confirming")
+    line("pattern_frame_prefix", None, "")
     L.append("")
 
     # ── Pages ─────────────────────────────────────────────────

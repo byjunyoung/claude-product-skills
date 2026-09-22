@@ -55,6 +55,17 @@ naming:
   # null means this file has no such convention.
   common_page_pattern: null                   # e.g. '^Common|^\[UI\] Common'
   common_frame_prefix: null                   # e.g. "Common-"
+  # The page that holds this file's own composition patterns — how a list row is
+  # built here, where a status badge sits inside it, what an empty panel looks
+  # like. Neither of the two above it: the library holds the parts, the common
+  # page holds one copy of a repeated state, and this holds the arrangement rule
+  # between them. That rule is what drifts when two people draw the same kind of
+  # thing a fortnight apart, each one internally fine.
+  # null means the file has no such page, and /fig:draw then proposes defining
+  # one rather than inventing a one-off. Keep the page out of pages.strict: it
+  # holds compositions, not screens, so the section and flow rules do not apply.
+  pattern_page_pattern: null                  # e.g. '^\[Pattern\]|^Patterns$'
+  pattern_frame_prefix: null                  # e.g. "pattern/"
 
 # --- Page roles ----------------------------------------------------------------
 # Pages are sorted by name regex. An empty list means the file has no such tier.

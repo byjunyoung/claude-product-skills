@@ -11,7 +11,7 @@
     {
       "name": "fig",
       "source": "./plugins/fig",
-      "description": "A bundle for the half of Figma work that isn't drawing the screen itself. Before you draw, it lays out the sections and stubs the states you're missing so the gaps become your to-draw list; after, it wires the flow, audits the file, and syncs the canonical page once engineering ships. prep, arrows, lint, sync, code, qa, deck and more.",
+      "description": "A bundle for a Figma file several people share. It lays out the sections and stubs the states you're missing so the gaps become your to-draw list, draws each one anchored to your file's own conventions, then wires the flow, audits the file, and syncs the canonical page once engineering ships. prep, draw, arrows, lint, sync, code, qa, deck and more.",
       "category": "design",
       "tags": [
         "figma",

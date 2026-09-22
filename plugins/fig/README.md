@@ -1,6 +1,6 @@
 # fig
 
-A bundle for the half of Figma work that isn't drawing the screen itself. It builds your to-draw list before you start, and keeps a file several people share in order afterwards.
+A bundle for a Figma file several people share. It builds your to-draw list before you start, draws each screen anchored to your file's own conventions, and keeps the canonical page current afterwards.
 
 You type these the way you type anything else to Claude — `/fig:lint`, and it answers in words. Nothing here asks you to write code.
 
@@ -14,6 +14,7 @@ claude plugin install fig@byjunyoung
 | `/fig:setup` | Reads how your file already names and spaces things, and writes it down as your settings |
 | `/fig:read` | Lists every page and screen in the file |
 | `/fig:prep` | Makes names consistent · puts screens in their section · leaves a placeholder for each screen you still owe |
+| `/fig:draw` | Draws a screen or fills a placeholder — following the pattern your file already uses, cloned from its nearest canonical screen |
 | `/fig:arrows` | Creates and re-syncs flow arrows |
 | `/fig:lint` | The audit everything else has to pass. It reads and reports, and never edits |
 | `/fig:handoff` | Gates on lint · pins the version handed over · hands over the links |
@@ -30,7 +31,7 @@ claude plugin install fig@byjunyoung
 
 On a file you are opening for the first time, run `/fig:setup` first and let it observe the conventions. It opens by checking this machine — the Figma plugin, the two programs the audit runs on (`python3` with PyYAML, and `node`), and which of your connected tools actually answer — so anything missing is named up front rather than quietly narrowing the run. The full explanation is in the [repository README](https://github.com/byjunyoung/claude-product-skills).
 
-The skills that write — `prep`, `arrows`, `diff`, `sync`, `tokens`, `deck` — check your Figma seat before their first write, and stop on a View seat — one that can read a file but not edit it — instead of failing halfway.
+The skills that write — `prep`, `draw`, `arrows`, `diff`, `sync`, `tokens`, `deck` — check your Figma seat before their first write, and stop on a View seat — one that can read a file but not edit it — instead of failing halfway.
 
 ## The other half
 

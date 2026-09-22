@@ -24,6 +24,7 @@ Takes one design page and **audits structure (placement), flow (arrows), and com
 ## When NOT to invoke
 
 - Actually fixing, tidying, or stubbing placeholders → `/fig:prep`
+- Drawing the screen a violation is about → `/fig:draw`
 - Creating or syncing arrows → `/fig:arrows`
 - Auditing token (variable) bindings → `/fig:tokens`
 - Checking and applying work into the canonical page → `/fig:sync`
@@ -171,6 +172,7 @@ After editing a script, check its syntax with `scripts/lib/check.sh`. `use_figma
 - **Excluded sections are treated three different ways** — dropped from the audit, dropped from coverage, but **kept as pass-through targets.** If a line actually crosses one, it is a broken line whether the section is excluded or not. The list is `pages.exclude_sections`
 - Duplicate frame names make a name lookup return only one of them. Report `[duplicate name]` first, then narrow to a single section and re-run
 - **States managed on a common page are not counted as per-screen omissions or orphans** (see fig:prep, "repeated common elements") — (1) a screen whose Default carries a reference annotation to the common page counts that state as covered, (2) canonical state frames on a page matching `naming.common_page_pattern` are expected not to appear in per-screen flow, so they are dropped from coverage. If the setting is `null`, this exception does not apply
+- **A pattern page is dropped from coverage the same way** — the page `naming.pattern_page_pattern` matches holds arrangements rather than screens (how a row is built, where a badge sits in it), and nobody navigates to one, so requiring it to appear in the flow would report every frame on it as an orphan. `/fig:draw` writes and reads that page. With the setting `null` the exception does not apply, so a file that adopted the page before recording it in the config reports the whole page as orphans — which is the signal to record it
 
 ## Notes
 

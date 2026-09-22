@@ -25,6 +25,7 @@ A PRD keeps growing. Keep the body thin and push the detail out into the entry l
 ## When NOT to invoke
 
 - Tidying or auditing a design file → `/fig:prep` · `/fig:lint`
+- Drawing the screens this document describes → `/fig:draw`, which reads the published document as its source for copy rather than inventing any
 - Comparing a shipped screen against the baseline → `/fig:qa`
 - Filing or syncing tickets → whatever ticket tool you use
 
