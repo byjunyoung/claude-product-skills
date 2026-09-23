@@ -1,7 +1,7 @@
 {
   "name": "fig",
   "description": "A bundle for a Figma file several people share. It builds your to-draw list before you start, draws each screen anchored to your file's own conventions, and keeps the canonical page current afterwards.",
-  "version": "3.21.0",
+  "version": "3.22.0",
   "author": {
     "name": "Junyoung Kim",
     "url": "https://www.linkedin.com/in/byjunyoung/"

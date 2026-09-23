@@ -3,6 +3,7 @@
  *
  * Checks: frame membership · out of bounds · frame overlap · section overlap · naming
  *         · variant stacking · library sibling overlap · implicit variable mode
+ *         · clipped or overflowing content
  *
  * Usage
  *   1) python3 scripts/lib/resolve-config.py --js <fileKey>   → `const CFG = {...};`
@@ -211,6 +212,55 @@ for (const s of secs) {
       const def = (col.modes.find(m => m.modeId === col.defaultModeId) || {}).name || "default";
       issues.push(`[mode] ${s.name} / ${f.name}: ${n} colour(s) bound to "${col.name}" with no mode set on the screen, its section or the page — renders in the default (${def})`);
     }
+  }
+}
+
+// ── Clipped and overflowing content — a control cut by its own box, or hanging off the screen ──
+// A 28px button inside a cell whose padding leaves 12px, a floating button placed past the frame's
+// bottom edge: both come across intact from a canonical screen, both look like a rendering glitch
+// in the file, and neither trips a placement check, because every frame is where it should be.
+// What is measured is painted content — text, and anything with a visible fill or stroke — so an
+// empty wrapper wider than its parent is not reported: nothing of it can be seen being cut. Layout
+// boxes, not render bounds, because render bounds come back already clipped and hide the cut.
+// Only a clipping box a component defines — a cell, a slot, a field — is judged for cuts. A frame
+// the screen clips itself is how a scrolling list, a carousel track or a cropped image is drawn,
+// and nothing on the node tells those apart from an accident, so they are left alone.
+const painted = n => n.type === "TEXT" ||
+  ["fills", "strokes"].some(k => Array.isArray(n[k]) && n[k].some(p => p.visible !== false && (p.opacity == null || p.opacity > 0)));
+const union = (a, b) => !a ? b : !b ? a : (() => {
+  const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+  return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
+})();
+const contentBox = n => {
+  if (!n.visible) return null;
+  if (painted(n) || !("children" in n)) return painted(n) ? n.absoluteBoundingBox : null;
+  let u = null;
+  for (const c of n.children) u = union(u, contentBox(c));
+  return u;
+};
+const inComponent = n => { for (let a = n; a && a.type !== "PAGE"; a = a.parent) if (a.type === "INSTANCE") return true; return false; };
+const past = (b, p) => Math.max(p.x - b.x, b.x + b.width - p.x - p.width, p.y - b.y, b.y + b.height - p.y - p.height);
+for (const s of secs) {
+  if (skipSection(s)) continue;
+  for (const f of s.children.filter(isScreen)) {
+    const fbox = f.absoluteBoundingBox;
+    const hits = [];
+    const walk = (n, clippedBelow) => {
+      if (!n.visible) return;
+      if (n !== f && !clippedBelow && painted(n) && past(n.absoluteBoundingBox, fbox) > 2)
+        hits.push(`${n.name} hangs off the screen`);
+      if (n !== f && n.clipsContent && "children" in n && inComponent(n)) {
+        const p = n.absoluteBoundingBox;
+        for (const c of n.children) {
+          const cb = contentBox(c);
+          if (cb && cb.width <= p.width * 3 && past(cb, p) > 2) hits.push(`${c.name} cut ${Math.round(past(cb, p))}px by ${n.name}`);
+        }
+      }
+      if ("children" in n) for (const c of n.children) walk(c, clippedBelow || (n !== f && n.clipsContent));
+    };
+    walk(f, false);
+    if (hits.length)
+      issues.push(`[clip] ${s.name} / ${f.name}: ${hits.length} (${hits.slice(0, 3).join("; ")}${hits.length > 3 ? ", \u2026" : ""})`);
   }
 }
 

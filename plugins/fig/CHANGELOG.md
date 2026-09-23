@@ -1,5 +1,10 @@
 # fig
 
+## 3.22.0 — 2026-09-23
+
+- **`/fig:lint` now catches a control cut off by its own container, or hanging off the screen (`[clip]`, blocking).** Both turned up in a full review of a set of cloned screens, and both came across unchanged from the canonical screen: a 28px detail button in a 44px table cell whose padding left 12px, and a floating button placed 40px below the frame's bottom edge. Every frame was where it belonged, so no placement check had anything to say, and a frame-by-frame look at reduced scale missed both. Uneven cell heights within one table row, which drew its dividers at different heights, came from the same source; that one stays with the side-by-side render, since telling a table row from any other row by structure alone would guess
+- **What the check deliberately leaves alone, and why.** Two looser versions were run on the same file first. Judging every clipping frame flagged a chat list scrolled to its latest message, a carousel track, and a 3D stage — each cut on purpose, and nothing on the node separates them from an accident — so only boxes a component defines (a cell, a slot, a field) are judged for cuts. Judging layout boxes flagged an empty wrapper 1000px wide inside a 472px modal, which cuts nothing anyone can see, so only painted content counts. And render bounds cannot be used at all: they come back already clipped, so the cut child reports exactly its container's size and passes
+
 ## 3.21.0 — 2026-09-23
 
 - **Twenty-two cloned screens each passed on their own and three were broken in the file.** A set of screens was rebuilt as full clones of canonical ones, each checked by a screenshot of that one frame, and reported done. Opened by the person who asked for them: the three login screens were dark, two warning panels had lost their text, and a control that only appears on hover was showing. None of it was visible in the frame-by-frame checks, and the audit passed. Three separate gaps, closed separately

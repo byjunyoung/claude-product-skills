@@ -357,7 +357,7 @@ flowchart TD
 
 | Area | What it catches |
 |---|---|
-| Structure | Screens outside any section · screens past section bounds · overlapping screens · naming violations · section number vs. placement mismatch · a screen whose colours resolve in a light/dark mode nobody set |
+| Structure | Screens outside any section · screens past section bounds · overlapping screens · naming violations · section number vs. placement mismatch · a screen whose colours resolve in a light/dark mode nobody set · a control cut off by its own container or hanging off the screen |
 | Flow | Arrows cutting through unrelated screens · arrowheads pointing at empty space · screens on no flow at all · labels covering an arrowhead or another line |
 | Components | Variants stacked on top of one another inside a set · a component buried under the one placed beside it · settings that tagged along in a duplicate, leaving an empty slot rendered |
 
