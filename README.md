@@ -357,7 +357,7 @@ flowchart TD
 
 | Area | What it catches |
 |---|---|
-| Structure | Screens outside any section · screens past section bounds · overlapping screens · naming violations · section number vs. placement mismatch |
+| Structure | Screens outside any section · screens past section bounds · overlapping screens · naming violations · section number vs. placement mismatch · a screen whose colours resolve in a light/dark mode nobody set |
 | Flow | Arrows cutting through unrelated screens · arrowheads pointing at empty space · screens on no flow at all · labels covering an arrowhead or another line |
 | Components | Variants stacked on top of one another inside a set · a component buried under the one placed beside it · settings that tagged along in a duplicate, leaving an empty slot rendered |
 
@@ -368,6 +368,8 @@ Arrowhead direction isn't catchable by distance alone. An arrow can sit 12px awa
 The component audit works without any written convention. It derives the usage distribution from how other screens in the same file use that component, and compares against it.
 
 The two overlap checks read coordinates alone, so they run on a file with no config at all — and they run on a component page, which the frame-overlap check above never looked at. A set with no auto-layout drops each new variant on the last one's coordinates: the top variant draws fine and the rest are simply not visible, which is why review keeps letting it through.
+
+The mode check catches a duplicated screen that looked right only because of where it used to sit. A colour tied to a token with several modes (light and dark, say) renders in whatever mode the screen, its section or its page names, and in the token's default where none does. Move a screen off a page that set light onto one that sets nothing, and it comes back dark, with nothing on the node looking wrong. So any screen using such a token has to name its mode somewhere above it, even when the default is what it wants.
 
 ---
 

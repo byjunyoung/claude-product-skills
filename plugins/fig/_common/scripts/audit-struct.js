@@ -2,7 +2,7 @@
  * audit-struct.js — structural audit (read-only, zero writes)
  *
  * Checks: frame membership · out of bounds · frame overlap · section overlap · naming
- *         · variant stacking · library sibling overlap
+ *         · variant stacking · library sibling overlap · implicit variable mode
  *
  * Usage
  *   1) python3 scripts/lib/resolve-config.py --js <fileKey>   → `const CFG = {...};`
@@ -164,6 +164,53 @@ for (const s of secs) {
     const hits = f.findAll(n => DEFAULT_NAME.test(n.name) && !inInstance(n));
     if (hits.length)
       issues.push(`[layer name] ${s.name} / ${f.name}: ${hits.length} on Figma defaults (${hits.slice(0, 3).map(n => n.name).join(", ")}${hits.length > 3 ? ", \u2026" : ""})`);
+  }
+}
+
+// ── Implicit variable mode — a screen whose colours resolve in a mode nobody chose ──
+// A screen bound to a collection with several modes (light/dark, brand A/B) renders in whatever
+// mode its nearest ancestor sets — itself, its section, its page — and in the collection default
+// where none does. Clone a screen that looked light only because its old page or parent set the
+// mode, land it somewhere that does not, and it comes back in the default: bound colours flip and
+// anything hand-typed for the old mode vanishes. Nothing about the node looks wrong; only a render
+// shows it, and a check that compares it with its siblings misses the case where every screen on
+// the page was cloned the same way. So the rule is per screen: bind to a multi-mode collection,
+// and some ancestor has to name the mode — even where the default is what it wants, because an
+// explicit default survives the next move.
+const colCache = {}, varCache = {};
+const collectionOf = async id => {
+  if (!(id in varCache)) varCache[id] = await figma.variables.getVariableByIdAsync(id);
+  const v = varCache[id];
+  if (!v) return null;
+  if (!(v.variableCollectionId in colCache))
+    colCache[v.variableCollectionId] = await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId);
+  return colCache[v.variableCollectionId];
+};
+const boundIds = n => {
+  const ids = [];
+  for (const k of ["fills", "strokes"]) {
+    const ps = n[k];
+    if (Array.isArray(ps)) for (const p of ps) if (p.boundVariables && p.boundVariables.color) ids.push(p.boundVariables.color.id);
+  }
+  return ids;
+};
+for (const s of secs) {
+  if (skipSection(s)) continue;
+  for (const f of s.children.filter(isScreen)) {
+    const ids = new Set(boundIds(f));
+    f.findAll(n => { for (const id of boundIds(n)) ids.add(id); return false; });
+    const named = new Set([f, s, figma.currentPage].flatMap(n => Object.keys(("explicitVariableModes" in n && n.explicitVariableModes) || {})));
+    const unset = {};
+    for (const id of ids) {
+      const col = await collectionOf(id);
+      if (!col || col.modes.length < 2 || named.has(col.id)) continue;
+      const u = unset[col.id] = unset[col.id] || { col, n: 0 };
+      u.n++;
+    }
+    for (const { col, n } of Object.values(unset)) {
+      const def = (col.modes.find(m => m.modeId === col.defaultModeId) || {}).name || "default";
+      issues.push(`[mode] ${s.name} / ${f.name}: ${n} colour(s) bound to "${col.name}" with no mode set on the screen, its section or the page — renders in the default (${def})`);
+    }
   }
 }
 

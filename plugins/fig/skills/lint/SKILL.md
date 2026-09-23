@@ -68,6 +68,7 @@ The layers merge bottom-up: bundled defaults → `~/.claude/figma-conventions.ya
 | Split state variants | Variants of one `[screen]` broken apart in a column by an unrelated frame wedged between parent and variant, so the `[state]` dashed line passes through it | medium |
 | **Variant stacking** | Variants of one component set whose bboxes intersect. A set with no auto-layout drops a new variant on the last one's coordinates, so several states render as a single component — nothing about it looks broken, the top variant draws fine and the rest are simply not visible | ★ high |
 | Default layer names | Layers inside a screen still carrying Figma's own `Frame 427` / `Group 12` name. **Layers inside a component instance are excluded** — they belong to the library that made the component, cannot be renamed on this page, and are fixed in that file instead | low |
+| **Implicit variable mode** | A screen whose colours are bound to a collection with more than one mode (light/dark, brand A/B) while neither the screen, its section nor the page names a mode for it — so it renders in the collection default. The usual cause is a clone: a screen that looked right only because its old page or parent set the mode, landed where nothing does. Judged per screen, not against siblings, because a page whose screens were all cloned the same way has no sibling to disagree. Set the mode explicitly even where the default is wanted — an explicit default survives the next move | ★ high |
 | Library sibling overlap | A set or component overlapping the one placed beside it in the same section. Frame overlap above looks at frames only, so a component page passes that check while its components bury each other — a set that gained a variant or a layout runs past the gap it was placed with | medium |
 
 ### B. Flow (arrows) — fig:arrows's territory
@@ -116,6 +117,7 @@ The grade is read off the tag the script already emits, so it is a lookup and no
 | `[section overlap]` | blocking | Which section a frame belongs to becomes ambiguous |
 | `[variant stack]` | blocking | Variants sit on one another and only the top one renders |
 | `[library overlap]` | blocking | Components bury each other on a library page |
+| `[mode]` | blocking | The screen renders in a mode nobody chose — bound colours flipped, anything hand-typed for the intended mode unreadable |
 | `[split state]` | blocking | An unrelated frame is wedged in, so the state chain runs through it |
 | `[arrow] … orphan` · `… passes through` | blocking | The source or target does not exist, or the line crosses an unrelated frame and reads as connecting to it |
 | `[state] … orphan` · `… passes through` | blocking | The same two, on a state chain |

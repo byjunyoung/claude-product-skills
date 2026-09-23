@@ -175,7 +175,11 @@ Per "What's undecided stays inline" above. Draw first, annotate second, and neve
 
 ### 9. Verify
 
-**The mandatory last action — call `/fig:lint` (via the Skill tool).** A clone happened, so this is never optional: get `STRUCT PASS` and `FLOW PASS`, fix what comes back, call again. Where the run built anything that was neither cloned nor instanced, **call `/fig:tokens` as well** — that is where a hand-typed colour enters a file, and it is the only path in this skill that can introduce one.
+**The mandatory last action — call `/fig:lint` (via the Skill tool).** A clone happened, so this is never optional: get `STRUCT PASS` and `FLOW PASS`, fix what comes back, call again. Its `[mode]` check is the one a clone trips most: a screen cloned off a page that set the colour mode lands in the collection default.
+
+**Call `/fig:tokens` in its check-only mode on every frame drawn, cloned or not.** A clone copies whatever its source carried, and a source that is itself a draft built earlier in the work — a component nobody has handed over yet — carries its hand-typed colours into every screen that uses it. Those colours looked right in the mode they were typed for, and disappear in the other. "It was cloned, so it is clean" is only true of a canonical source.
+
+**Then render every frame drawn, together, and look.** One image of all of them at a reduced scale — the whole section, or several sections side by side — not a screenshot per frame. Each screen looked at alone passes; a dark screen among light siblings, an empty box where a label should be, a hover-only control left showing, are obvious only next to the others. Lint and tokens measure what they can name; this is where what nobody named turns up. Where the drawn frames span more than one page, the design tool's image export renders them in one request.
 
 No audit lives in this file. The verdict comes from those two skills alone, the same way `/fig:prep` and `/fig:arrows` take theirs.
 
@@ -240,6 +244,9 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 | Reparenting a clone with `appendChild` | Local-font text fails to load and the call is rejected. Use `absorb()` |
 | Opening with a full preview, or a spec draft, whose values you chose yourself | The person has to judge the direction and the document at once, and usually cannot picture either. Agree the direction item by item, show the text sketch of each state, then preview |
 | Calling it done on an isolated screenshot | The gate is `/fig:lint` plus a whole-section screenshot, as everywhere else here |
+| Skipping `/fig:tokens` because every frame was cloned | A clone of a draft carries the draft's hand-typed colours. Check every drawn frame |
+| Checking each drawn screen on its own | Render all of them in one image before reporting — a screen that is wrong only relative to its siblings looks fine alone |
+| A cloned screen that looked right on its source page | It may have been borrowing that page's colour mode. Name the mode on the screen itself |
 
 ## Constraints
 
