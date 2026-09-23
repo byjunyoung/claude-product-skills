@@ -1,6 +1,6 @@
 ---
 name: draw
-description: Draws a screen, or fills a stub `/fig:prep` left behind, inside the file's own conventions rather than as a loose fragment. It looks up the file's own arrangement pattern first and, where none exists, stops and has one defined rather than inventing a one-off. It anchors to the nearest canonical screen and clones it, so what comes out is the whole screen with the change in it, not a swatch of the part that is new. Copy comes from a spec, from the running system, or from the file's own precedent — never from what sounds plausible. One undecided fact is pinned on the node it belongs to, never left as a blank frame standing in for the whole screen. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "design this state", "이 화면 그려줘", "placeholder 채워줘", "이 상태 디자인해줘".
+description: Draws a screen, or fills a stub `/fig:prep` left behind, inside the file's own conventions rather than as a loose fragment. It looks up the file's own arrangement pattern first and, where none exists, stops and has one defined rather than inventing a one-off. It anchors to the nearest canonical screen and clones it, so what comes out is the whole screen with the change in it, not a swatch of the part that is new. Copy comes from a spec, from the running system, or from the file's own precedent — never from what sounds plausible. One undecided fact is pinned on the node it belongs to, never left as a blank frame standing in for the whole screen. Where a screen is about to look or behave differently, the direction is agreed in the conversation first — item by item, then as a rough text sketch of each state — before anything reaches the file. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "design this state", "이 화면 그려줘", "placeholder 채워줘", "이 상태 디자인해줘".
 allowed-tools: AskUserQuestion, Bash, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__search_design_system, mcp__plugin_figma_figma__get_design_context, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
 ---
 
@@ -124,6 +124,21 @@ Copy, labels and sample values come from somewhere real: the spec, the file's ow
 
 **And it does not stop in the file.** The ticket's acceptance conditions are written from the design's structure and its copy, so a plausible string drawn here is a plausible string somebody builds against, checks off, and ships. Where nothing sources a piece of content and it is not itself a state-defining fact, say so rather than filling the gap to look finished — a value marked as unsourced beats a confident wrong one.
 
+## Sketch the direction before the file
+
+**A table of rules does not show anybody a screen.** A spec entry can be complete and still leave the person who asked for it unable to picture what they are agreeing to — and a write to a shared file is the most expensive place to find out they meant something else. So where the work changes how a screen looks or behaves — a new screen, a layout that moves, a flow that gains states — the direction is agreed in the conversation before a single node is written, and always in the same shape:
+
+1. **The list of what has to be decided**, numbered, before the first question — so the size of it is visible
+2. **One question at a time**, each with two or three lines of context and a recommended option. When an answer opens a question the list did not have — moving something out of a panel raises where it goes instead — ask that before moving to the next number
+3. **A table once it is settled** — item │ decision — so the whole direction reads in one place
+4. **A rough text wireframe for each moment the screen changes** — at rest, right after the action, while it is in progress, collapsed or returned, any secondary view — with one line under each saying what changed since the last. Labels inside the boxes are ASCII: short English words, or letters keyed to a legend written outside the box. A wide character (Korean, Japanese, Chinese) takes two columns in a monospace terminal and pushes every right-hand border out of line. Generate the lines with a short script rather than counting columns by hand, and mark any size as an estimate
+5. **A transition tree** — which state follows which, on what input — with its vertical lines only at the left edge, for the same reason
+6. **Two or three lines on what differs from today**
+
+The sketch does not replace preview → go. It is what makes the preview something the person can judge: they are no longer weighing the direction and the details in the same breath. And a spec draft written before the sketch is agreed has the same problem one step earlier — values chosen by whoever drafted it, presented as if they had been decided.
+
+**Skip it for a stub whose `TBD` already settled the layout**, where the canonical screen fixes the rest. There is nothing left to picture.
+
 ## Procedure
 
 ### 1. Take the target
@@ -132,7 +147,7 @@ A stub: read its name, its position, and its `TBD (needs confirmation): …` des
 
 ### 2. Read the sources
 
-The spec, the file's own precedent, and where the content is something a running system produces, that system. This is the step that decides whether step 6 writes sourced copy or invented copy, and it cannot be done afterwards.
+The spec, the file's own precedent, and where the content is something a running system produces, that system. This is the step that decides whether step 7 writes sourced copy or invented copy, and it cannot be done afterwards.
 
 ### 3. Anchor to canonical
 
@@ -142,19 +157,23 @@ Per "Anchor to canonical" above. Name what was found and where, or name the sear
 
 Per "Pattern first" above, for each kind of thing being drawn. Cases 2 and 3 take their own preview → go and their own `use_figma` call, **before** the screen is drawn.
 
-### 5. Preview → go
+### 5. Sketch → agree
+
+Per "Sketch the direction before the file" above, where the screen is about to look or behave differently. Nothing is previewed until the person accepts the sketch.
+
+### 6. Preview → go
 
 State the canonical source, the pattern each element follows, what changes on the clone, where the copy comes from, and what stays open and where it will be pinned. **Write nothing before the go.** One screen or one state per gate — redoing a wrong batch of five costs more than redoing a wrong one.
 
-### 6. Draw the state
+### 7. Draw the state
 
 Clone, reparent with `absorb()`, then change only what is in scope. **Where the target was a stub, the clone takes the stub's exact name and position** — `/fig:arrows` drew the existing `-->` and `[state]` lines against that name, and a renamed or moved frame turns them into orphans, which `/fig:lint` grades blocking. Where the target is new, the name follows `naming.frame` **after the canonical screen it anchors to**, so `/fig:sync` can pair the two when the work is applied later.
 
-### 7. Pin what is still open
+### 8. Pin what is still open
 
 Per "What's undecided stays inline" above. Draw first, annotate second, and never let one open question keep the rest of the screen from being real.
 
-### 8. Verify
+### 9. Verify
 
 **The mandatory last action — call `/fig:lint` (via the Skill tool).** A clone happened, so this is never optional: get `STRUCT PASS` and `FLOW PASS`, fix what comes back, call again. Where the run built anything that was neither cloned nor instanced, **call `/fig:tokens` as well** — that is where a hand-typed colour enters a file, and it is the only path in this skill that can introduce one.
 
@@ -219,10 +238,12 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 | Copy that reads plausibly | It ends up in the acceptance checklist. Read the spec, the system, or the file's own precedent, and mark what nothing sourced |
 | Renaming or moving the stub's frame while filling it | The arrows were drawn against that name and position. Keep both, or fix the flow with `/fig:arrows` |
 | Reparenting a clone with `appendChild` | Local-font text fails to load and the call is rejected. Use `absorb()` |
+| Opening with a full preview, or a spec draft, whose values you chose yourself | The person has to judge the direction and the document at once, and usually cannot picture either. Agree the direction item by item, show the text sketch of each state, then preview |
 | Calling it done on an isolated screenshot | The gate is `/fig:lint` plus a whole-section screenshot, as everywhere else here |
 
 ## Constraints
 
+- **A change to how a screen looks is sketched in text and agreed before its preview.** A stub the canonical screen already settles is exempt
 - **Preview → go before writing**, split per screen or per state, and a pattern write takes a gate of its own
 - **`/fig:lint` after every run**, since every run clones. `/fig:tokens` as well where anything was built rather than cloned or instanced. Never report done without a `PASS`
 - Sections matching `pages.exclude_sections` are never drawn into, and a page matching `pages.readonly` is refused

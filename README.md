@@ -340,7 +340,7 @@ flowchart TD
 | `/fig:setup` | Observe a file's conventions and draft a config |
 | `/fig:read` | Collect the page and screen inventory |
 | `/fig:prep` | Normalize names · place into sections · stub missing screens |
-| `/fig:draw` | Draw a screen or fill a stub — following the file's own pattern, cloned from its nearest canonical screen |
+| `/fig:draw` | Draw a screen or fill a stub — agreeing the direction first as a rough text sketch of each state, then following the file's own pattern, cloned from its nearest canonical screen |
 | `/fig:arrows` | Create and re-sync flow arrows |
 | `/fig:lint` | Read-only audit gate (zero writes) |
 | `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task doc |

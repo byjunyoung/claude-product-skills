@@ -14,7 +14,7 @@ claude plugin install fig@byjunyoung
 | `/fig:setup` | Reads how your file already names and spaces things, and writes it down as your settings |
 | `/fig:read` | Lists every page and screen in the file |
 | `/fig:prep` | Makes names consistent · puts screens in their section · leaves a placeholder for each screen you still owe |
-| `/fig:draw` | Draws a screen or fills a placeholder — following the pattern your file already uses, cloned from its nearest canonical screen |
+| `/fig:draw` | Draws a screen or fills a placeholder — agreeing the direction first as a rough text sketch of each state, then following the pattern your file already uses, cloned from its nearest canonical screen |
 | `/fig:arrows` | Creates and re-syncs flow arrows |
 | `/fig:lint` | The audit everything else has to pass. It reads and reports, and never edits |
 | `/fig:handoff` | Gates on lint · pins the version handed over · hands over the links |
