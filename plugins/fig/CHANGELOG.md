@@ -1,5 +1,9 @@
 # fig
 
+## 3.22.2 — 2026-09-28
+
+- `/fig:draw`'s constraints list still said `/fig:tokens` runs only where something was built rather than cloned — the rule 3.21.0 replaced, since a clone of a draft carries the draft's hand-typed colours. The skill body already said every drawn frame; the list now says the same, so the two no longer disagree
+
 ## 3.22.1 — 2026-09-28
 
 - **The plugin README is cut down to what a first-time reader needs, and brought up to date.** It had fallen behind in two places: it said `/fig:handoff` pins the version handed over, which ships off, and it said nothing of what 3.15–3.22 added — lint findings graded blocking or warning, the `[mode]` and `[clip]` checks, and `/fig:draw` checking tokens on every drawn frame and rendering them side by side. The cycle, how `/fig:draw` works, what lint catches, the settings layers and the link to `pm` are each drawn as a plain-text diagram rather than a paragraph, and three of the repository's images show what prep, arrows and lint produce. The depth stays in the repository README

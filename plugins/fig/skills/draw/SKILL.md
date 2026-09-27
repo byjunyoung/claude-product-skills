@@ -252,7 +252,7 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 
 - **A change to how a screen looks is sketched in text and agreed before its preview.** A stub the canonical screen already settles is exempt
 - **Preview → go before writing**, split per screen or per state, and a pattern write takes a gate of its own
-- **`/fig:lint` after every run**, since every run clones. `/fig:tokens` as well where anything was built rather than cloned or instanced. Never report done without a `PASS`
+- **`/fig:lint` and `/fig:tokens` after every run**, on every frame drawn — every run clones, and a clone carries whatever its source carried. Never report done without a `PASS`
 - Sections matching `pages.exclude_sections` are never drawn into, and a page matching `pages.readonly` is refused
 - Never invent an arrangement the file or its pattern page could have settled
 - Never invent a fact a source could have settled, and never leave an unsourced value unmarked
