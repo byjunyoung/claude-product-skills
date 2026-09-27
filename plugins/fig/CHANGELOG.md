@@ -1,5 +1,9 @@
 # fig
 
+## 3.22.1 — 2026-09-28
+
+- **The plugin README is cut down to what a first-time reader needs, and brought up to date.** It had fallen behind in two places: it said `/fig:handoff` pins the version handed over, which ships off, and it said nothing of what 3.15–3.22 added — lint findings graded blocking or warning, the `[mode]` and `[clip]` checks, and `/fig:draw` checking tokens on every drawn frame and rendering them side by side. The cycle, how `/fig:draw` works, what lint catches, the settings layers and the link to `pm` are each drawn as a plain-text diagram rather than a paragraph, and three of the repository's images show what prep, arrows and lint produce. The depth stays in the repository README
+
 ## 3.22.0 — 2026-09-23
 
 - **`/fig:lint` now catches a control cut off by its own container, or hanging off the screen (`[clip]`, blocking).** Both turned up in a full review of a set of cloned screens, and both came across unchanged from the canonical screen: a 28px detail button in a 44px table cell whose padding left 12px, and a floating button placed 40px below the frame's bottom edge. Every frame was where it belonged, so no placement check had anything to say, and a frame-by-frame look at reduced scale missed both. Uneven cell heights within one table row, which drew its dividers at different heights, came from the same source; that one stays with the side-by-side render, since telling a table row from any other row by structure alone would guess
