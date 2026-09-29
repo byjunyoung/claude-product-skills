@@ -1,5 +1,9 @@
 # fig
 
+## 3.22.3 — 2026-09-29
+
+- **`[split state]` no longer reports frames nothing joins.** It told variants apart by trimming the last part of a frame's name, so with three-part names `Detail-Toast-Saved` and `Detail-Toast-Reset` read as two states of a screen called `Detail-Toast`, and the confirmation dialog placed between them was reported as wedged in. A modal and its selected state above a separate edit-screen variant tripped it the same way. Neither pair had a `[state]` chain, and nothing on the canvas was wrong. Once a section has chains, they are what say which frames belong together, so only the pairs a chain joins are judged now. A section with no chains yet is still judged by name, which keeps the check catching a wedge before the arrows are drawn
+
 ## 3.22.2 — 2026-09-28
 
 - `/fig:draw`'s constraints list still said `/fig:tokens` runs only where something was built rather than cloned — the rule 3.21.0 replaced, since a clone of a draft carries the draft's hand-typed colours. The skill body already said every drawn frame; the list now says the same, so the two no longer disagree

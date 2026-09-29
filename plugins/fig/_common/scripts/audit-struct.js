@@ -90,9 +90,22 @@ numbered.forEach((s, i) => {
 // A transition result (a modal, a dialog) wedged between the parent screen and its variant
 // gets crossed by the [state] dashed line, which is straight. Catching it at the placement
 // stage is what keeps the arrow stage clean.
+// Once a section has [state] chains, they say which frames are variants of one screen, and only
+// pairs a chain joins are judged. The name alone cannot: with three-part names such as
+// Detail-Toast-Saved and Detail-Toast-Reset, trimming the last part makes "Detail-Toast" look like
+// a screen, and a dialog placed between the two toasts is reported although nothing joins them.
+// A section with no chains yet is still judged by name, so a wedge is caught before arrows exist.
 const screenOf = n => n.replace(/-[^-]+$/, "");     // [screen name] with the trailing suffix removed
+const STATE_PREFIX = N.state_chain_prefix || "[state] ";
+const CHAIN_DELIM = N.state_chain_delimiter || " ~ ";
 for (const s of secs) {
   if (skipSection(s)) continue;
+  const chained = new Set();
+  for (const v of s.children)
+    if (v.type === "VECTOR" && v.name.startsWith(STATE_PREFIX) && v.name.includes(CHAIN_DELIM)) {
+      const [a, b] = v.name.slice(STATE_PREFIX.length).split(CHAIN_DELIM).map(t => t.trim());
+      chained.add(a + "\n" + b); chained.add(b + "\n" + a);
+    }
   const frames = s.children.filter(isScreen)
     .map(f => ({ name: f.name, screen: screenOf(f.name), x: f.x, y: f.y, b: f.y + f.height }));
   const byScreen = {};
@@ -106,6 +119,7 @@ for (const s of secs) {
       if (col.length < 2) continue;
       col.sort((a, b) => a.y - b.y);
       for (let i = 1; i < col.length; i++) {
+        if (chained.size && !chained.has(col[i - 1].name + "\n" + col[i].name)) continue;
         const top = col[i - 1].b, bot = col[i].y;
         const intruder = frames.find(o =>
           o.screen !== screen && Math.abs(o.x - col[i].x) < 8 && o.y >= top && o.y < bot);
