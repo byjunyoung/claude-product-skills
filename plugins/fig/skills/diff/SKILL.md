@@ -167,6 +167,8 @@ Only where and how they go in is decided by `task_tracker.type`.
 - **Never guess where AS-IS is**: not on the same page → search other pages, or ask.
 - **Do not build the comparison page around feature sections**: two axes (feature × before/after) make comparison impossible. AS-IS/TO-BE are the only axis (section 1-2).
 - **Representative only**: no duplicate pins across sibling state variants. One representative plus an "inherits" line.
+- **Pins only for this task's changes**: incidental and out-of-scope changes go in the task doc's table, not on the canvas as `[out of scope]` pins. Navigation, AS-IS links, code notes and policy never become pins — the arrows, the AS-IS section, the ticket and the spec already hold them.
+- **The next round clears them**: frames cloned from a marked TO-BE carry its pins. Clear them before marking the new round, otherwise last round's `[this task]` labels read as this round's.
 - **Large metadata**: when it lands in a file, parse with python or jq. `0:xxxx` internal ids cannot be addressed → match by text.
 - **Corrupted non-ASCII**: a syllable can break when typed straight into an external document. Read back after inserting and substitute a `\u` escape for anything broken.
 

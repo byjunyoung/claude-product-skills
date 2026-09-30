@@ -70,7 +70,7 @@ The values live in the config. What follows is the judgement about **how to use 
 States and elements that **repeat identically across many screens** — generic Empty, Error, Loading, a shared empty-result, a shared error, a shared toast or dialog — do not get a placeholder frame on every screen. Copying one pattern as many times as there are screens destroys the single source, and one change then means touching all of them. Instead, gather them:
 
 1. **One canonical copy on a dedicated common page** — put a single set of those states on the page `naming.common_page_pattern` points at, prefixed with `naming.common_frame_prefix`. That is the single source for the repeated pattern. **Look for an existing reusable asset first** (a design system spinner or feedback component) and only build one when there is none.
-2. **Each screen gets an annotation on its Default, not a placeholder** — instead of empty/error/loading frames per screen, put a **Dev Mode annotation** on that screen's Default frame referencing the common page. Write it as a markdown link so it jumps on click (the `commonRef` helper). Nothing invades the layout, and "this screen's empty/error/loading is the common one" survives into handoff.
+2. **Each screen gets nothing — no placeholder and no annotation** — the common page existing is the reference. A screen that draws none of its own empty, error or loading uses the common one; that is the rule, and it does not need restating on every Default. Pinning the same "see the common page" note on every screen was tried and it buried the few pins that mattered under dozens of identical ones.
 3. **If placeholders are already scattered, remove them and convert** — delete the common-natured placeholder frames built per screen, and tidy the `[state]` and `-->` arrows that pointed at what was deleted (reconnect broken flows with `/fig:arrows`). **Before deleting, confirm that screen has its own separate Default** so the only copy is never destroyed → preview → go.
 
 **Deciding common versus screen-specific:** if the state repeats *identically across many screens*, it goes on the common page. If it is *that screen's own* empty message, its own error, its own interaction result, it stays a per-screen placeholder (step 4). When it is ambiguous, ask about scope — do not sweep screen-specific states into the common pile.
@@ -185,7 +185,7 @@ Write scripts use `${CLAUDE_PLUGIN_ROOT}/_common/scripts/prep-ops.js` as a pream
 | `resizeSection(section, w, h)` | Resizes, then **returns the names of neighbouring sections it invaded**. An empty array means it is safe |
 | `renumber()` | Reassigns `NN.` in canvas row-major order. Protected number bands are excluded |
 | `placeholder(section, name, desc, w, h, x, y)` | Dashed-border placeholder. When the policy is undecided, put `TBD (needs confirmation)` in desc |
-| `commonRef(frame, fileKey, pageId, label)` | Annotates a Default with a reference to the common page. Cross-page node hyperlinks are blocked, so a URL deep link is used |
+| `commonRef(frame, fileKey, pageId, label)` | Legacy — kept for older runs, no longer called. Screens do not carry a common-page note (see "Repeated common elements") |
 
 ## Constraints
 

@@ -1,5 +1,10 @@
 # fig
 
+## 3.23.0 — 2026-09-30
+
+- **Clones no longer carry their source's annotations, and the skills stop pinning what already has a home.** One working file had collected 263 Dev Mode pins across 60-odd screens, and all but ten were noise: a "see the common page" note on every Default, navigation notes repeating the flow arrows, AS-IS links repeating the AS-IS section, code notes, and — the bulk — pins that had come along with cloned frames and modals and read as if written for the screen they landed on. A modal cloned from one feature brought an open question about video length onto nine unrelated dialogs. `/fig:draw` now clears every annotation on a clone in the call that clones it, nested instances included, and the only pin it writes is an open question, once, on the representative frame. `/fig:prep` no longer pins a common-page reference on each Default — the common page existing is the reference — and `/fig:lint` counts a common-page state as covered on that basis. `/fig:diff` keeps incidental changes in the task doc instead of pinning them, and says to clear last round's pins before marking the next
+- **`/fig:lint` warns when pins pile up (`[annotation]`, warning).** More than `annotations.max_per_screen` pins on one screen (default 2), or the same pin text on `annotations.same_text_screens` screens or more (default 3) — the second is almost always clone residue
+
 ## 3.22.3 — 2026-09-29
 
 - **`[split state]` no longer reports frames nothing joins.** It told variants apart by trimming the last part of a frame's name, so with three-part names `Detail-Toast-Saved` and `Detail-Toast-Reset` read as two states of a screen called `Detail-Toast`, and the confirmation dialog placed between them was reported as wedged in. A modal and its selected state above a separate edit-screen variant tripped it the same way. Neither pair had a `[state]` chain, and nothing on the canvas was wrong. Once a section has chains, they are what say which frames belong together, so only the pairs a chain joins are judged now. A section with no chains yet is still judged by name, which keeps the check catching a wedge before the arrows are drawn

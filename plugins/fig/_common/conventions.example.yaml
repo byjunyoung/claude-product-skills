@@ -159,6 +159,12 @@ component_audit:
   body_offset: { left: 270, top: 120 }        # shared chrome (nav width, top bar height) — exempt
 
 # --- Design system -------------------------------------------------------------
+
+annotations:
+  # /fig:lint warns when pins pile up. Clones bring their source's pins along, so a note written
+  # for one screen turns up on every copy and reads as if it were written for each.
+  max_per_screen: 2          # more pins than this on one screen is a warning
+  same_text_screens: 3       # the same pin text on this many screens or more is a warning (clone residue)
 design_system:
   library: auto                               # auto = detect the library the file is connected to
   token_prefixes: []                          # token groups to look up  e.g. ["fill/", "border/", "icon/"]

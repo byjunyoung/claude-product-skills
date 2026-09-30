@@ -182,6 +182,32 @@ for (const s of secs) {
   }
 }
 
+// ── Annotations — pins that pile up rather than inform ──
+// Dev Mode pins are cheap to add and nobody removes them. A clone brings every pin its source
+// carried, nested instances included, so one screen's notes turn up on every screen cloned from it
+// and read as if written for each. Two signals: too many pins on one screen, and the same pin text
+// on several screens. Neither is wrong on its own terms; both mean the pins stopped being read.
+const PIN_MAX = ((C.annotations || {}).max_per_screen) || 2;
+const PIN_DUP = ((C.annotations || {}).same_text_screens) || 3;
+const pinText = new Map();
+for (const s of secs) {
+  if (skipSection(s)) continue;
+  for (const f of s.children.filter(isScreen)) {
+    const pinned = [f, ...f.findAll(n => n.annotations && n.annotations.length)].filter(n => n.annotations && n.annotations.length);
+    const labels = pinned.flatMap(n => n.annotations.map(a => (a.labelMarkdown || a.label || "").trim())).filter(Boolean);
+    if (labels.length > PIN_MAX)
+      issues.push(`[annotation] ${s.name} / ${f.name}: ${labels.length} pins (more than ${PIN_MAX})`);
+    for (const l of new Set(labels)) {
+      const k = l.slice(0, 80);
+      if (!pinText.has(k)) pinText.set(k, []);
+      pinText.get(k).push(f.name);
+    }
+  }
+}
+for (const [k, frames] of pinText)
+  if (frames.length >= PIN_DUP)
+    issues.push(`[annotation] same pin on ${frames.length} screens (clone residue?): "${k.slice(0, 40)}\u2026" — ${frames.slice(0, 3).join(", ")}${frames.length > 3 ? ", \u2026" : ""}`);
+
 // ── Implicit variable mode — a screen whose colours resolve in a mode nobody chose ──
 // A screen bound to a collection with several modes (light/dark, brand A/B) renders in whatever
 // mode its nearest ancestor sets — itself, its section, its page — and in the collection default
