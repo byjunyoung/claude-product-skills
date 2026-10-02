@@ -1,5 +1,11 @@
 # pm
 
+## 0.31.0 — 2026-10-02
+
+- **A contract covering a whole feature came out as one flat list.** The coverage pass did its job — every behaviour row, state and rule produced a line — and a parent spanning five scenarios ended up with eighty done conditions and fifty QA steps in two undivided lists. Nothing was wrong with any line; the person reviewing it still could not read it, and a list nobody reads gets ticked rather than checked
+- **`/pm:task-publish` now groups both binding sections by scenario** — one group per thing a person sets out to do, the same groups in the same order in both sections, so a condition and the step confirming it sit across from each other. What every group would repeat (loading, failing to load) is written once in a shared group. The group heading sits one level under the section heading, so a gate reading section headings sees what it saw before. Grouping changes how the contract reads, never what it says: no line is dropped or merged to even the groups out. A contract small enough to read at a glance is left ungrouped
+- **New key `contract.split_offer_at`.** Past that many groups the preview offers to split the parent into one per scenario — an offer only. Splitting creates parents and moves tasks, which is the tracker lead's call; where the parent already has children or its shape was decided, the run says so in one line and files grouped. Null, the default, means no offer
+
 ## 0.30.1 — 2026-09-22
 
 - **0.30.0 said to write the title for its reader and left the grammar open, so titles turned into sentences.** *The setting nobody can reach* is plain, names the outcome, and passes every word of the rule — and it is what a defect is called. A task titled that way stops reading as something somebody is doing, and in a list of names like `<what> <verb-as-noun>` it reads as an import even though nothing in it is jargon

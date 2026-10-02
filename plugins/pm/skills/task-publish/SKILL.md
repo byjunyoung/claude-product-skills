@@ -149,7 +149,7 @@ The done-conditions side stays a single line. It is the verdict; these are the w
 
 The screens come from the design's structure — every frame in the handed-over section that this contract's conditions touch, state variants included. An empty state that only exists as a variant is exactly the kind of screen a hurried comparison skips.
 
-**Where the count runs past `contract.design_match_max`, say so in the preview and offer to split the ticket.** Twenty comparison steps is a ticket covering twenty screens, not a rule that grew too heavy, and splitting is the same signal the granularity section already names. With the value unset there is no ceiling and no prompt.
+**Where the count runs past `contract.design_match_max`, say so in the preview and offer to split the ticket.** Twenty comparison steps is a ticket covering twenty screens, not a rule that grew too heavy, and splitting is the same signal the grouping section already names. With the value unset there is no ceiling and no prompt.
 
 #### QA checklist
 
@@ -166,11 +166,24 @@ Derived from the done conditions, **after** those are settled.
 
 Entry paths come from the design's flow where it has one, and from the spec's behaviour table otherwise.
 
-#### Granularity
+#### Grouping, and when to split instead
 
-Several conditions coming out of one spec entry grow lines here rather than splitting the entry. The ticket number is the identifier; there is no second version axis to maintain.
+A contract written to cover a whole feature runs to dozens of lines, and a flat list of eighty is read the way any wall of text is read: the first screenful, then a scroll to the end. The lines are not the problem — each one is a requirement somebody needs — the missing structure is. So both binding sections are grouped, and the group, not the line, is the unit somebody reads.
 
-Where the lines turn out to be describing different screens, that is the signal to split the ticket — not to trim the lines. There is no target line count: a ticket carries as many as the work it covers.
+- **One group per scenario** — one thing a person sets out to do, named the way they would say it: a list and its filters, registering and editing, one settings screen. A spec entry is usually one group; two entries serving one goal share one, and an entry covering two goals splits across two
+- **The group heading sits one level below the section heading**, so whatever reads the section headings — a gate, a parser, a template check — sees exactly the sections it saw before
+- **The same groups, the same names, the same order in both sections.** A condition and the step confirming it then sit across from each other, and a group with conditions but no steps is visible as the gap it is
+- **What every group would otherwise repeat is written once.** Loading, failing to load, a save confirmation shared by several screens — these go in a group of their own, first, whose name says what it spans
+- **Groups follow the order a person meets them in** — the flow's order where the design has one, the spec's otherwise
+- **Grouping changes how the contract reads, never what it says.** No line is dropped, merged or shortened to even the groups out, and the coverage pass is unchanged. A group with one line is fine; a group nobody can name is two groups
+
+Several conditions coming out of one spec entry still grow lines rather than splitting the entry. The ticket number is the identifier; there is no second version axis to maintain. There is no target line count, for the contract or for a group: a ticket carries as many as the work it covers.
+
+**Where the groups outnumber `contract.split_offer_at`, the preview offers to split the parent instead** — one parent per scenario, each with its own contract. A parent is meant to be one scenario's worth of work in most trackers that have one, and a contract that needs that many groups is usually describing several. It is an offer, never a stop:
+
+- **Splitting is not this run's to do.** It creates parents and moves the tasks under them, which is the tracker lead's call and its own preview. The offer names the groups as they would become parents, and the contract is filed grouped either way
+- **Where the parent already has children, or the record says its shape was decided, say so in one line and file grouped.** Re-proposing a structure somebody already settled costs more than a long contract does
+- With the key unset there is no threshold and no offer
 
 ### 3. Interview, once (grouped)
 
@@ -318,14 +331,22 @@ Written into whichever ticket `task.contract.level` names — this one, or the p
 - {spec entry name} — {one line of what it has to do} ({url})
 
 ### {contract.sections.done}
+#### {shared group — what it spans}             ← only where groups repeat a line
 - [ ] {one condition per line}
-- [ ] {contract.design_match_line}              ← design-side only
+#### {scenario 1}
+- [ ] {one condition per line}
+#### {scenario 2}
+- [ ] …
+- [ ] {contract.design_match_line}              ← design-side only, after the last group
 - {link_rows.version}: {referenced version}     ← directly beneath it, when pinned
 
 ### {contract.sections.qa}
+#### {the same groups, same names, same order}
 - [ ] {entry path → action → expected result}
 - [ ] {contract.design_match_step, one per screen}   ← design-side only, last
 ```
+
+**A contract small enough to read at a glance — one scenario, a handful of lines — is written without group headings.** A heading over every three lines is structure for its own sake.
 
 **The sections go in the order `contract.sections` writes them**, which is the order the tracker's own template puts them in — not the order they were drafted. Drafting runs done first and QA from it; where the template reads QA before done, that is how it is written out.
 
@@ -383,6 +404,8 @@ Materials    : {entry name} ({entry kind})
 Sections     : {n} done ({n} specific · {n} from defaults) · {n} QA
                {n} requirements rows (where the section is set)
                comparison: {n} screens (or "no design handed over")
+Groups       : {group} ({n} done · {n} QA) · {group} (…) · …
+               {split offered — past contract.split_offer_at, or "parent already has children"}
 
 --- body ---
 {step 5 in full}
@@ -416,6 +439,7 @@ Where the tracker already gates on the sections existing — a column a ticket c
 - **Two or more kinds empty for want of material** → offer to fill the spec entry first. Filing anyway is fine and often right, but a coverage count that is really measuring the entry should not pass as a measure of the ticket
 - **No line specific to this task** → say which defaults it would be filed with, and ask what this one actually produces. A done-conditions list that would fit any sibling is not one
 - **Comparison steps past `contract.design_match_max`** → offer to split the ticket. The screens are the work; the ticket is what is too big
+- **Groups past `contract.split_offer_at`** → offer to split the parent, one per scenario, naming the groups as they would become parents. The contract is filed grouped whichever way the answer goes
 
 **No external write happens before "go"** — not the ticket, not the write-back into the record. Both are in this one preview because both are writes.
 

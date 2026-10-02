@@ -377,6 +377,12 @@ task:
     # screens are the work; the ticket is what got too big. Null means no ceiling.
     design_match_max: null   # e.g. 12
 
+    # Done conditions and QA steps are always grouped by scenario once a contract
+    # outgrows a glance. Above this many groups, the preview also offers to split the
+    # parent into one per scenario — an offer only; the contract is filed grouped
+    # either way, and splitting is the tracker lead's call. Null means no offer.
+    split_offer_at: null     # e.g. 4
+
   # --- Whatever your tracker needs and no other does -----------------------------
   # Board ids, custom field ids, issue-type ids. Written once, read back verbatim.
   # Nothing here is interpreted, so a tracker this plugin has never seen still works.
