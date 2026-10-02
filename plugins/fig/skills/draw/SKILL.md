@@ -42,7 +42,7 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --js <fileKey>
 ```
 
-Sections read: `naming` (frame and section patterns, state suffixes, the common and pattern pages) · `pages` (strictness, the canonical axis, excluded sections) · `placeholder_style` (how a stub is recognized, and what its removal has to leave behind) · `design_system` (which library is searched first) · `layout` (spacing, where nothing existing says where to put something) · `qa.baseline.prd` (the default spec).
+Sections read: `naming` (frame and section patterns, state suffixes, the common and pattern pages) · `pages` (strictness, the canonical axis, excluded sections) · `placeholder_style` (how a stub is recognized, and what its removal has to leave behind) · `design_system` (which library is searched first) · `references` (screen-reference services consulted only when a pattern has to be newly defined) · `layout` (spacing, where nothing existing says where to put something) · `qa.baseline.prd` (the default spec).
 
 - **Strictness comes from the target page's name**, the same way `/fig:prep` reads it. A match in `pages.readonly` means refuse the work and say so. On `pages.free` the drawing discipline still applies in full — anchoring, pattern reference and grounding are not a `pages.strict` luxury — only the section and layout rules are relaxed
 - `pages.canonical` names the page everything is compared against, the same axis `/fig:sync` resolves. `null` means it has not been settled for this file: resolve it once the way `/fig:sync` does, by name pattern or by the divider band it sits in, and ask rather than guessing per screen
@@ -73,7 +73,7 @@ That rule is a third thing, and it needs its own place:
 
 1. **The pattern is there** → follow it. Instance it where it is a component, clone it where it is not
 2. **No pattern, but the file has two or more precedents** → derive the pattern from them, write it to the pattern page, then draw from it. This is the common case and the valuable one: the rule already existed, unwritten, and the second screen is where it either gets recorded or gets forgotten
-3. **Nothing anywhere** → a new pattern has to be defined. It binds every screen after this one, so it is not a detail of this screen: propose it, say what it will bind, and take its own go
+3. **Nothing anywhere** → a new pattern has to be defined. It binds every screen after this one, so it is not a detail of this screen: propose it, say what it will bind, and take its own go. Where `references.sources` names a connected screen-reference service, look there first for how shipped products arrange the same thing, and let two or three of them inform the proposal — named in the proposal as what it was compared against. They inform an arrangement only: the parts still come from the design system, and copy never comes from another product's screen
 
 **A pattern goes into a section on that page, not loose on the canvas.** The structure audit reports any frame sitting directly on a page, whatever the page is for, and it does not read page strictness to decide; the coverage exception that lets a pattern off the flow requirement only reaches frames that are inside a section. So both rules point the same way — one section per family of patterns, named to `naming.section_pattern` like any other.
 

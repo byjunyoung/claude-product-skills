@@ -1,5 +1,9 @@
 # fig
 
+## 3.24.0 — 2026-10-02
+
+- **A new pattern was proposed from nothing.** When the file had no precedent for an arrangement, `/fig:draw` defined one from what seemed reasonable, and that pattern then binds every screen after it. New key `references.sources` names screen-reference services reached through a connector; when a pattern has to be newly defined, the skill looks there for how shipped products arrange the same thing and says in the proposal what it was compared against. It stays at that one step on purpose: the file's own screens and patterns come first, the parts still come from the design system, and copy never comes from another product's screen. Empty, the default, changes nothing
+
 ## 3.23.1 — 2026-10-02
 
 - **`/fig:qa` captures every issue when it is seen, and shows the captures in the report.** A QA round came back as text alone — file names, request results, and a note that an input had silently saved a zero — and the person reading it asked to be walked through it again with pictures. By then the environment had been restored: the store was back in its operating mode, which locks the very screens the issues were on, so re-capturing meant asking to change it a second time. Each defect and each needs-confirmation item now gets screenshots at the moment it is observed, one per step that shows something and a before-and-after pair for anything that changes a value, named in reading order. The evidence line lists them, and delivering the report means walking each issue with its images rather than pointing at files

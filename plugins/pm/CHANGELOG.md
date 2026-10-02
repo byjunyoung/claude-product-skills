@@ -1,5 +1,10 @@
 # pm
 
+## 0.32.0 — 2026-10-02
+
+- **The precedent check could only read about other products, never look at them.** A local archive and the web turn up articles describing how a comparable product handles something, and the recommendation was built on that description. Libraries of real shipped screens and flows now reach Claude through connectors, which puts the screens themselves within reach
+- **New key `prd.precedent.reference_sources`.** Services listed there are searched after the archive and before the web, for real screens of the same kind of feature. What this team already decided still outranks anything found. A listed service not connected in a session is skipped and named in the report, and a screen is read as a shape to compare, never as evidence of another product's rules. Empty, the default, leaves the check as it was
+
 ## 0.31.0 — 2026-10-02
 
 - **A contract covering a whole feature came out as one flat list.** The coverage pass did its job — every behaviour row, state and rule produced a line — and a parent spanning five scenarios ended up with eighty done conditions and fifty QA steps in two undivided lists. Nothing was wrong with any line; the person reviewing it still could not read it, and a list nobody reads gets ticked rather than checked

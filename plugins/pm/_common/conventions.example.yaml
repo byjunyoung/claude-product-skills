@@ -90,6 +90,10 @@ prd:
   precedent:
     enabled: true                 # whether a new feature entry gets checked at all
     archive_dir: null             # a local research archive to check before the web, if you keep one
+    reference_sources: []         # screen-reference services reached through a connector, searched after the
+                                  # archive and before the web for real screens of the same kind of feature —
+                                  # the connector's name as your client lists it, e.g. ["lazyweb"]. Empty skips
+                                  # this step; a listed one not connected in a session is skipped and reported
 
   # --- target: markdown | git ----------------------------------------------------
   markdown:

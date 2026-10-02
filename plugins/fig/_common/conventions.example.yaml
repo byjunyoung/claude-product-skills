@@ -170,6 +170,14 @@ design_system:
   token_prefixes: []                          # token groups to look up  e.g. ["fill/", "border/", "icon/"]
   match_threshold_channel: 8                  # max channel delta still counted as "the same color"
 
+# --- Outside references (optional) ---------------------------------------------
+# Consulted by /fig:draw only when the file has no precedent and a new pattern has to be
+# defined. The file's own screens and the design system always come first.
+references:
+  sources: []                                 # screen-reference services reached through a connector,
+                                              # by the name your client lists, e.g. ["lazyweb"]. Empty skips
+                                              # the lookup; one not connected in a session is skipped and reported
+
 # --- Canonical sync ------------------------------------------------------------
 sync:
   pair_patterns:                              # section names that form a comparison pair
