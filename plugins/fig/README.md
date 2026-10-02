@@ -52,7 +52,7 @@ claude plugin install fig@byjunyoung
 | `/fig:diff` | Annotates what changed · writes up the task doc |
 | `/fig:proto` | A working single-file HTML prototype |
 | `/fig:code` | Applies the design to the front-end code |
-| `/fig:qa` | Compares what actually shipped against the plan, and writes up the defects |
+| `/fig:qa` | Compares what actually shipped against the plan, and writes up the defects with a screenshot for each |
 | `/fig:deck-setup` | Measures a team presentation template into deck assets |
 | `/fig:deck` | Turns a source into a presentation deck (Figma Slides) |
 

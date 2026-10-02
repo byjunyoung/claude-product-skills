@@ -1,5 +1,9 @@
 # fig
 
+## 3.23.1 — 2026-10-02
+
+- **`/fig:qa` captures every issue when it is seen, and shows the captures in the report.** A QA round came back as text alone — file names, request results, and a note that an input had silently saved a zero — and the person reading it asked to be walked through it again with pictures. By then the environment had been restored: the store was back in its operating mode, which locks the very screens the issues were on, so re-capturing meant asking to change it a second time. Each defect and each needs-confirmation item now gets screenshots at the moment it is observed, one per step that shows something and a before-and-after pair for anything that changes a value, named in reading order. The evidence line lists them, and delivering the report means walking each issue with its images rather than pointing at files
+
 ## 3.23.0 — 2026-09-30
 
 - **Clones no longer carry their source's annotations, and the skills stop pinning what already has a home.** One working file had collected 263 Dev Mode pins across 60-odd screens, and all but ten were noise: a "see the common page" note on every Default, navigation notes repeating the flow arrows, AS-IS links repeating the AS-IS section, code notes, and — the bulk — pins that had come along with cloned frames and modals and read as if written for the screen they landed on. A modal cloned from one feature brought an open question about video length onto nine unrelated dialogs. `/fig:draw` now clears every annotation on a clone in the call that clones it, nested instances included, and the only pin it writes is an open question, once, on the representative frame. `/fig:prep` no longer pins a common-page reference on each Default — the common page existing is the reference — and `/fig:lint` counts a common-page state as covered on that basis. `/fig:diff` keeps incidental changes in the task doc instead of pinning them, and says to clear last round's pins before marking the next

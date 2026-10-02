@@ -349,7 +349,7 @@ flowchart TD
 | `/fig:diff` | Annotate changes · write up the task doc |
 | `/fig:proto` | Working single-file HTML prototype |
 | `/fig:code` | Apply the design to a frontend repo |
-| `/fig:qa` | Audit a shipped screen against the spec and report defects |
+| `/fig:qa` | Audit a shipped screen against the spec and report defects, each with screenshots |
 | `/fig:deck-setup` | Measure a team slide template into local deck assets |
 | `/fig:deck` | Turn a source document into a Figma Slides deck |
 

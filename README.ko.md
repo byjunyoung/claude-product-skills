@@ -348,7 +348,7 @@ flowchart TD
 | `/fig:diff` | 변경점 주석 표기 · 일감 문서 정리 |
 | `/fig:proto` | 동작하는 단일 HTML 프로토타입 |
 | `/fig:code` | 프론트엔드 레포 코드 반영 |
-| `/fig:qa` | 올라온 화면을 기획 기준과 대조해 결함 리포트 |
+| `/fig:qa` | 올라온 화면을 기획 기준과 대조해 결함마다 캡처를 붙여 리포트 |
 | `/fig:deck-setup` | 팀 발표 템플릿을 실측해 덱 자산 생성 |
 | `/fig:deck` | 소스를 발표 덱(Figma Slides)으로 |
 

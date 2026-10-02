@@ -126,6 +126,16 @@ These have caught things repeatedly in practice. Run them whether or not they ar
 - A difference with no baseline behind it is not a defect — it is `needs confirmation`. When it disagrees with the design or the document, ask which of them is current first.
 - Watch for false positives: state-dependent checks are confirmed **only after actually producing that state** (an unsaved-changes warning, for instance, is verified by leaving with the value changed).
 
+### Capture every issue as it happens
+
+Every defect and every `needs confirmation` item gets screenshots **taken at the moment it is observed**, saved to disk — not reconstructed afterwards. Going back to re-capture means touching the data and the environment a second time, and some states (a locked operating mode, a value that has since been restored) cannot be produced again without asking.
+
+- **One capture per reproduction step that shows something** — the starting screen, the input, the result. A before-and-after pair is the minimum for anything that changes a value.
+- **Crop to the part that matters** (zoom on the region) and keep one wider shot so the reader can tell where on the page it is.
+- Name the files `{item number}-{step}-{what it shows}` so the report can point at them and they sort in reading order.
+- Where the evidence is a request result rather than something visible, capture the screen it came from anyway, and put the request on the evidence line.
+- Items verified good get one capture each at most — enough to show the state was reached, not a gallery.
+
 ## 6. The defect report
 
 Keep **what was reported and what was newly found apart**. The requester looks first at what became of the item they raised.
@@ -158,7 +168,7 @@ One defect:
     · Reproduce: 1) … 2) … 3) …
     · Expected: … (baseline: which document, which part)
     · Actual: …
-    · Evidence: request results · screens · count changes
+    · Evidence: captures (file names, in step order) · request results · count changes
 
 Do not drop frequency — leaving an intermittent defect to read as "always" burns engineering time on reproduction. Write the verdict in plan language, and keep engineering detail such as request results and code **on the evidence line only**.
 
@@ -175,3 +185,5 @@ Without these three the report reads as "I looked at everything". Writing down w
 ## Delivering the report
 
 Where the report goes is **asked and settled** (in the response only / recorded on the ticket / drafted as a reply). External writes happen only after preview → "go".
+
+**The person reading the report sees the captures, not a list of file names.** Walk each issue step by step — what was done, the capture, what it shows — in plain language before any engineering detail, and send the images themselves (attach them, or use whatever file-sending tool the session has). Where the report is going onto a ticket, say which captures go with which item; trackers that cannot take an image by API need them attached by hand, so say so rather than leaving a broken link.
