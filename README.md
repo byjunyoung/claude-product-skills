@@ -247,6 +247,7 @@ That's setup done. [**fig**](#fig--the-design-file) covers the loop from here.
 ```
 /fig:setup    First time in a file, observe its conventions and draft a config
 /fig:prep     Lay out the section skeleton, stub missing states as placeholders
+/fig:sketch   Agree the direction in text first — when a screen looks or behaves differently
 /fig:draw     Fill each stub — following your file's own pattern, cloned from canonical
 /fig:arrows   Wire transition arrows and state groups
 /fig:lint     Audit structure, flow, and components in one pass
@@ -257,6 +258,8 @@ That's setup done. [**fig**](#fig--the-design-file) covers the loop from here.
 `prep` comes first because it builds the to-draw list. A list screen needs an empty state; a form needs a validation-failure state. Stub those as dashed placeholders and the gaps become visible. The point is that they surface before engineering asks.
 
 <img src=".github/prep-stubs.png" alt="Three finished screens above five dashed placeholder frames, each named for the state it stands for" width="100%">
+
+Where a screen is about to look or behave differently, `sketch` comes before any of that. It agrees the direction in the conversation — the decisions one at a time, then a rough text wireframe of each state and a tree of which follows which — and writes nothing, to Figma or anywhere else: once agreed, each part already has a home in the spec, the stubs and the arrows. It is just as useful with no drawing planned, to settle a direction before a spec gets written.
 
 `draw` fills them in, but not in isolation — it clones the screen the stub belongs to, so what lands is the actual final screen, not a component floating on its own. It reuses whatever the design system already has for that state before inventing anything, and where one fact is genuinely still undecided, it draws the rest for real and pins the open question as an annotation on the one node it affects, rather than leaving the whole frame blank.
 
@@ -312,6 +315,7 @@ Neither touches the file. Run one when you inherit a file someone else has been 
 flowchart TD
     setup["fig:setup<br/>observe → config"]
     prep["fig:prep<br/>section skeleton · missing screens"]
+    sketch["fig:sketch<br/>text wireframe of each state · writes nothing"]
     draw["fig:draw<br/>pattern → clone canonical → fill each stub"]
     arrows["fig:arrows<br/>flow arrows · state groups"]
     tokens["fig:tokens<br/>color token audit"]
@@ -323,7 +327,7 @@ flowchart TD
     sync["fig:sync<br/>canonical page after release"]
     qa["fig:qa<br/>audit what shipped"]
 
-    setup --> prep --> draw --> arrows --> tokens --> lint
+    setup --> prep --> sketch --> draw --> arrows --> tokens --> lint
     lint -- violations --> prep
     lint -- pass --> proto
     lint -- pass --> handoff
@@ -341,7 +345,8 @@ flowchart TD
 | `/fig:setup` | Observe a file's conventions and draft a config |
 | `/fig:read` | Collect the page and screen inventory |
 | `/fig:prep` | Normalize names · place into sections · stub missing screens |
-| `/fig:draw` | Draw a screen or fill a stub — agreeing the direction first as a rough text sketch of each state, then following the file's own pattern, cloned from its nearest canonical screen |
+| `/fig:sketch` | Agree the direction before anything is drawn — one decision at a time, a rough text wireframe of each state, a transition tree. Writes nothing |
+| `/fig:draw` | Draw a screen or fill a stub — after `/fig:sketch` where the screen changes, following the file's own pattern, cloned from its nearest canonical screen |
 | `/fig:arrows` | Create and re-sync flow arrows |
 | `/fig:lint` | Read-only audit gate (zero writes) |
 | `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task doc |

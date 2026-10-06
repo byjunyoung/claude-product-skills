@@ -16,6 +16,8 @@ claude plugin install fig@byjunyoung
      │
 /fig:prep     ──▶  sections + a dashed placeholder per missing screen
      │             = your to-draw list
+/fig:sketch   ──▶  the direction, agreed in text            writes nothing
+     │             (only when a screen looks or behaves differently)
 /fig:draw     ──▶  each placeholder becomes a real screen
      │
 /fig:arrows   ──▶  transition arrows and state links
@@ -42,6 +44,7 @@ claude plugin install fig@byjunyoung
 | `/fig:setup` | Reads how your file already names and spaces things, and writes it down as your settings. Run it first on a new file |
 | `/fig:read` | Lists every page and screen in the file |
 | `/fig:prep` | Makes names consistent · puts screens in their section · leaves a placeholder for each screen you still owe |
+| `/fig:sketch` | Agrees what a screen will look like before anything is drawn — one decision at a time, then a rough text wireframe of each state. Writes nothing |
 | `/fig:draw` | Draws a screen or fills a placeholder, cloned from the nearest canonical screen |
 | `/fig:arrows` | Creates and re-syncs flow arrows |
 | `/fig:lint` | The audit everything else has to pass. Reads and reports, never edits |
@@ -59,7 +62,7 @@ claude plugin install fig@byjunyoung
 ## How draw draws
 
 ```
-1  Agree the direction   one decision at a time → a rough text sketch of each state
+1  Agree the direction   /fig:sketch, or skipped when it already ran in this conversation
                          (only when a screen is about to look or behave differently)
 2  Find the pattern      the file's pattern page → two screens that already agree
                          → neither: stop and ask, rather than invent one

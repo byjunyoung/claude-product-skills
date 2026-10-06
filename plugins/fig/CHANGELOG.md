@@ -1,5 +1,9 @@
 # fig
 
+## 3.25.0 — 2026-10-06
+
+- **New skill `/fig:sketch` — the direction-agreeing step, taken out of `/fig:draw`.** The text wireframe added in 3.20 kept proving useful well before anybody drew: to settle a direction before a spec was written, or to check two people meant the same screen. Inside `draw` it could only be reached by starting a Figma write, with its seat check and canonical search. It now stands on its own in the same shape — the decision list, one question at a time, a table of what was settled, a rough text wireframe per state, a transition tree, what differs from today — and writes nothing. Saving the sketch was considered and dropped: once agreed, the decision table belongs in the spec, the states become stubs and frames, the transitions become arrows, so a stored copy would only be one nobody updates. `draw` skips its sketch step when `/fig:sketch` was accepted in the same conversation, runs it when it was not, and still skips it for a stub whose `TBD` already settles the layout
+
 ## 3.24.0 — 2026-10-02
 
 - **A new pattern was proposed from nothing.** When the file had no precedent for an arrangement, `/fig:draw` defined one from what seemed reasonable, and that pattern then binds every screen after it. New key `references.sources` names screen-reference services reached through a connector; when a pattern has to be newly defined, the skill looks there for how shipped products arrange the same thing and says in the proposal what it was compared against. It stays at that one step on purpose: the file's own screens and patterns come first, the parts still come from the design system, and copy never comes from another product's screen. Empty, the default, changes nothing

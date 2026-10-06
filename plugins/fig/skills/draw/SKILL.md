@@ -1,6 +1,6 @@
 ---
 name: draw
-description: Draws a screen, or fills a stub `/fig:prep` left behind, inside the file's own conventions rather than as a loose fragment. It looks up the file's own arrangement pattern first and, where none exists, stops and has one defined rather than inventing a one-off. It anchors to the nearest canonical screen and clones it, so what comes out is the whole screen with the change in it, not a swatch of the part that is new. Copy comes from a spec, from the running system, or from the file's own precedent — never from what sounds plausible. One undecided fact is pinned on the node it belongs to, never left as a blank frame standing in for the whole screen. Where a screen is about to look or behave differently, the direction is agreed in the conversation first — item by item, then as a rough text sketch of each state — before anything reaches the file. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "design this state", "이 화면 그려줘", "placeholder 채워줘", "이 상태 디자인해줘".
+description: Draws a screen, or fills a stub `/fig:prep` left behind, inside the file's own conventions rather than as a loose fragment. It looks up the file's own arrangement pattern first and, where none exists, stops and has one defined rather than inventing a one-off. It anchors to the nearest canonical screen and clones it, so what comes out is the whole screen with the change in it, not a swatch of the part that is new. Copy comes from a spec, from the running system, or from the file's own precedent — never from what sounds plausible. One undecided fact is pinned on the node it belongs to, never left as a blank frame standing in for the whole screen. Where a screen is about to look or behave differently, the direction is agreed first with `/fig:sketch` — item by item, then as a rough text sketch of each state — before anything reaches the file. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "design this state", "이 화면 그려줘", "placeholder 채워줘", "이 상태 디자인해줘".
 allowed-tools: AskUserQuestion, Bash, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__search_design_system, mcp__plugin_figma_figma__get_design_context, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
 ---
 
@@ -22,6 +22,7 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 
 ## When NOT to invoke
 
+- Agreeing the direction only, with nothing written yet → `/fig:sketch`
 - Laying out the section skeleton or stubbing missing cases → `/fig:prep`
 - Creating or syncing flow arrows → `/fig:arrows`
 - Checking for violations only, zero writes → `/fig:lint`
@@ -126,18 +127,13 @@ Copy, labels and sample values come from somewhere real: the spec, the file's ow
 
 ## Sketch the direction before the file
 
-**A table of rules does not show anybody a screen.** A spec entry can be complete and still leave the person who asked for it unable to picture what they are agreeing to — and a write to a shared file is the most expensive place to find out they meant something else. So where the work changes how a screen looks or behaves — a new screen, a layout that moves, a flow that gains states — the direction is agreed in the conversation before a single node is written, and always in the same shape:
+**A table of rules does not show anybody a screen.** Where the work changes how a screen looks or behaves — a new screen, a layout that moves, a flow that gains states — the direction is agreed in the conversation before a single node is written. That step is `/fig:sketch`: the list of decisions, one question at a time, a table of what was settled, a rough text wireframe of each state, a transition tree, and what differs from today.
 
-1. **The list of what has to be decided**, numbered, before the first question — so the size of it is visible
-2. **One question at a time**, each with two or three lines of context and a recommended option. When an answer opens a question the list did not have — moving something out of a panel raises where it goes instead — ask that before moving to the next number
-3. **A table once it is settled** — item │ decision — so the whole direction reads in one place
-4. **A rough text wireframe for each moment the screen changes** — at rest, right after the action, while it is in progress, collapsed or returned, any secondary view — with one line under each saying what changed since the last. Labels inside the boxes are ASCII: short English words, or letters keyed to a legend written outside the box. A wide character (Korean, Japanese, Chinese) takes two columns in a monospace terminal and pushes every right-hand border out of line. Generate the lines with a short script rather than counting columns by hand, and mark any size as an estimate
-5. **A transition tree** — which state follows which, on what input — with its vertical lines only at the left edge, for the same reason
-6. **Two or three lines on what differs from today**
+- **Already sketched and accepted in this conversation** → skip it. The sketch's decision table is the direction; draw from it, and do not re-ask what it settled
+- **Not sketched yet** → run `/fig:sketch` (via the Skill tool) before step 6, and come back once the person accepts it. A sketch from an earlier conversation is confirmed again, not assumed — nothing was saved, by design
+- **A stub whose `TBD` already settled the layout**, where the canonical screen fixes the rest → skip it. There is nothing left to picture
 
-The sketch does not replace preview → go. It is what makes the preview something the person can judge: they are no longer weighing the direction and the details in the same breath. And a spec draft written before the sketch is agreed has the same problem one step earlier — values chosen by whoever drafted it, presented as if they had been decided.
-
-**Skip it for a stub whose `TBD` already settled the layout**, where the canonical screen fixes the rest. There is nothing left to picture.
+The sketch does not replace preview → go. It is what makes the preview something the person can judge: they are no longer weighing the direction and the details in the same breath.
 
 ## Procedure
 
@@ -159,7 +155,7 @@ Per "Pattern first" above, for each kind of thing being drawn. Cases 2 and 3 tak
 
 ### 5. Sketch → agree
 
-Per "Sketch the direction before the file" above, where the screen is about to look or behave differently. Nothing is previewed until the person accepts the sketch.
+Per "Sketch the direction before the file" above — `/fig:sketch`, unless it already ran in this conversation or the stub settles the layout. Nothing is previewed until the person accepts the sketch.
 
 ### 6. Preview → go
 
@@ -248,7 +244,7 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 | Copy that reads plausibly | It ends up in the acceptance checklist. Read the spec, the system, or the file's own precedent, and mark what nothing sourced |
 | Renaming or moving the stub's frame while filling it | The arrows were drawn against that name and position. Keep both, or fix the flow with `/fig:arrows` |
 | Reparenting a clone with `appendChild` | Local-font text fails to load and the call is rejected. Use `absorb()` |
-| Opening with a full preview, or a spec draft, whose values you chose yourself | The person has to judge the direction and the document at once, and usually cannot picture either. Agree the direction item by item, show the text sketch of each state, then preview |
+| Opening with a full preview, or a spec draft, whose values you chose yourself | The person has to judge the direction and the document at once, and usually cannot picture either. Agree the direction with `/fig:sketch` first, then preview |
 | Pins that came along with a clone | Last round's labels read as this round's decisions. Clear the clone's annotations in the call that clones it, including those on nested instances |
 | Explaining the screen in pins — navigation, before/after, rules, code notes | Each already lives in the arrows, the AS-IS section, the spec or the ticket. Pin only an open question, once |
 | Calling it done on an isolated screenshot | The gate is `/fig:lint` plus a whole-section screenshot, as everywhere else here |
@@ -258,7 +254,7 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 
 ## Constraints
 
-- **A change to how a screen looks is sketched in text and agreed before its preview.** A stub the canonical screen already settles is exempt
+- **A change to how a screen looks is sketched with `/fig:sketch` and agreed before its preview.** A stub the canonical screen already settles is exempt
 - **Preview → go before writing**, split per screen or per state, and a pattern write takes a gate of its own
 - **`/fig:lint` and `/fig:tokens` after every run**, on every frame drawn — every run clones, and a clone carries whatever its source carried. Never report done without a `PASS`
 - Sections matching `pages.exclude_sections` are never drawn into, and a page matching `pages.readonly` is refused
