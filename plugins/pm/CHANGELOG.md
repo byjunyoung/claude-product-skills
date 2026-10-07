@@ -1,5 +1,12 @@
 # pm
 
+## 0.34.0 — 2026-10-07
+
+- **A spec came out plain in every sentence and still written for engineering.** The voice rule reads how a line is phrased, never whether it belongs. Research for an entry turns up where a value is stored, which lookup filters on what, a vendor list, a chat command, a default nobody sees — all true, all rewritten plainly, and none of it something the person deciding scope or drawing the screen can act on. The entries grew a layer of background the reader had to read past to find the requirement
+- **`/pm:prd` now decides what gets a sentence before deciding how it reads.** Section 2.4 adds a filter with a table of the usual research finds and what the entry carries instead: the fact as the person meets it rather than where it comes from, nothing for a value no screen shows, what the person sees until enforcement is done rather than how it is enforced, the kind of thing rather than a list of examples, an out-of-scope item by name rather than by its command. A reason gets one clause. The guard carries over — a cut line must not take a decision with it
+- **The voice check in step 3 now reads each line twice** — once for how it is phrased, once for whether the reader would act on it
+- No new config key
+
 ## 0.33.0 — 2026-10-07
 
 - **A ticket came out with only the assignee the record happened to carry, and with settings left blank.** Projects keep assignee patterns nobody writes down — every parent carries the same people, front-end and server tasks go to different hands — and a ticket filed from the record alone drifted off them. A parent filed without a type was read by the tracker as a task and lost its milestone without anyone seeing it

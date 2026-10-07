@@ -143,6 +143,20 @@ This is not the terminology list. That list reads nouns, and a sentence containi
 
 **A word the reader may not have is explained where it first appears**, in three or four words, inside the sentence rather than in a glossary nobody scrolls to. Where the team's own term is the accurate one, keep the term and gloss it; a folksy substitute invented to avoid it reads worse than the term did.
 
+**What the reader cannot act on stays out.** Plain sentences are half of it; the other half is what gets a sentence at all. Research for a spec turns up far more than the spec needs — where a value is stored, which service reads it, which condition a lookup filters on, a vendor's name, a command somebody types in a chat tool — and all of it is true, and most of it is the grounds for a decision rather than the decision. Before a line goes in, ask whether the person deciding scope, drawing the screen or answering for the product would do anything differently for having read it. Where they would not, it does not go in.
+
+| Found during research | What the entry carries |
+|---|---|
+| Where a fact comes from inside the system — a table, a lookup, a service, a document of engineering's | The fact, as the person meets it: *a branch with no location does not appear on the app's map*. The source, if it is worth keeping, is one line under references |
+| A value no screen shows and nobody chooses — a default engineering sets, a field left over from an older system | Nothing. If engineering needs telling, that is the ticket's job, not the spec's |
+| How something is enforced — what a check looks at, which condition has to change | What the person sees until it is done, and who still owes the work: *closed branches stay listed in the app until the app side is changed* |
+| A list of examples — vendors, models, codes | The kind of thing it is (*the card payment provider*), unless the reader picks from exactly that list on the screen |
+| Something out of scope | Its name in the reader's words, not the command or the channel it currently lives in |
+
+A reason earns one clause, not a paragraph. A rule that needs three sentences of background to justify itself is usually carrying research that belongs under references.
+
+**The guard runs here too: cutting a line must not cut a decision.** Before dropping one, check whether it held something somebody settled — a requirement, a default the reader chose, a dependency they have to track. Keep that and drop only the mechanism around it.
+
 **The guard: changing how it reads must not change what it says.** Values, decisions, section order and table structure stay exactly as they were, and only the sentences move. A pass over the wording that quietly rounds a number or softens a rule has broken the document it was tidying.
 
 Systems vocabulary is a symptom to watch for, not a list to ban — *active*, *trigger*, *threshold*, *evaluate*, *propagate*, *the presence or absence of*, *upon*, *the relevant*, rules chained together with arrows. Meeting one is a reason to read that sentence again from the reader's side; rewritten that way, the word usually has nowhere left to sit. The examples above are English because this file is, and the rule is about the shape of the sentence rather than the language it is in — `meta.language` decides that, and every one of these reads the same way translated.
@@ -154,7 +168,7 @@ Systems vocabulary is a symptom to watch for, not a list to ban — *active*, *t
 Self-check, read-only. Anything caught sends it back to step 2.
 
 1. **Terminology** — look for `prd.forbidden_terms` in the body. Where they appear, replace with product-side wording. Write as far as "what" (the requirement) and leave "how" (the implementation) to engineering or to a TBD
-2. **Voice** — the check above reads nouns; this one reads sentences, which is where the same problem survives every string check there is. Read the rules, the behaviour rows and the case rows back as somebody who cannot open the code: does each one say what a person sees, or what the system decided? Rewrite whatever fails by 2.4 — and change nothing but the sentence
+2. **Voice** — the check above reads nouns; this one reads sentences, which is where the same problem survives every string check there is. Read the rules, the behaviour rows and the case rows back as somebody who cannot open the code: does each one say what a person sees, or what the system decided? Rewrite whatever fails by 2.4 — and change nothing but the sentence. Then read each line once more for whether the reader would act on it at all, and cut what they would not by the same section — leaving every decision in place
 3. **Format** — re-read only the places that are easy to break
    - Functional requirements go in a **table** (behaviour │ condition │ input │ result). Not bullet sentences
    - States and cases go in a **table**, with the rows fixed to `structure.cases`. Not applicable is `—`; anything off the list is `other`
