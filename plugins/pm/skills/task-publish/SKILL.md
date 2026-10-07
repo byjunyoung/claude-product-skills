@@ -201,7 +201,11 @@ Ask everything still missing in one `AskUserQuestion` round. **Never ask for wha
 | Other links | Ask — dependencies, policies |
 | Milestone | Only where `task.hierarchy.milestone_on` is not `none`, and only for a project listed in `milestone_projects`. With no `milestone_format` entry for that project, the options are the milestones already open and none is created |
 
-Project, group, priority, assignee and dates come from the record and are not asked. Where the record has several assignees and the tracker takes one, ask which.
+Project, group, priority and dates come from the record and are not asked. Where the record has several assignees and the tracker takes one, ask which.
+
+**The assignee is checked against the project's own tickets, not taken from the record alone.** Before the preview, read the assignees on this project's recent tickets **of the same kind** — parents against parents, tasks against tasks, and for tasks the same role (design, front end, server). A project usually has a pattern nobody wrote down: every parent carries the same two people, front-end tasks go to one person and server tasks to another. Where the precedent shows one, apply it, and where the record disagrees with it, show both in the preview and say which one was used. Where the precedent is mixed, ask rather than pick. A ticket filed with only the person who happened to file it is the usual way the pattern drifts.
+
+**No ticket setting is left blank without a reason.** Go through everything the tracker takes for this kind of ticket — type, labels, priority, assignee, milestone, parent, board column, start and end dates — and fill each one from, in order: the record, the project's precedent above, then this interview. What none of those settles is asked here in the same round, never left empty and never guessed. The only blanks allowed are the ones a rule requires (a milestone the rules say a task inherits from its parent, say), and the preview names each one with the rule. A blank type is the costly one: a tracker that tells parents from tasks by type will read an untyped parent as a task and act on it — strip its milestone, warn about its assignees — without anyone noticing.
 
 ### 4. Resolve the parent
 
@@ -222,7 +226,7 @@ duplicate of one that already exists.
 
 **A task with no parent is a real answer where the config allows it.** A one-off fix, a chore, a ticket somebody's merge opened by itself — none of those has a feature to hang under, and inventing a parent for them is what produces the empty umbrella ticket everything unrelated then collects under. Say what it costs at the same time: with `milestone_on: parent` a task with no parent cannot carry a version, so it is invisible to anything reading the milestone. Where the work does belong to a feature, the parent is still the right answer. With `parent_required` `true` the option is not offered — the tracker requires one.
 
-A newly created parent is titled by `task.hierarchy.parent_title`, is built on `task.template.parent` where one is named, and carries whatever `task.mirror_extras` specifies for its type and board placement. **`task.ticket.default_labels` is the task level's and does not follow it up** — a parent carries the labels the rule document requires of its kind and no others, and where there is no rule document it carries none. A parent filed with a label nobody's rules asked for is worse than one filed bare: the label is what other people's filters and boards are built on. Where the project uses milestones, the milestone is set **on the parent** — see step 8.
+A newly created parent is titled by `task.hierarchy.parent_title`, is built on `task.template.parent` where one is named, and carries whatever `task.mirror_extras` specifies for its type and board placement. Its assignees and every other setting are filled the way step 3 fills a task's — from this project's existing parents first, then by asking — and its title follows the wording those parents already use. **`task.ticket.default_labels` is the task level's and does not follow it up** — a parent carries the labels the rule document requires of its kind and no others, and where there is no rule document it carries none. A parent filed with a label nobody's rules asked for is worse than one filed bare: the label is what other people's filters and boards are built on. Where the project uses milestones, the milestone is set **on the parent** — see step 8.
 
 ### 5. Assemble the ticket body
 
@@ -391,7 +395,8 @@ Parent       : #{n} {title}
 Title        : {task.ticket.title, filled in}
 Labels       : {label} ({where it came from — config, or the rule that requires it})
                required by the rules but not in the tracker: {label} — reported, not created
-Assignee     : {mapped username}
+Assignee     : {mapped username} ({record, or the project's precedent — both where they disagree})
+Blank on purpose: {setting} — {the rule that requires it}
 Contract     : {level} → #{n} {title}   (or "this ticket", or "off")
 Template     : {task.template.task or .parent}   (or "none published")
                left for a person: {section} — the template's own placeholder kept

@@ -1,5 +1,11 @@
 # pm
 
+## 0.33.0 — 2026-10-07
+
+- **A ticket came out with only the assignee the record happened to carry, and with settings left blank.** Projects keep assignee patterns nobody writes down — every parent carries the same people, front-end and server tasks go to different hands — and a ticket filed from the record alone drifted off them. A parent filed without a type was read by the tracker as a task and lost its milestone without anyone seeing it
+- **`/pm:task-publish` now reads the assignees on the project's own tickets of the same kind before the preview** — parents against parents, tasks against tasks of the same role — and applies the pattern it finds. Where the record disagrees, the preview shows both and says which was used; where the precedent is mixed, it asks
+- **Every setting the tracker takes is filled or explained.** Type, labels, priority, assignee, milestone, parent, board column and dates come from the record, then precedent, then the interview. The only blanks left are ones a rule requires, and the preview names each with its rule. A newly created parent is filled the same way
+
 ## 0.32.0 — 2026-10-02
 
 - **The precedent check could only read about other products, never look at them.** A local archive and the web turn up articles describing how a comparable product handles something, and the recommendation was built on that description. Libraries of real shipped screens and flows now reach Claude through connectors, which puts the screens themselves within reach
