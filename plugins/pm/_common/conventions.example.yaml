@@ -144,6 +144,9 @@ task:
   record:                        # where the planning-side task lives
     type: notion                 # any type whose adapter answers as a record — notion and markdown ship. none = no tracker
     ref:  null                   # a collection:// url, an owner/repo, or a directory
+    scope: members               # whose work the record list holds. members = only tickets with an
+                                 # assignee on assignee_map; a ticket held wholly by others has no record
+                                 # and is never created or synced. all = every ticket in the mirror
   mirror:                        # the engineering-side copy, if there is one
     type: none                   # any type whose adapter answers as a mirror — github ships. none = one tracker
     ref:  null

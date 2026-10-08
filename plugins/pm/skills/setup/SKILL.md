@@ -66,6 +66,7 @@ The file speaks in keys. The questions do not.
 |---|---|---|
 | `task.record` | Where do you first write a task down? — a Notion database, GitHub issues, a folder of markdown files, somewhere else, nothing yet | nothing yet · a tool this plugin has never seen |
 | `task.mirror` | Where does engineering watch progress? — the same place, a GitHub repo, somewhere else | the same place |
+| `task.record.scope` | Does the record list hold only your team's work, or everything engineering tracks? — `members` keeps it to tickets assigned to someone on `assignee_map` | members — a ticket held by somebody outside the map gets no record |
 | `task.link_property` | Which field on a task should hold the ticket's link? — the url fields the schema has | none exists — it has to be created first |
 | `task.status_map` | When a spec is finished, which board column should its ticket sit in? | leave it blank — whoever runs the board fills it |
 | `task.properties.progress` · `.start` · `.end` | Does a task record say how far along it is, and when it started and finished? — name those properties | leave them blank — the progress and schedule checks stay off |

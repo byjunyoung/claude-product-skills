@@ -1,5 +1,14 @@
 # pm
 
+## 0.35.0 — 2026-10-09
+
+- **A record list that belongs to one team filled up with other people's tickets.** A kickoff filed seven tickets and mirrored all seven into the record list, three of them held by engineering alone; a later sync then wrote the engineer's user id onto two more records by copying it from the first, and proposed "rows the mirror has that the record lacks" as a batch — a drift kind the table never had. The constraint against inventing a mapping was there and was walked around
+- **`task.record.scope` (new, default `members`)** — the record side holds only tickets with an assignee on `task.assignee_map`. A ticket held wholly by others is never proposed as a record and an existing record for one is reported as *outside scope*, with its ticket and holder named, and left unsynced. A mapped assignee beside an unmapped one is shared work, not a mismatch — the record carries the mapped people only. `all` restores the old behaviour
+- **Two drift rows added to `/pm:task-sync`** — *Ticket without record* reports and asks, one preview per record, and creates only on an explicit instruction, never as a batch; *Outside scope* reports and proposes nothing
+- **Two constraints sharpened** — a user id found on another record is not a mapping; a record is never created from a ticket on the skill's own initiative
+- `/pm:setup` asks the scope question with the others
+- New config key: `task.record.scope` — the example file and the setup table carry it
+
 ## 0.34.0 — 2026-10-07
 
 - **A spec came out plain in every sentence and still written for engineering.** The voice rule reads how a line is phrased, never whether it belongs. Research for an entry turns up where a value is stored, which lookup filters on what, a vendor list, a chat command, a default nobody sees — all true, all rewritten plainly, and none of it something the person deciding scope or drawing the screen can act on. The entries grew a layer of background the reader had to read past to find the requirement
