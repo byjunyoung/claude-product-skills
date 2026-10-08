@@ -1,5 +1,9 @@
 # fig
 
+## 3.26.0 — 2026-10-08
+
+- **Dev Mode status is gone from every skill, not just switched off.** `/fig:handoff` and `/fig:sync` kept the *Ready for dev* and *Completed* steps behind `handoff.dev_status` (off since 3.11.1, because `use_figma` rejects `devStatus` outright). Left in as an option, it kept coming back in conversation as "I can mark these ready for dev" — a step no run could take, offered as if it could. The steps, the `handoff.dev_status` and `handoff.ready_note` keys, the `note` input and the read-back of the status are removed; `/fig:handoff` now hands over the pinned links and the task-doc line and says outright that it never sets or offers a Dev Mode status, and its trigger phrases no longer include "mark these ready for dev". `/fig:sync`'s last step only names the version, through the web app since `use_figma` cannot save one either. A config that still carries the two keys is read without error; they do nothing
+
 ## 3.25.0 — 2026-10-06
 
 - **New skill `/fig:sketch` — the direction-agreeing step, taken out of `/fig:draw`.** The text wireframe added in 3.20 kept proving useful well before anybody drew: to settle a direction before a spec was written, or to check two people meant the same screen. Inside `draw` it could only be reached by starting a Figma write, with its seat check and canonical search. It now stands on its own in the same shape — the decision list, one question at a time, a table of what was settled, a rough text wireframe per state, a transition tree, what differs from today — and writes nothing. Saving the sketch was considered and dropped: once agreed, the decision table belongs in the spec, the states become stubs and frames, the transitions become arrows, so a stored copy would only be one nobody updates. `draw` skips its sketch step when `/fig:sketch` was accepted in the same conversation, runs it when it was not, and still skips it for a stub whose `TBD` already settles the layout

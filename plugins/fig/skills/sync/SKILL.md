@@ -129,22 +129,11 @@ Move working pages whose changes are now in canonical into the archive.
 - Confirm the moved frames have the same text node count as before the move
 - Reference material kept in canonical but excluded from audits (size variants and the like) goes in a section matching `pages.exclude_sections`. Left in a normal section it reports as a missing state variant or a flow orphan
 
-### Step 6 — the signals Figma shows engineering
+### Step 6 — name the version
 
-Where `handoff.dev_status` is on, and only after Step 5 passed:
+Only after Step 5 passed, and only where `sync.named_version` is set: `sync.named_version` with `{date}` and `{n}` (screens applied) filled in. `use_figma` cannot save a version (`"saveVersionHistoryAsync" is not a supported API`, checked on a live file with an Edit seat, 2026-08-31), so it is saved through the web app — *File → Save to version history* — behind the same preview → go as everything else, or handed to the person to save under exactly that name. `null` saves none — and `null` is the default.
 
-1. **Mark completed** — on each canonical section the applied changes landed in, `section.devStatus = { type: "COMPLETED" }`. This is what turns the "ready for dev" a prep left there into "shipped" where engineering looks
-2. **Name the version** — `sync.named_version` with `{date}` and `{n}` (screens applied) filled in, then in a **separate** `use_figma` call after every write above has finished:
-
-   ```js
-   await figma.saveVersionHistoryAsync("{title}", "{one line: what was applied, from where}");
-   ```
-
-   Separate on purpose: changes made earlier in the same script are not guaranteed to be in the version. `null` saves none — and `null` is the default
-
-Both go in the preview with everything else; nothing here is a second gate.
-
-*(Checked on a live file with an Edit seat, 2026-08-31: `use_figma` rejects both of these — `"devStatus" is not a supported API` and `"saveVersionHistoryAsync" is not a supported API`. It is the tool's allowlist, not the seat and not the file, and Figma's REST API has no endpoint that sets a dev status either. Both settings ship off; the apply in Steps 1 to 5 is unaffected and its seat check above still holds.)*
+Dev Mode status (*Completed*) is not set and not offered: `use_figma` cannot write it and nothing else here can either (removed in 3.26.0).
 
 ## Reporting
 
@@ -163,7 +152,7 @@ audited N  →  applied X · not applied Y · needs checking Z
 · working page → archive location, whether deleted
 
 [handoff]
-· sections marked completed: N · version saved: {title}   (or: off — handoff.dev_status, sync.named_version)
+· version saved: {title}   (or: off — sync.named_version)
 ```
 
 If nothing was un-applied, report just that, briefly.

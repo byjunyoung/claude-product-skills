@@ -188,19 +188,11 @@ sync:
   named_version: null                         # title of the version saved after apply. null saves none — the default,
                                               # because saveVersionHistoryAsync is not exposed to use_figma (see handoff below)
 
-# --- Handoff signals -----------------------------------------------------------
-# The signals Figma itself shows engineering, set at the end of the skills that earn them:
-# /fig:prep marks a section ready for dev once /fig:lint passes it; /fig:sync marks it
-# completed once the change is in canonical. Off, both are left alone.
-#
-# Off is the default, and not out of caution: use_figma rejects both the getter and the
-# setter with `"devStatus" is not a supported API`, on an Edit seat as much as a View one
-# (checked on a live file, 2026-08-31). Figma's REST API reads the status but has nothing
-# that sets it. Until the tool exposes it, on means every run fails at the write.
+# --- Handoff --------------------------------------------------------------------
+# Dev Mode status (Ready for dev / Completed) is not set by any skill: use_figma rejects
+# `"devStatus" is not a supported API` and Figma's REST API cannot set it. The
+# handoff.dev_status and handoff.ready_note keys were removed in 3.26.0.
 handoff:
-  dev_status: false                           # Dev Mode status on sections — READY_FOR_DEV after prep, COMPLETED after sync
-  ready_note: "prep · {date}"                 # the note carried on a READY_FOR_DEV status
-
   # --- The moment a handover points at -------------------------------------------
   # A handover has to name a moment in the file. Without one, "matches the design"
   # moves as soon as somebody edits it again, and a ticket leaning on that line is
@@ -209,7 +201,7 @@ handoff:
   # Figma's own named versions are that moment — a file-level snapshot a deeplink
   # pins with version-id — so nothing is copied and no frozen duplicate exists.
   # Saving one is done by hand: use_figma's allowlist rejects the version API the
-  # same way it rejects devStatus (checked on a live file, 2026-08-31). The skill
+  # (`saveVersionHistoryAsync` is not a supported API, 2026-08-31). The skill
   # asks, the person saves, the skill reads it back.
   version:
     enabled: false                            # true where your handovers pin a version
