@@ -1,5 +1,12 @@
 # pm
 
+## 0.36.0 — 2026-10-12
+
+- **A spec named every state an automatic job could stop in and never said how two of them end.** A job stopped on an error stayed on its list for good. Every way out waited for a signal from the device that had stopped, and the one manual way out — archiving the alert that started the job — had been taken away the day before, when another entry hid that alert to tidy its own list. Each entry read fine on its own, and the gap sat between them
+- **Two checks added to the cross-entry read in `/pm:prd` step 3.1** — *a state with a way in and no way out* asks every state a job passes through for one exit that does not wait on the stopped thing's own signal, and for what the screen shows when that signal never arrives; *hiding something another entry still holds on to* follows every hide or removal to the entries that used the thing to finish a job
+- The skill description and the READMEs' account of the cross-entry read carry the two checks
+- No new config key
+
 ## 0.35.0 — 2026-10-09
 
 - **A record list that belongs to one team filled up with other people's tickets.** A kickoff filed seven tickets and mirrored all seven into the record list, three of them held by engineering alone; a later sync then wrote the engineer's user id onto two more records by copying it from the first, and proposed "rows the mirror has that the record lacks" as a batch — a drift kind the table never had. The constraint against inventing a mapping was there and was walked around
