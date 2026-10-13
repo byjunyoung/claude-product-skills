@@ -407,7 +407,7 @@ A separate plugin covering the document and the work that comes out of it.
 
 <img src=".github/context-table.png" alt="A request thread on the left, sorted into named context rows on the right, with fact, assumed and TBD labelled apart" width="100%">
 
-`task-publish` takes one task and `task-sync` takes the list, because the two fail differently. One task fails by being filed wrong. A list fails by drifting — unfiled, duplicated, wrong parent, resurrected, naming a release the tracker has since moved it out of, or still saying a task is a quarter done when every box on it has been ticked. Diagnosing drift means reading both sides first, which is why `sync` shows you the diagnosis and waits rather than writing.
+`task-publish` takes one task and `task-sync` takes the list, because the two fail differently. One task fails by being filed wrong. A list fails by drifting — unfiled, duplicated, wrong parent, resurrected, naming a release the tracker has since moved it out of, still saying a task is a quarter done when every box on it has been ticked, or sitting in a status with a field that status calls for left blank. Diagnosing drift means reading both sides first, which is why `sync` shows you the diagnosis and waits rather than writing.
 
 Where your task list carries how far along something is and when it started, those move with the tick that changed them: `publish` writes them in the same approval as the edit, and `sync` counts them from the checklist rather than estimating. A progress figure nobody moved is the kind of drift that surfaces in a status meeting instead of in a diff, so neither skill invents one — with those properties unnamed in the config, the check is simply off.
 

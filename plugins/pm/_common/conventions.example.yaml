@@ -231,6 +231,17 @@ task:
   # progress and schedule diagnoses off wherever they would otherwise run.
   progress_source: contract
 
+  # The fields a record must have filled, by its status. Keys are the record's own
+  # status names, plus `always` for every status. Values name fields by the keys under
+  # properties (start, end, progress, version) or by the record's project, group,
+  # priority and assignee; `progress_done` asks for progress at 100%.
+  # /pm:task-sync reports a record missing one. A blank the evidence can fill — a
+  # schedule date, the ticked fraction, the mirror's milestone — goes to the diagnosis
+  # that already fills it; the rest is reported only, since a missing priority or
+  # assignee is somebody's decision. Empty, the default, turns the check off.
+  # e.g. always: [project, priority]  /  In progress: [start, progress]  /  Done: [start, end, progress_done]
+  required_fields: {}
+
   # Record status -> the mirror column a task is seated in when it is first filed.
   # Only the statuses a task can be filed *in* need an entry; a status with none leaves
   # the mirror's own default alone. This also tells /pm:task-sync which column counts as

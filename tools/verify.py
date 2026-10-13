@@ -34,7 +34,7 @@ TEAM_FILE = {"fig": "figma-conventions.yaml"}
 FREE_KEY_MAPS = (
     "files.", "qa.environments.",
     "task.mirror_extras.", "task.label_map.", "task.assignee_map.",
-    "task.status_map.", "task.field_owner.",
+    "task.status_map.", "task.field_owner.", "task.required_fields.",
     "task.hierarchy.milestone_format.",
 )
 

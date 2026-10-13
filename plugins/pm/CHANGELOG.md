@@ -1,5 +1,12 @@
 # pm
 
+## 0.37.0 — 2026-10-12
+
+- **A team kept its own table of which fields each task status must carry, and only its own scripts read it.** A daily check and a session hook flagged a task in progress with no start date or a finished one at 80%, from a table in the team config the skills never looked at. The table sat outside the schema, so the repository check failed on it on every push, and the drift it caught never reached `/pm:task-sync`, the one place that reconciles a list
+- **New key `task.required_fields`** — record status → the fields a record in that status must have filled, plus `always`; `progress_done` asks for 100%. Empty, the default, turns the check off
+- **`/pm:task-sync` reports a *required field blank*.** A blank the evidence can fill goes to the diagnosis that already fills it — schedule, progress, version — so nothing is proposed twice; a blank project, priority, group or assignee is reported only, since it is a decision. `default_assignee` is not read as an answer to who holds a task
+- `/pm:setup` asks the question and writes the key on the record side; the example config, both READMEs and the repository check carry it
+
 ## 0.36.0 — 2026-10-12
 
 - **A spec named every state an automatic job could stop in and never said how two of them end.** A job stopped on an error stayed on its list for good. Every way out waited for a signal from the device that had stopped, and the one manual way out — archiving the alert that started the job — had been taken away the day before, when another entry hid that alert to tidy its own list. Each entry read fine on its own, and the gap sat between them

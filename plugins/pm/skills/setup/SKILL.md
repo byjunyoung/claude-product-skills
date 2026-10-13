@@ -70,6 +70,7 @@ The file speaks in keys. The questions do not.
 | `task.link_property` | Which field on a task should hold the ticket's link? — the url fields the schema has | none exists — it has to be created first |
 | `task.status_map` | When a spec is finished, which board column should its ticket sit in? | leave it blank — whoever runs the board fills it |
 | `task.properties.progress` · `.start` · `.end` | Does a task record say how far along it is, and when it started and finished? — name those properties | leave them blank — the progress and schedule checks stay off |
+| `task.required_fields` | For each task status, which fields must already be filled — a start date once work begins, an end date once it is done? | leave it blank — the check stays off |
 | `task.field_owner` | When the two sides disagree on a title or an assignee, which one is right? | leave it blank — it is reported and left alone |
 | `task.hierarchy.parent_kind` | Are tasks grouped under something bigger — an epic, a project? | none — a flat list |
 | `task.context_rows` | The rows your team asks about a task — these defaults, or your own words | the defaults |
@@ -264,7 +265,7 @@ task:
 
 **A `null` is not a gap to be filled later by guessing.** It says the schema did not settle it, so the check or the step is skipped until a person writes a value.
 
-**With a `side`, read the existing file first** and rewrite only the keys that side owns. Record: `task.record`, `task.properties`, `task.context_rows`, `task.link_property`, `task.notion`. Mirror: `task.mirror`, `task.mirror_extras`, `task.ticket`, `task.hierarchy`. The maps that join the two — `task.label_map`, `task.assignee_map`, `task.status_map` — and `task.field_owner` belong to whichever run can see both sides, and are left alone otherwise. Everything else in the file stays byte for byte, comments included. An adapter drafted in 3b is written where 3b says, never into this file.
+**With a `side`, read the existing file first** and rewrite only the keys that side owns. Record: `task.record`, `task.properties`, `task.required_fields`, `task.context_rows`, `task.link_property`, `task.notion`. Mirror: `task.mirror`, `task.mirror_extras`, `task.ticket`, `task.hierarchy`. The maps that join the two — `task.label_map`, `task.assignee_map`, `task.status_map` — and `task.field_owner` belong to whichever run can see both sides, and are left alone otherwise. Everything else in the file stays byte for byte, comments included. An adapter drafted in 3b is written where 3b says, never into this file.
 
 ### 7. Prove it before handing it over
 
