@@ -25,7 +25,7 @@ skill improvising them from what it remembers of the tool's API.
 
 Exit 4 is the other stop. The file exists, but its `roles:` line does not include the side
 the skill is reading — a mirror-only adapter asked for a record's list, say. Half an adapter
-is not an adapter for the other half; 3b drafts the missing side.
+is not an adapter for the other half; /pm:setup's step 4c drafts the missing side.
 """
 import importlib.util, os, re, sys
 

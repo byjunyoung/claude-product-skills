@@ -30,7 +30,7 @@ The `pm` skills read every value from `pm-conventions.yaml`. This is where that 
 
 - `record` (optional): the planning-side list — a database url, a repo, or a directory
 - `mirror` (optional): the engineering tracker — usually `owner/repo`
-- `out` (optional): where to write. Defaults to `~/.claude/pm-conventions.yaml`; pass `./pm-conventions.yaml` for a project-local one
+- `out` (optional): where to write. Defaults to `~/.claude/pm-conventions.yaml`; pass `./pm-conventions.yaml` for a project-local one. On the local start it is `<repo>/pm-conventions.yaml` unless one was passed — the paths in it are relative to that repository
 - `side` (optional): `record`, `mirror`, or `both` (the default). For when the two sides are reachable from different machines — the doc tool from one, the tracker from another. A run with a side writes only that side's keys into `out` and leaves the other side's byte for byte, so two runs on two machines finish one file
 
 Anything omitted is asked for at the start, together, in one round.
@@ -80,9 +80,9 @@ The file speaks in keys. The questions do not.
 | `task.field_owner` | When the two sides disagree on a title or an assignee, which one is right? | leave it blank — it is reported and left alone |
 | `task.hierarchy.parent_kind` | Are tasks grouped under something bigger — an epic, a project? | none — a flat list |
 | `task.context_rows` | The rows your team asks about a task — these defaults, or your own words | the defaults |
-| `task.contract.level` | Which ticket carries the done conditions and the QA list — each task, or the parent it hangs under? | none — no contract, a summary and links only · leave it blank — kept out of the file, so `/pm:task-publish` stops and asks before it files anything |
+| `task.contract.level` | Which ticket carries the done conditions and the QA list — each task, or the parent it hangs under? | none — no contract, a summary and links only · leave it blank — kept out of the file, so `/pm:task-publish` stops and names the key before it files anything — answer it by running `/pm:setup` again. `/pm:task-sync` stops the same way |
 | `task.progress_source` | Should a task's progress be counted from the ticked boxes of its done conditions and QA list? | leave it blank — the progress and schedule checks stay off |
-| `log.enabled` | Keep a daily log — what moved, what was on the calendar, what was decided? It is written only when you run `/pm:log` | no — `/pm:log` says it is off when called |
+| `log.enabled` | Keep a daily log — what moved, what was on the calendar, what was decided? It is written only when you run `/pm:log` | no — `/pm:log` says it is off when called · leave it blank — not written, so the bundled default applies and the log is on |
 | `log.me.tracker_user_id` | Which of the tracker's users are you? — the user list the schema read | leave it blank — the log keeps every row under yours and says so |
 | `log.sources.calendar` · `.chat_channels` · `.notes_channel` | Which calendar, which channels to read for the day, and is there a channel only you write notes in? | leave them blank — each is skipped and named in the log |
 | `prd.notion.template` · `.inline_db` · `.task_db` · `.parent` | Which page is your spec template, and under which page do new specs go? — the template's inline databases are read from it, not asked | leave them blank — `/pm:prd` asks for a page the first time it writes |
@@ -99,7 +99,7 @@ The file speaks in keys. The questions do not.
 
 Three rules —
 
-- **One question per turn in ⑤. ② is the only grouped round**, and it is five questions
+- **One question per turn in ⑤. ② is the only grouped round** — five questions, asked as two calls, since one call takes at most four
 - **Every question carries options, a recommendation grounded in what ① and ④ saw, and "leave it blank"** — a blank is `null`, written with the question beside it, and it is a complete answer, not a failure to answer
 - **Say what is being read before reading it, and what was found after.** A step that takes seconds in silence reads as a hang
 
@@ -128,11 +128,13 @@ Read the person the verdict and the fix lines in their words — the table under
 
 ### 2. Where your work lives
 
-Ask once, grouped, in the words of the table above — five questions: where specs live, where a task is first written down, where engineering watches progress, which chat tool requests arrive in, and which calendar the log reads. **Options, not a blank line** — people recognise their tool from a list and cannot name its "type". Local files are the recommended answer for specs and tasks, and "nowhere yet" for engineering: that start needs nothing installed, and a tool attaches later without moving anything. For chat and the calendar, recommend what ① found connected, and `none` where nothing was.
+Ask once, grouped, in the words of the table above — five questions: where specs live, where a task is first written down, where engineering watches progress, which chat tool requests arrive in, and which calendar the log reads. One question call takes at most four, so the round is two calls back to back — specs, tasks and engineering in the first, chat and the calendar in the second. **Options, not a blank line** — people recognise their tool from a list and cannot name its "type". Local files are the recommended answer for specs and tasks, and "nowhere yet" for engineering: that start needs nothing installed, and a tool attaches later without moving anything. For chat and the calendar, recommend what ① found connected, and `none` where nothing was.
 
 **"They are the same place" is a real answer.** Then `mirror.type` is `none`, `/pm:task-sync` has nothing to reconcile, and half the config below does not apply. Do not talk anyone into a second tracker.
 
 **"Nothing yet" is a real answer too** — it is the local start, and ③ lays it out. And **a tool this plugin has never seen is not a wrong answer** — write its type as the team calls it, and 4c drafts the adapter.
+
+**With `side: record` or `side: mirror`, ask only that side's question** — where a task is first written, or where engineering watches. Specs, chat and the calendar belong to a run with no `side`, the only run that writes them.
 
 **Then run the preflight again with what was named**, so its verdict means something. Where ② named no tool, there is nothing to require and the first pass stands:
 
@@ -154,7 +156,7 @@ The default. One markdown repository holds whatever ② left local, and every to
 
 ```
 <repo>/
-  pm-conventions.yaml    written in ⑥ — only what was settled, nothing copied from the defaults
+  pm-conventions.yaml    written in ⑥ — only what was settled, nothing copied from the defaults. This is `out`
   docs/prd/              one file per product — prd.markdown.dir, split by product
   tasks/                 one file per task, its front matter the properties — trackers/markdown.md
   logs/YYYY/MM/          one file per day — /pm:log; laid out because log.enabled is on
@@ -169,13 +171,26 @@ Why this and not a tool: it needs nothing installed, git is the audit trail (`/p
 
 Ask two things: where the repository is (an existing directory, or one to create), and whether to `git init` where it is not one. Then interview only what markdown cannot supply — `task.properties.projects` (the products, one file each under `docs/prd/`), `task.context_rows` (the defaults, in `meta.language`), `task.properties.priority` (the defaults unless the team says otherwise). **The config carries only what ② and ③ settled.** A key nobody was asked about stays out of the file, so the plugin's own default keeps applying — and a later change to that default reaches this file too. ②'s answers are always written, even where they match the default: where tasks and specs live is a decision, and `task.record.ref` goes with `task.record.type`. Only "the defaults" as an answer to `task.context_rows` or `task.properties.priority`, taken as they ship, is left out the same way.
 
-Preview the tree and the README, with the config lines ② and ③ settled beside them, and on a go create the folders and the README. The config itself is written once, in ⑥, after ⑤ has asked its questions. Nothing here is an external write, but it is somebody's working directory: create only what is listed, and inside a directory that already has content of its own, say which files are new. Where ⑤ turns the log off, remove `logs/` while it is still empty.
+**The config goes into the repository.** On this start `out` is `<repo>/pm-conventions.yaml` unless one was passed: `./tasks`, `./logs` and `./docs/prd` are relative to the repository, and in the user-wide `~/.claude` file they would point wherever a session happened to start.
 
-Where ② named no tool, ④ has nothing to read — go on to ⑤. A run with `side: mirror` is attaching a tracker to a start that already exists, and skips this step.
+Preview the tree and the README, with the config lines ② and ③ settled beside them, and on a go create the folders and the README. The config itself is written once, in ⑥, after ⑤ has asked its questions. Nothing here is an external write, but it is somebody's working directory: create only what is listed, and inside a directory that already has content of its own, say which files are new. Where ⑤ turns the log off, remove `logs/` while it is still empty, and the README's line for it.
+
+**Where the tree already exists** — a run made again to attach a tracker — add only what is missing. A README somebody has edited is never overwritten; say what it no longer covers instead.
+
+Where ② named no tracker, and no chat tool or calendar this plugin has never seen, ④ has nothing to do — go on to ⑤. A run with `side: mirror` is attaching a tracker to a start that already exists, and skips this step.
 
 ### 4. Attach a tracker
 
 Only where ② named one — a tool for the record, the mirror, or both. Where it named none, the local start is complete without this step. It is also how a tracker joins later: run `/pm:setup` again and name the tool in ②.
+
+A chat tool or calendar ② named comes here too, only to check that its adapter exists:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind sources --type {sources.chat_type} --role chat
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind sources --type {sources.calendar_type} --role calendar
+```
+
+Exit 3 is a tool this plugin has never seen — 4c drafts it, under `sources/`. There is no schema to read and nothing to pair for these; with no tracker named, go on to ⑤ after 4c.
 
 #### 4a. Read the record side's schema
 
@@ -254,7 +269,7 @@ One at a time, most consequential first, each with a recommendation grounded in 
 
 **Every question here has a "do not know" answer, and it is `null`.** Say so before asking. Someone new to a team cannot say which column a finished spec should sit in or which side owns the assignee field — that is knowledge about how the team works, not about the tools, and the person who has it runs the board. A `null` is written with the question beside it as a comment, so whoever can answer finds it in the file rather than in a chat history. Never fill it with the recommendation just because a recommendation was offered.
 
-**One exception: `task.contract.level`.** The skills check whether anybody wrote it, and a written `null` would pass that check with no level behind it. Its blank keeps the key out of the file — the question stays, as a comment — so `/pm:task-publish` stops on it and asks again rather than filing on a level nobody chose.
+**One exception: `task.contract.level`.** The skills check whether anybody wrote it, and a written `null` would pass that check with no level behind it. Its blank keeps the key out of the file — the question stays, as a comment — so `/pm:task-publish` stops and names the key rather than filing on a level nobody chose — answer it by running `/pm:setup` again. `/pm:task-sync` stops the same way.
 
 Where a mirror is attached:
 
@@ -270,7 +285,7 @@ Where a mirror is attached:
 Always:
 
 - `context_rows` — the defaults, or what this team actually asks. Skip it where ③ already asked
-- `log.enabled` — keep a daily log. The recommendation is yes: it is written only when `/pm:log` is called by name, and the local start already has a folder for it. Either answer is written — it is a decision, not a default taken as it ships
+- `log.enabled` — keep a daily log. The recommendation is yes: it is written only when `/pm:log` is called by name, and the local start already has a folder for it. Either answer is written — it is a decision, not a default taken as it ships. A blank is not written: the bundled default applies, and the log is on
 
 Only where it applies:
 
@@ -335,9 +350,7 @@ For a markdown record, the folder reads:
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py list --dir {task.record.ref}
 ```
 
-Run it from the repository ③ laid out — a relative `{task.record.ref}` resolves against the directory the session runs in. Exit 0; an empty folder prints nothing, which is right for a start. Exit 2 means the path is a file, not a folder.
-
-The old proof only asked whether the record's location was set. The plugin's own default sets it now, so that check passes with no file written at all — which is why these three replace it.
+Run it from the repository ③ laid out — a relative `{task.record.ref}` resolves against the directory the session runs in. Exit 0; an empty folder prints nothing, which is right for a start. Exit 2 means the path is a file, not a folder. **Exit 0 with `does not exist yet — no records` on stderr is a fail here:** ③ has just created that folder, so the command ran from the wrong directory or `task.record.ref` points somewhere else. Say which before going on.
 
 With a mirror attached, the pair check follows. Take one existing task that is already filed on both sides and check that the config finds its pair — the link property resolves, the project maps to the label the ticket actually carries, the assignee maps to the username actually on it.
 
@@ -416,7 +429,7 @@ Lead with three lines a person can act on — what you have now, what stayed bla
 fill it, what to run next. The lists below are the detail.
 
 - Which keys came from a schema, and which were interviewed
-- Which were left `null`, and what each one blocks
+- Which were left `null`, and what each one blocks — and a `task.contract.level` left blank, which is kept out of the file: `/pm:task-publish` and `/pm:task-sync` stop on it until `/pm:setup` answers it, so say so beside the commands ⑧ names
 - Which were left out because nobody was asked — they follow the plugin's defaults, later changes included
 - Unmapped projects and users, listed by name — these are the ones that will be skipped
 - ⑦'s checks — the file `--where` named, whether the pairs were written, and the folder read for a markdown record — then the pairing check where a mirror is attached: passed against which task, or `not checked`, and why
