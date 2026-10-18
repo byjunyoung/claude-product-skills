@@ -4,7 +4,7 @@ Each case copies the repository, plants one file, and runs the copy's own verify
 
     python3 tools/test/verify.test.py
 """
-import shutil, subprocess, sys, tempfile
+import json, re, shutil, subprocess, sys, tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -78,6 +78,45 @@ case("no team strings file → skipped, not failed", lambda r: None, 0,
 
 case("a url containing /pm: is not a reference",
      lambda r: write(r, "plugins/pm/skills/prd/notes.md", "`https://example.com/a/pm:b`\n"), 0)
+
+def set_description(text, desc):
+    """Replace the frontmatter description (one line or folded) with a one-line value."""
+    head, rest = text.split("\n---", 1)[0], text.split("\n---", 1)[1]
+    head = re.sub(r"^description:.*?(?=^\S|\Z)", f"description: {desc}\n", head + "\n", flags=re.S | re.M).rstrip("\n")
+    return head + "\n---" + rest
+
+
+def plant_desc(r, skill, desc, dest=None):
+    src = r / "plugins" / "pm" / "skills" / skill / "SKILL.md"
+    text = set_description(src.read_text(), desc)
+    if dest:
+        text = re.sub(r"^name:.*$", f"name: {dest}", text, count=1, flags=re.M)
+        shutil.copytree(src.parent, r / "plugins" / "pm" / "skills" / dest)
+        src = r / "plugins" / "pm" / "skills" / dest / "SKILL.md"
+    src.write_text(text, encoding="utf-8")
+
+
+case("long description warns",
+     lambda r: plant_desc(r, "log-review", "a" * 600),
+     0, "[pm:log-review] description is 600 characters (limit 500)")
+
+with tempfile.TemporaryDirectory() as tmp:
+    repo = copy_repo(tmp)
+    plant_desc(repo, "log-review", "a" * 650, dest="task")
+    rc, out = verify(repo)
+    lines = [l for l in out.splitlines() if "[pm:task] description is" in l]
+    check("override limit applies", not lines, "\n".join(lines))
+
+
+def plant_market_drift(r):
+    f = r / "plugins" / "pm" / ".claude-plugin" / "plugin.json"
+    d = json.loads(f.read_text())
+    d["description"] += " (edited)"
+    f.write_text(json.dumps(d, indent=2, ensure_ascii=False))
+
+
+case("marketplace and plugin.json differ", plant_market_drift,
+     1, "[pm] plugin.json and marketplace.json descriptions differ")
 
 print()
 if failures:

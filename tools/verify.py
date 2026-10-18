@@ -23,6 +23,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 MARKET = REPO / ".claude-plugin" / "marketplace.json"
 
+# A skill's description is loaded into every session that has the plugin installed, so its length is
+# a standing cost. Over the limit is reported as a warning for now; Phase 3 turns it into a failure.
+DESC_LIMIT = 500
+DESC_LIMIT_OVERRIDE = {("fig", "deck"): 700, ("pm", "task"): 700}
+
 # The team config filename differs per plugin. Only fig keeps the older name (it is a file already in use)
 TEAM_FILE = {"fig": "figma-conventions.yaml"}
 
@@ -212,7 +217,12 @@ def check_plugin(name, root, yaml):
             # bare `: ` — a colon and a space start a mapping in YAML, so the value stopped being a
             # string. Skipped, not failed: the skill simply was not there, and nothing said why.
             try:
-                yaml.safe_load(fm)
+                parsed = yaml.safe_load(fm)
+                desc = parsed.get("description") if isinstance(parsed, dict) else None
+                if isinstance(desc, str):
+                    limit = DESC_LIMIT_OVERRIDE.get((name, sk), DESC_LIMIT)
+                    if len(desc) > limit:
+                        warns.append(f"[{name}:{sk}] description is {len(desc)} characters (limit {limit})")
             except yaml.YAMLError as e:
                 where = getattr(e, "problem_mark", None)
                 spot = f" (line {where.line + 1}, column {where.column + 1})" if where else ""
@@ -404,6 +414,11 @@ def main():
             continue
         roots[name] = root
         check_plugin(name, root, yaml)
+
+        # One description per plugin: plugin.json is the source, the marketplace entry repeats it.
+        pj = root / ".claude-plugin" / "plugin.json"
+        if pj.exists() and json.loads(pj.read_text()).get("description") != e.get("description"):
+            fails.append(f"[{name}] plugin.json and marketplace.json descriptions differ")
 
     # After every plugin is known: a reference may name the other plugin's skills
     check_references({n: {d.name for d in (r / "skills").iterdir() if (d / "SKILL.md").exists()}
