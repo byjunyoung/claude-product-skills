@@ -11,23 +11,35 @@ claude plugin install pm@byjunyoung
 
 | Command | What it does |
 |---|---|
-| `/pm:setup` | Reads how your own tools are set up and writes your first settings file |
+| `/pm:setup` | Lays out a local start — folders and your first settings file — and attaches a tracker when there is one |
 | `/pm:prd` | Writes a new requirements document, or extends one — in language its readers can act on |
-| `/pm:task-draft` | Turns a request — a chat thread, a page, a conversation — into a task's context table |
-| `/pm:task-publish` | Files one task as a ticket wherever engineering tracks its work |
+| `/pm:task-draft` | Turns a request — a chat thread, a page, a conversation — into a task with its context table, a markdown file by default |
+| `/pm:task-publish` | Files one task as a ticket wherever engineering tracks its work, once a tracker is attached |
 | `/pm:task-sync` | Reconciles the planning list against that tracker |
-| `/pm:log` | Writes a day's work log as a file from the same tracker |
+| `/pm:log` | Writes a day's work log as a file, from your task records, calendar and chat. Runs only when called by name |
 | `/pm:log-review` | Turns a period of those logs into accomplishment statements |
 
 ## Where it writes
 
-Where it is stored is decided by `prd.target` in `pm-conventions.yaml`. The skeleton is the same either way; only the publishing differs.
+Everything starts as markdown files in one repository, with nothing else connected:
+
+```
+docs/prd/     specs — one file per product
+tasks/        one file per task — task.record, ./tasks by default
+logs/         one file per day — /pm:log
+highlights/   what /pm:log-review accumulates
+```
+
+Notion or a tracker attaches through `pm-conventions.yaml`, one part at a time. For a spec, `prd.target` decides. The skeleton is the same either way; only the publishing differs.
 
 ```
 markdown   local files. The default — no other tool required
 git        written as markdown, then a branch and a PR
-notion     a Notion page. Requires the prd.notion section filled in
+notion     a Notion page — copied from prd.notion.template, or created under prd.notion.parent.
+           With neither set, it asks for a page and offers to remember it
 ```
+
+A markdown spec is a file named after its product, and every feature or policy entry carries an anchor — `#entry-1`, `#entry-2` — so a task or a ticket can link to the entry rather than to the whole page. A number is never handed out twice: a removed entry stays behind as a one-line "(removed)" marker that keeps its anchor. Where tasks are markdown files too, the spec's *Linked tasks* section is rebuilt from them on every publish.
 
 ## What a ticket carries
 
@@ -47,11 +59,15 @@ How to work with one tool is written in one file, and the tool's name in your se
 
 ## Starting from nothing
 
-"Nothing yet" is an answer `/pm:setup` takes. It lays out one markdown repository — `docs/prd/`, `tasks/`, `logs/`, `highlights/` — that needs no other tool, with git as the audit trail. A tracker attaches later as the mirror, on whichever machine can see it, with the record untouched.
+It is the default. With no settings file at all, a task is a markdown file under `./tasks`, a spec is one under `./docs/prd`, and the daily log is on. `/pm:setup` lays this out as one repository — `docs/prd/`, `tasks/`, `logs/`, `highlights/` and a README saying what lives where — that needs no other tool, with git as the audit trail. The settings file goes into that repository as `pm-conventions.yaml`, and it carries only what you answered: a setting nobody asked about stays out, so the plugin's own defaults keep applying, later changes to them included.
+
+A tracker attaches later as the mirror, on whichever machine can see it, with the task files untouched. Until one does, `/pm:task-publish` and `/pm:task-sync` say the tasks are kept as records only, and stop.
 
 ## The log side
 
-Two of these skills are not about the spec at all. They keep a daily record of your own work, from the same tracker the task skills already read.
+Two of these skills are not about the spec at all. They keep a daily record of your own work, read from the same task records the other skills write — the `./tasks` files by default, or the tracker your settings name.
+
+**It is on from the start, and it runs only when called by name.** `log.enabled` ships switched on, and `/pm:setup` lays out a `logs/` folder for it. Nothing starts it by itself: Claude never runs it because a conversation seems to want one — you type `/pm:log`, or a scheduler you set up does. Because it is built to run with nobody watching, it writes the day's file into your log folder without a preview; everything else it touches is only read. Set `log.enabled: false` to keep no log.
 
 **They are split in two on purpose.** `/pm:log` runs unattended and records only facts and evidence — what moved, what was decided, what someone said about your work, the links that prove it happened. It never rates the importance of anything. `/pm:log-review` runs when you ask it, reads a period of those files, and interviews you for the three things a file cannot know: your role, what the result can be measured by, and what you learned.
 
@@ -124,9 +140,9 @@ the plugin's bundled defaults        the floor
 ./pm-conventions.yaml                per project (strongest)
 ```
 
-Three layers merge, so **only the lines you actually want to change have to be written.** Everything that can be set is listed with a comment in `_common/conventions.example.yaml`, and `/pm:setup` drafts your copy by reading how your tools are already set up — including the board fields and option ids no interface shows you. It opens by checking this machine — the two programs it runs on (`python3` with PyYAML, and `node`) and which of your connected tools actually answer — so anything missing is named up front. You never have to open the file yourself: say what to change and Claude edits it.
+Three layers merge, so **only the lines you actually want to change have to be written.** Everything that can be set is listed with a comment in `_common/conventions.example.yaml`, and `/pm:setup` drafts your copy — the local start first, then, where you name a tracker, what its schema shows, including the board fields and option ids no interface shows you. It opens by checking this machine — `python3` with PyYAML, which every skill runs on, and which of your connected tools actually answer — so anything missing is named up front. `node` is needed only for the Notion-log importer above, so a machine without it is never blocked. You never have to open the file yourself: say what to change and Claude edits it.
 
-`/pm:setup` takes a `side` where the doc tool and the tracker are reachable from different machines, and leaves blank — with the question beside it — anything you cannot answer. A skill that cannot run without a setting stops and names the setting, rather than running on nothing.
+`/pm:setup` takes a `side` where the doc tool and the tracker are reachable from different machines, and leaves blank — with the question beside it — anything you cannot answer. A skill that cannot run without a setting stops and names the setting, rather than running on nothing. It stops the same way on a setting written without the one that has to sit beside it — `task.record.ref` with no `task.record.type` — because the default it would otherwise lean on has changed.
 
 ## What this skill holds to
 
