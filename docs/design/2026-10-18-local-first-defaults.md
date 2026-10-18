@@ -7,9 +7,8 @@ the owner's review. Not built. Corrected after the same day's skill review
 ## Intent
 
 Both plugins should run with nothing connected but Figma. A person who installs them and writes no
-config gets a working loop on local markdown files: the PRD and the task records. (The log is not
-part of it yet: `log.enabled` ships `false`, so `/pm:log` stops on its first run. Whether that
-default changes is an open decision in the review.) A team that
+config gets a working loop on local markdown files: the PRD, the task records, and the log
+(`log.enabled` changes to ship `true`; review D5). A team that
 already runs on Notion and GitHub keeps running exactly as before, because its config names those
 tools and the config wins over the bundled floor.
 
@@ -88,6 +87,7 @@ Settled with the owner, one at a time.
 | `task.mirror.type` | `none` | unchanged |
 | `prd.target` | `markdown` | unchanged |
 | `sources.chat_type` / `calendar_type` | `slack` / `google` | unchanged |
+| `log.enabled` | `false` | `true` (review D5) |
 
 **Guard (designer's call).** A config that writes `task.record.ref` but not `task.record.type` used
 to get `notion` from the floor and will now get `markdown`. Treat `task.record.type` as an authored

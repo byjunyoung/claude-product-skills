@@ -319,18 +319,39 @@ and only diff made pairs.
   (decisions into PRD entries, open questions as pins on nodes); a summary list on its own would
   repeat diff's unread table.
 
-**D3. tokens.** Its audit becomes an `[unbound]` check in lint, and tokens keeps only binding.
-Where the plan allows, point to Figma's *Check designs* instead. The plan and beta status come from
-the reviewer and are unverified:
-<https://help.figma.com/hc/en-us/articles/39592284074263-Check-designs-in-Figma>.
+**D3. tokens — decided: the audit moves to lint.**
 
-**D4. proto's publish default.** A Code layer next to the source frame (official
-figma-code-workflows, gated on `code_layers_enabled`), or the current GitHub Pages gallery. The
-gallery is the owner's own setup.
+- lint gains an `[unbound]` check, so a colour left off the tokens is caught at handoff's gate.
+- The audit code moves out of tokens' prose into a script under `_common/scripts`, where checks and
+  tests cover it.
+- tokens keeps binding only. Its "lint mode" wording goes, since the name collides with
+  `/fig:lint`.
 
-**D5. The log's default.** `log.enabled: true` (safe: preflight requires only written values, and
-null sources are skipped), or keep `false` and leave the log out of the no-config promise. The
-design now says the latter until this is decided.
+Figma's *Check designs* was not chosen. Its plan and beta status come from the reviewer and are
+unverified: <https://help.figma.com/hc/en-us/articles/39592284074263-Check-designs-in-Figma>.
+
+**D4. proto's publish default — decided: a Code layer next to the source frame**, through the
+official figma-code-workflows (`send_code_to_figma`). The GitHub Pages gallery stays as an option.
+Conditions, from Figma's help article
+(<https://help.figma.com/hc/en-us/articles/44193259600535>):
+
+- Code layers are in open beta, rolling out gradually.
+- Creating one needs a Full seat and edit access. Check `whoami.code_layers_enabled` first, and fall
+  back to the gallery when it is false.
+- Imports cost no AI credits. Editing a code layer through the agent is free on paid plans until
+  2026-11-04 and uses credits after that.
+- The article does not say whether people without edit access can play a code layer, or whether
+  there is a share link. Sharing outside Figma — a usability test, a stakeholder on a phone without
+  Figma — keeps the gallery as its route until that is known.
+
+**D5. The log's default — decided: on.** `log.enabled` ships `true`. This is safe because:
+
+- preflight requires only values a person wrote, and null sources are skipped and named in the
+  summary
+- with S10, `/pm:log` runs only when called by name
+
+With no config, it writes the day's log to `./logs` from what moved in `./tasks`. The design's
+no-config promise includes the log again; see its Intent.
 
 ## Lifecycle gaps
 
