@@ -435,6 +435,32 @@ produces?
   - <https://www.figma.com/blog/introducing-figma-specs/>
   - <https://help.figma.com/hc/en-us/articles/44049066011671>
 
+## Surfaces to update when this ships
+
+Everything public that describes these skills is updated in the same release, not after it. Only
+public surfaces are listed here. The owner keeps a private list of team documents, team config and
+personal skills that also change.
+
+| Surface | What goes stale | How it is updated |
+|---|---|---|
+| `README.md` and `README.ko.md`, in pairs | the fig cycle and its diagram node for tokens audit; the `handoff → diff` edge; the skill tables (tokens, diff, deck-setup, task-*); "neither touches the file"; the tool-requirement table; the deck-setup step; setup reading a tracker first; the pm table and its "split because they fail differently" note; *Where the two meet* ("never call each other", diff writing markdown); troubleshooting; the repository tree. **Missing:** `[unbound]`, `/fig:review`, `/pm:release`, the prd metric table, handoff in the Chrome row | file → `verify-all` → release |
+| `plugins/fig/README.md` | command table; "How draw draws" (lint + tokens on every drawn frame); *The other half* (task-publish, diff's table) | same |
+| `plugins/pm/README.md` | command table; ticket section; *The other half* ("never call each other", diff has nowhere to write) | same |
+| `marketplace.json`, pm `plugin.json` | the pm description assumes a tracker and omits the log and release | same |
+| `.github/two-plugins.html` + `.png` | title "never call each other"; `task-draft` / `task-publish` in the flow; diff's table | re-render the PNG |
+| `.github/context-table.html` + `.png` | "/pm:task-draft reads the source…" | re-render the PNG |
+| `.github/config-layers.png` | a string `qa.baseline.prd` | optional: the legacy form still works |
+| GitHub releases | the latest release is far behind the plugin versions | a new release announcing this change. Old release notes stay as written |
+| The owner's portfolio page on these plugins (ko and en) | "fig never writes to Figma" is already false; "pm writes only after a preview" breaks once the log is on by default; an image alt says "never call each other". Its diagram image is byte-identical to `two-plugins.png` | edit both languages → site tests → preview → go → deploy; copy the re-rendered PNG |
+
+**Re-rendering.** No script exists in the repository. The social preview was produced with headless
+Chrome (`--headless=new --hide-scrollbars --force-device-scale-factor=1 --window-size=1280,640
+--screenshot=… file://….html`). The 2000px diagrams' exact command was not recorded. Write it down
+as a script this time (inference: the same method, at a larger size and with a reduced palette).
+
+**Not stale:** the repository description, topics and homepage. The uploaded social card carries
+no skill names. Dated posts elsewhere keep their dates.
+
 ## Appendix — findings by skill
 
 Severity: H high, M medium, L low. Line numbers are against the branch this document sits on.
