@@ -1,6 +1,6 @@
 ---
 name: prd
-description: Writes a product requirements document against a format, or fills out an existing one. Gathers and analyzes code repos, docs, designs, and chat history first, then proposes recommended answers so the interview can be settled with a single "go". Before writing anything it verifies read-only for vague wording, empty definitions, and engineering terms that do not belong in a product doc, then reads the entries against each other for roles and state names nobody defined, entries that contradict, cases nobody wrote, thresholds nobody can count, states with no way out, and things hidden that another entry still needs — and reads an entry that claims to describe what already ships against the thing itself. A feature entry drafted for the first time is checked against precedent — a local research archive, then any connected screen-reference service, then the web — after what this team already decided, never before it. It writes for the people who read a spec rather than for the people who build it, so a rule says what somebody sees rather than what the system decided. Where the doc lives — markdown files, a git repo, or Notion — is decided by config. Triggers - "/pm:prd", "write the PRD", "draft the requirements", "PRD 작성", "PRD 만들어줘", "기능 항목 추가", "PRD 보강", "사용자 그룹 추가".
+description: Writes a product requirements document against a format, or fills out an existing one. Gathers material first, proposes recommended answers settled with one "go", and verifies read-only before writing — vague wording, undefined terms, contradictions, missing cases. Written for spec readers, not builders. Markdown files by default, or a repo or Notion by config. Triggers - "/pm:prd", "write the PRD", "draft the requirements", "PRD 작성", "PRD 만들어줘", "기능 항목 추가", "PRD 보강".
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, WebSearch, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-duplicate-page, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-query-data-sources
 ---
 
@@ -14,7 +14,7 @@ A PRD keeps growing. Keep the body thin and push the detail out into the entry l
 
 **And it is read by people who cannot open the code.** Whoever designs the screens, settles the scope, runs the product once it ships. A requirement is worth what the sentence carrying it is worth to them — 2.4 is the rule, and the second check in 3 is the gate.
 
-**The premise**: external writes happen only after preview → "go". Reading, searching, and gathering come first, without confirmation.
+**The premise**: writes happen only after preview → "go" — a markdown file as much as a Notion page. Reading, searching, and gathering come first, without confirmation.
 
 ## When to invoke
 
@@ -27,15 +27,18 @@ A PRD keeps growing. Keep the body thin and push the detail out into the entry l
 - Tidying or auditing a design file → `/fig:prep` · `/fig:lint`
 - Drawing the screens this document describes → `/fig:draw`, which reads the published document as its source for copy rather than inventing any
 - Comparing a shipped screen against the baseline → `/fig:qa`
-- Filing or syncing tickets → whatever ticket tool you use
+- Turning a request into a task record → `/pm:task-draft`; filing or syncing tickets → `/pm:task-publish` · `/pm:task-sync`
 
 ## Configuration
 
 The rules and values are set by `pm-conventions.yaml`, not by this document.
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml --authored task.record.type
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/preflight.py --quiet
 ```
+
+A FAIL from either stops the run — print its fix lines and nothing else. `task.record.type` is asked for because the Linked tasks section is built from it (step 4); a config that never named it would otherwise run on the floor's copy without anyone having chosen it.
 
 The layers merge bundled defaults → `~/.claude/pm-conventions.yaml` → `./pm-conventions.yaml`. Later layers cover earlier ones, so **only the keys you need have to be written.** If it ran on bundled defaults alone, say so in the result.
 
@@ -214,7 +217,7 @@ Report what turns up; do not reconcile. A build drifts from a decision somebody 
 
 ## 4. Preview and publish
 
-**Always** show the full content and take a "go" before an external write. The preview names the **target** and the **added, changed, and deleted items**, and closes with `shall I proceed? (go / changes)`.
+**Always** show the full content and take a "go" before a write — to a markdown file, a branch, or a Notion page alike. A file in the repo is previewed → go in the same stages as the others. The preview names the **target** and the **added, changed, and deleted items**, and closes with `shall I proceed? (go / changes)`.
 
 A "go" approves what was shown. Nothing that was not in the preview gets slipped in at execution time because it seemed better. If the content changes, preview again → go.
 
@@ -222,11 +225,19 @@ A "go" approves what was shown. Nothing that was not in the preview gets slipped
 
 ### Publishing by target
 
-**markdown** — written into `prd.markdown.dir`. With `split` at `product`, one file per product; at `domain`, one file per domain. With `front_matter` true, title, status, and updated date go in the front matter. Tables are pipe tables, and entry properties go in the front matter or as table columns.
+**markdown** — written into `prd.markdown.dir`. Slugs come from `python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py slug NAME`.
+
+    split: product   {dir}/{slug(product)}.md
+    split: domain    {dir}/{slug(product)}/index.md             Overview, User groups, Linked tasks, Design, Change log
+                     {dir}/{slug(product)}/{slug(domain)}.md    that domain's entries
+
+With `front_matter` true, the front matter carries `title`, `product`, `domain` (domain files only), `status` and `updated`. Tables are pipe tables, and entry properties go in the front matter or as table columns. Each feature or policy entry gets its anchor from Appendix B, so that a task or a ticket can link to it.
+
+Where `task.record.type` is markdown, the **Linked tasks** section is regenerated on every publish from `markdown-tracker.py list --dir {task.record.ref}`: the records whose `project` equals the product, one line each, `- [{title}]({path relative to the PRD file}) — {status}`. Its first line is `<!-- generated from {task.record.ref}; edits here are replaced -->`. Other record types leave the section as it was.
 
 **git** — written the same as markdown, then a `branch_prefix + product name` branch, and with `open_pr` true, a PR as well. Commits and PRs are external writes too, so they take a preview → go.
 
-**notion** — where `prd.notion.template` exists, start by duplicating it. Rows go into the inline DB (`inline_db`), linked to `task_db` if there is one. **Re-read the template and the DB immediately before writing** to confirm the current heading formats, properties, and options, and match them — never trust option values pinned in this document or in the config. Read back after writing to verify. The things to watch are in appendix C.
+**notion** — where `prd.notion.template` exists, start by duplicating it. Where it is null, create the document under `prd.notion.parent`; where both are null, ask for a page and offer to store its id in the config — never create at the workspace's top level. Rows go into the inline DB (`inline_db`), linked to `task_db` if there is one. **Re-read the template and the DB immediately before writing** to confirm the current heading formats, properties, and options, and match them — never trust option values pinned in this document or in the config. Read back after writing to verify. The things to watch are in appendix C.
 
 Once published, list the remaining TBDs and the manual follow-ups **once**. Do not repeat it every turn.
 
@@ -252,6 +263,8 @@ Product-specific rows are absorbed into the row content rather than added to the
 ## Appendix B — the feature and policy entry format
 
 **Properties** — type, status, and priority from `prd.properties`, plus target users and the design link.
+
+**The anchor** — on a markdown target, the line before each feature or policy entry's heading is `<a id="entry-{n}"></a>`. `n` is one more than the highest `entry-` id across all of the product's files. It is never renumbered and never reused, even after an entry is deleted. A link to an entry is `{path}#entry-{n}`; that is the form `spec_url` and `task.ticket.link_rows.spec` take.
 
 **A feature entry's body** (`structure.feature_sections`):
 

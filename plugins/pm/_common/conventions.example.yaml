@@ -98,8 +98,9 @@ prd:
 
   # --- target: markdown | git ----------------------------------------------------
   markdown:
-    dir: "./docs/prd"            # where documents go
-    front_matter: true           # whether to prepend title, status and updated date
+    dir: "./docs/prd"            # where documents go: {dir}/{slug(product)}.md, or with split: domain
+                                 # {dir}/{slug(product)}/index.md plus {dir}/{slug(product)}/{slug(domain)}.md
+    front_matter: true           # prepend title, product, domain (domain files only), status and updated
     split: product               # product = one file per product / domain = one per domain
   git:
     branch_prefix: "prd/"        # branch prefix when target is git
@@ -109,6 +110,9 @@ prd:
   # null skips that lookup or link. Inline database schemas are not changed per document.
   notion:
     template:      null          # page id of the standard format to duplicate
+    parent:        null          # page id a new document is created under when template is null.
+                                 # null with template also null = ask for a page and offer to store it;
+                                 # a document is never created at the workspace's top level
     inline_db:
       users:       null          # user groups
       features:    null          # features and policies
