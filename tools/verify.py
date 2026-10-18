@@ -189,12 +189,13 @@ def check_plugin(name, root, yaml):
             fails.append(f"[{name}] check.sh failed:\n" + r.stdout + r.stderr)
 
     cfg_ref = re.compile(r"`([a-z_]+(?:\.[a-z_]+)+)`")
-    skill_ref = re.compile(rf"/{name}:([a-z-]+)")
     legacy_ref = re.compile(r"(?<![\w-])figma-([a-z-]+)")
 
+    # A skill is a folder, not one file: later phases move bodies out of SKILL.md into sibling mode
+    # files, so every check that reads prose reads every *.md under the skill. Only the frontmatter
+    # belongs to SKILL.md alone. Skill references are checked repo-wide in check_references().
     for sk in names:
-        f = skills / sk / "SKILL.md"
-        s = f.read_text()
+        s = (skills / sk / "SKILL.md").read_text()
 
         m = re.search(r"^---\n(.*?)\n---", s, re.S)
         if not m:
@@ -219,23 +220,23 @@ def check_plugin(name, root, yaml):
                              " — a strict parser drops the skill instead of reading it."
                              " Usually a `: ` inside the description")
 
-        for ref in set(cfg_ref.findall(s)):
-            if ref.split(".")[0] not in schema:   # skip code expressions that are not config paths
-                continue
-            if ref not in known:
-                fails.append(f"[{name}:{sk}] `{ref}` is not in the schema")
+        for f in sorted((skills / sk).rglob("*.md")):
+            s = f.read_text()
+            rel = f.relative_to(REPO)
 
-        for ref in set(skill_ref.findall(s)):
-            if ref != sk and not (skills / ref / "SKILL.md").exists():
-                fails.append(f"[{name}:{sk}] → /{name}:{ref} does not exist")
+            for ref in sorted(set(cfg_ref.findall(s))):
+                if ref.split(".")[0] not in schema:   # skip code expressions that are not config paths
+                    continue
+                if ref not in known:
+                    fails.append(f"[{name}:{sk}] {rel}: `{ref}` is not in the schema")
 
-        # Script paths must use the plugin root variable — an absolute path breaks when the install location changes
-        if "~/.claude/skills/" in s:
-            fails.append(f"[{name}:{sk}] an absolute path is left in (replace with ${{CLAUDE_PLUGIN_ROOT}})")
+            # Script paths must use the plugin root variable — an absolute path breaks when the install location changes
+            if "~/.claude/skills/" in s:
+                fails.append(f"[{name}:{sk}] {rel}: an absolute path is left in (replace with ${{CLAUDE_PLUGIN_ROOT}})")
 
-        for w in TEAM_STRINGS:
-            if w in s:
-                fails.append(f"[{name}:{sk}] team value '{w}'")
+            for w in TEAM_STRINGS:
+                if w in s:
+                    fails.append(f"[{name}:{sk}] {rel}: team value '{w}'")
 
     # Every ${CLAUDE_PLUGIN_ROOT}/… a document points at must exist. A renamed script and a
     # skill still naming the old path fail only at run time, in someone else's install.
@@ -337,9 +338,7 @@ def check_plugin(name, root, yaml):
         for w in IDENTITY_STRINGS:
             if w in t:
                 fails.append(f"[{name}] {f.name}: identifier '{w}' — the shipped copy points at someone else's company")
-        for ref in sorted(set(skill_ref.findall(t))):
-            if not (skills / ref / "SKILL.md").exists():
-                fails.append(f"[{name}] {f.name} → /{name}:{ref} does not exist")
+        # (skill references in these files are checked by check_references())
         if f.parent == REPO:
             continue                              # the root READMEs name the official figma-* skills on purpose
         for ref in sorted(set(legacy_ref.findall(t))):
@@ -348,6 +347,35 @@ def check_plugin(name, root, yaml):
             fails.append(f"[{name}] {f.name}: old name 'figma-{ref}'")
 
     counts.append(f"{name} {len(names)} skills / {len(known)} keys")
+
+
+# A reference to a skill can sit in any document and name either plugin. The lookbehind keeps a URL
+# or a path (`example.com/a/pm:b`) from reading as a command. CHANGELOGs are never scanned — they
+# name skills that no longer exist, on purpose.
+SKILL_REF = re.compile(r"(?<![\w/.-])/(fig|pm):([a-z][a-z-]*)")
+
+
+def check_references(plugins: dict[str, set[str]]) -> None:
+    """Every /plugin:skill a shipped document names must be a skill that exists, in either plugin."""
+    targets = []                                   # (file, tag)
+    for p in sorted(plugins):
+        root = REPO / "plugins" / p
+        for f in sorted((root / "skills").rglob("*.md")):
+            sk = f.relative_to(root / "skills").parts[0]
+            targets.append((f, f"{p}:{sk}"))
+        for pat in ("*.md", "*.py"):
+            targets += [(f, p) for f in sorted((root / "_common").rglob(pat))]
+        targets.append((root / "README.md", p))
+    targets += [(REPO / "README.md", "repo"), (REPO / "README.ko.md", "repo")]
+    targets += [(f, "repo") for f in sorted((REPO / ".github").glob("*.html"))]
+
+    for f, tag in targets:
+        if not f.is_file():
+            continue
+        text = f.read_text(errors="ignore")
+        for plug, ref in sorted(set(SKILL_REF.findall(text))):
+            if ref not in plugins.get(plug, set()):
+                fails.append(f"[{tag}] {f.relative_to(REPO)} → /{plug}:{ref} does not exist")
 
 
 def main():
@@ -375,6 +403,10 @@ def main():
             continue
         roots[name] = root
         check_plugin(name, root, yaml)
+
+    # After every plugin is known: a reference may name the other plugin's skills
+    check_references({n: {d.name for d in (r / "skills").iterdir() if (d / "SKILL.md").exists()}
+                      for n, r in roots.items()})
 
     # Files outside plugins/ ship too — the repository is public, so a diagram, a dev checklist or a
     # tool carries a team's name just as far as a SKILL.md does. The per-plugin check never looked
