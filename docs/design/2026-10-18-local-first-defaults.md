@@ -277,7 +277,11 @@ or two components with each other — not two separate frames — and it needs a
   difference between an AS-IS/TO-BE pair (`sync.pair_patterns`, sync:74-77), and diff was the only
   skill that made those pairs. Without them, sync falls back to scanning a section's text, which
   misses deletions and rewordings. draw:205 and :249 also still describe the AS-IS section as where
-  before/after lives. How to respond is an open decision in the review (D1).
+  before/after lives.
+- **Decided (review D1):** sync's first signal becomes a direct comparison of each finished
+  working frame with its canonical counterpart, matched by the `[screen]-[state]` name. Identical
+  text means applied; any difference is shown as it stands. `sync.pair_patterns` and the pair path
+  retire with diff. draw's two AS-IS mentions are reworded.
 
 ### 9. Shorter descriptions
 

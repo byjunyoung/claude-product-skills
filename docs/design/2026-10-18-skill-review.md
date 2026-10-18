@@ -53,7 +53,7 @@ place and whose section numbers the proposals below refer to (§1–§11).
 | fig:arrows | keep, fix | Unique; re-sync overwrites line styles it promises to keep |
 | fig:tokens | restructure | The audit belongs in lint; tokens keeps binding. Overlaps Figma's own *Check designs* |
 | fig:lint | keep, slim | Structure and flow checks are unique; blind to nested sections, no section filter, grades by text match |
-| fig:sync | keep, restructure | Loses its main signal with diff gone; writes config without preview; version save described but not possible from its tools |
+| fig:sync | keep, restructure | Its main signal moves to a direct working-vs-canonical comparison (D1); writes config without preview; version save described but not possible from its tools |
 | fig:handoff | keep, fix | Two write gates in the wrong order; its pinned version does not reach pm under local defaults |
 | fig:qa | restructure | Compares against the current file, not the pinned version; evidence capture and output paths are thin |
 | fig:proto | restructure | The publish path lags the official Code layers workflow and is one person's gallery setup |
@@ -287,14 +287,24 @@ design" stays put, but qa reads the current file (qa:4).
 
 In the order they should be taken. Each changes what gets built.
 
-**D1. diff's removal and sync's signal.** A fact about decision 7, not a case for reversing it.
-sync's main signal is the AS-IS/TO-BE pair, and only diff made pairs. Options:
+**D1. diff's removal and sync's signal — decided.** sync's main signal was the AS-IS/TO-BE pair,
+and only diff made pairs.
 
-- draw keeps the pre-change clone as an AS-IS section whenever it edits a copy of a canonical
-  screen, so pairs keep existing.
-- Accept the weaker signal: whole-section text, which misses deletions and rewording.
-- Something else — for example, sync compares against the pinned handoff version (an unrun REST
-  path).
+- **Decision:** compare each finished working frame directly with its counterpart on the canonical
+  page.
+  - Identical text means applied.
+  - A difference is shown as it is, which also catches deletions and rewording.
+  - No counterpart means a new screen.
+- **Conditions (designer's call):**
+  - Frames are matched by the `[screen]-[state]` name that `/fig:prep` normalizes.
+  - Differences that come from other work landing on the canonical page in the meantime are graded
+    "needs checking", not "not applied".
+- **What it retires:** no AS-IS copy is needed, so `sync.pair_patterns` and sync's pair path go
+  with diff.
+- **Not chosen:**
+  - draw keeping an AS-IS copy of every canonical screen it edits
+  - accepting a whole-section text signal
+  - comparing against the pinned version through REST
 
 **D2. Which lifecycle gaps to fill.** See the next section. The first item is a definition, not a
 new skill.
