@@ -11,14 +11,15 @@
 # How each picture is sized (the method was never recorded, so this is inferred from the HTML
 # and from the committed PNGs):
 #   social-preview       1280x640 window, scale 1 -> 1280x640 (fixed size in its own CSS)
-#   arrows-before-after  body is 1560px wide, scale 1 -> 1560px wide
+#   arrows-before-after  width is the body width its own CSS sets, measured from the page, scale 1
 #   every other diagram  body is 1400px wide (base.css), scale 2000/1400 -> 2000px wide
-# Height is not fixed in the CSS. The script loads the page once, reads the document height,
-# then takes the screenshot with a window of exactly that height.
+# Height is not fixed in the CSS. The script loads the page once, reads the document height
+# (and, for arrows-before-after, the body width), then takes the screenshot with a window of
+# exactly that size.
 #
 # Committed sizes at the time this script was written, and what the script produced:
 #   picture              committed   rendered
-#   arrows-before-after  1560x1345   1560x1362
+#   arrows-before-after  see note    see note
 #   config-layers        2000x1364   2000x1400
 #   context-table        2000x1362   2000x1400
 #   lint-catches         2000x1804   2000x1844
@@ -26,7 +27,7 @@
 #   qa-report            2000x1403   2000x1434
 #   social-preview       1280x640    1280x640
 #   two-plugins          2000x1358   2000x1366
-# Widths match. Heights run 8-40px taller than the committed files: the layout is the same, but
+# Widths match (arrows-before-after: 1345 committed vs 1362 rendered tall, same measured width). Heights run 8-40px taller than the committed files: the layout is the same, but
 # the committed PNGs were trimmed a little tighter at the bottom, which was not recorded.
 # So a re-render comes out a little taller than the picture in the repository: check the result
 # against the committed one before committing it.
@@ -75,19 +76,22 @@ render() {
   local width height scale
   case "$name" in
     social-preview)      width=1280; height=640;  scale=1 ;;
-    arrows-before-after) width=1560; height="";   scale=1 ;;
+    arrows-before-after) width="";   height="";   scale=1 ;;
     *)                   width=1400; height="";   scale=$(awk 'BEGIN{printf "%.6f", 2000/1400}') ;;
   esac
 
-  if [ -z "$height" ]; then
-    # Measure: a throwaway copy that writes the document height into <title>, then dump the DOM.
-    local probe="$DIR/.probe-$name.html"
-    { cat "$html"; echo '<script>document.title="H="+Math.ceil(document.body.getBoundingClientRect().height)</script>'; } > "$probe"
-    height="$("$CHROME_BIN" --headless=new --disable-gpu --hide-scrollbars \
-                --window-size="$width,2000" --virtual-time-budget=2000 --dump-dom \
-                "file://$probe" 2>/dev/null | sed -n 's/.*<title>H=\([0-9]*\)<\/title>.*/\1/p' | head -1)"
+  if [ -z "$height" ] || [ -z "$width" ]; then
+    # Measure: a throwaway copy that writes the body size into <title>, then dump the DOM.
+    # A picture with no fixed width is probed in a wide window and takes the body width from the page.
+    local probe="$DIR/.probe-$name.html" probe_w="${width:-2000}" measured
+    { cat "$html"; echo '<script>var r=document.body.getBoundingClientRect();document.title="M="+Math.ceil(r.width)+"x"+Math.ceil(r.height)</script>'; } > "$probe"
+    measured="$("$CHROME_BIN" --headless=new --disable-gpu --hide-scrollbars \
+                --window-size="$probe_w,2000" --virtual-time-budget=2000 --dump-dom \
+                "file://$probe" 2>/dev/null | sed -n 's/.*<title>M=\([0-9]*x[0-9]*\)<\/title>.*/\1/p' | head -1)"
     rm -f "$probe"
-    if [ -z "$height" ]; then echo "render-images: could not measure $name" >&2; return 1; fi
+    if [ -z "$measured" ]; then echo "render-images: could not measure $name" >&2; return 1; fi
+    if [ -z "$width" ]; then width="${measured%x*}"; fi
+    height="${measured#*x}"
   fi
 
   "$CHROME_BIN" --headless=new --disable-gpu --hide-scrollbars \
