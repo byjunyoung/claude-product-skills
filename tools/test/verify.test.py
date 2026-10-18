@@ -57,6 +57,10 @@ case("cross-plugin stale reference in _common",
      lambda r: write(r, "plugins/pm/_common/trackers/README.md", "\n→ /fig:nonexistent\n", append=True),
      1, "→ /fig:nonexistent does not exist")
 
+case("stale reference in the example config",
+     lambda r: write(r, "plugins/fig/_common/conventions.example.yaml", "\n# → /pm:nonexistent\n", append=True),
+     1, "→ /pm:nonexistent does not exist")
+
 case("unknown config key in a mode file",
      lambda r: write(r, "plugins/fig/skills/lint/extra.md", "`qa.nonexistent_key`\n"),
      1, "extra.md: `qa.nonexistent_key` is not in the schema")

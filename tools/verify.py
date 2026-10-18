@@ -329,8 +329,8 @@ def check_plugin(name, root, yaml):
         for m in re.finditer(rf"\b{COUNT_WORDS} (skills|in all)\b|스킬 (\d+|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열\S*) *개|(\d+) *개의? 스킬", t, re.I):
             fails.append(f"[{name}] {f.name}: a skill count in prose — '{m.group(0)}' goes stale; list the skills or say 'the skills'")
 
-    # Skill-name references leak outside SKILL.md too. A comment in the example config once shipped
-    # still carrying a pre-rename name — because the check was only looking at SKILL.md.
+    # Identifiers leak outside SKILL.md too, so these files are read for them. (Skill-name references
+    # in the same files are check_references()'s job.)
     for f in (example, root / "README.md", REPO / "README.md", REPO / "README.ko.md"):
         if not f.exists():
             continue
@@ -365,7 +365,8 @@ def check_references(plugins: dict[str, set[str]]) -> None:
             targets.append((f, f"{p}:{sk}"))
         for pat in ("*.md", "*.py"):
             targets += [(f, p) for f in sorted((root / "_common").rglob(pat))]
-        targets.append((root / "README.md", p))
+        targets += [(root / "README.md", p),
+                    (root / "_common" / "conventions.example.yaml", p)]   # a comment there once kept a pre-rename name
     targets += [(REPO / "README.md", "repo"), (REPO / "README.ko.md", "repo")]
     targets += [(f, "repo") for f in sorted((REPO / ".github").glob("*.html"))]
 
