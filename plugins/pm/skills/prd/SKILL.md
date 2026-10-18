@@ -38,7 +38,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-co
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/preflight.py --quiet
 ```
 
-A FAIL from either stops the run — print its fix lines and nothing else. `task.record.type` is asked for because the Linked tasks section is built from it (step 4); a config that never named it would otherwise run on the floor's copy without anyone having chosen it.
+A FAIL stops the run only when its row concerns what this run touches — the connector `prd.target` needs, the record type read for Linked tasks, or a source this run reads; print its fix lines and nothing else. Any other FAIL row is reported in one line and the run continues. An UNKNOWN (exit 2, the last line says so) is likewise reported in one line and the run continues. `task.record.type` is asked for because the Linked tasks section is built from it (step 4); a config that never named it would otherwise run on the floor's copy without anyone having chosen it.
 
 The layers merge bundled defaults → `~/.claude/pm-conventions.yaml` → `./pm-conventions.yaml`. Later layers cover earlier ones, so **only the keys you need have to be written.** If it ran on bundled defaults alone, say so in the result.
 
@@ -264,7 +264,7 @@ Product-specific rows are absorbed into the row content rather than added to the
 
 **Properties** — type, status, and priority from `prd.properties`, plus target users and the design link.
 
-**The anchor** — on a markdown target, the line before each feature or policy entry's heading is `<a id="entry-{n}"></a>`. `n` is one more than the highest `entry-` id across all of the product's files. It is never renumbered and never reused, even after an entry is deleted. A link to an entry is `{path}#entry-{n}`; that is the form `spec_url` and `task.ticket.link_rows.spec` take.
+**The anchor** — on a markdown target, the line before each feature or policy entry's heading is `<a id="entry-{n}"></a>`. `n` is one more than the highest `entry-` id across all of the product's files, and 1 when none exists yet. Extending an old file anchors the new entries only; old ones are never back-filled. An id is never renumbered and never reused: an entry is not deleted from the file, a removed one stays as a short "(removed)" tombstone that keeps its anchor, so the highest id can never come round again. A link to an entry is `{path}#entry-{n}`; that is the form `spec_url` and `task.ticket.link_rows.spec` take.
 
 **A feature entry's body** (`structure.feature_sections`):
 
