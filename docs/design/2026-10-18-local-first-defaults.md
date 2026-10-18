@@ -1,4 +1,4 @@
-# Local-first defaults, and two skill merges
+# Local-first defaults, two skill merges, one removal
 
 Status: design, 2026-10-18. Decisions 1–6 agreed with the owner; the designer's calls are pending
 the owner's review. Not built.
@@ -17,13 +17,13 @@ markdown repository. What breaks the loop today is on the seams:
 - `fig` reads the PRD only through `notion-fetch` (`spec_url`, `qa.baseline.prd` as a Notion id).
   `/fig:qa` has no file-reading tool at all. A PRD in a local file is invisible to `/fig:draw`,
   which takes its copy from it.
-- `/fig:diff` and `/fig:handoff` write to a task record only in Notion or GitHub. Any other type
-  prints the table in the response.
+- `/fig:handoff` (and `/fig:diff`, removed in 8) writes to a task record only in Notion or GitHub.
+  Any other type prints in the response.
 
-Two merges ride along, because the same files are being opened. They answer the question of whether
-the skills are cut too finely: mostly not — each skill is called at its own moment, and shared logic
-already lives in `_common` scripts rather than being copied — but two boundaries do not earn their
-keep.
+Two merges and one removal ride along, because the same files are being opened. They answer the
+question of whether the skills are cut too finely: mostly not — each skill is called at its own
+moment, and shared logic already lives in `_common` scripts rather than being copied — but two
+boundaries do not earn their keep, and one skill writes a record nobody reads.
 
 ## Decisions
 
@@ -37,12 +37,13 @@ Settled with the owner, one at a time.
 | 4 | How fig writes to a markdown task record | Through `pm`'s markdown tracker adapter | A markdown row of fig's own; printing only |
 | 4a | What that does to "the two never call each other" | Reworded: each works alone; installed together, they borrow from each other | Keeping strict separation |
 | 5 | Skill granularity | Merge `deck-setup` into `deck`; merge `task-draft`, `task-publish`, `task-sync` into one `/pm:task` | No merges; a full regrouping into stage-level entry points |
-| 6 | The four retired commands | Removed outright; CHANGELOG and READMEs name the new form | Redirect stubs for one version (`disable-model-invocation: true` would have kept them out of the listing) |
+| 6 | The retired commands | Removed outright; CHANGELOG and READMEs name the new form | Redirect stubs for one version (`disable-model-invocation: true` would have kept them out of the listing) |
+| 7 | `/fig:diff` | Removed. Nobody reads the AS-IS/TO-BE table it writes into the task doc; looking at what changed is Dev Mode's *Compare changes* | Keeping it; folding it into `/fig:handoff` |
 
 ## Goals
 
-- No config, both plugins installed, nothing connected but Figma: PRD → task → design → diff runs
-  end to end on local files.
+- No config, both plugins installed, nothing connected but Figma: PRD → task → design → handoff
+  runs end to end on local files.
 - Every key a team's config writes resolves to the same value after the change.
 - Fewer entry points where a skill is only ever a step of another.
 - Shorter skill descriptions, so the skill listing stops dropping them (it drops descriptions once
@@ -132,15 +133,16 @@ types that need no connector; `notion` needs the Notion connector.
 
 ### 4. fig: writing to a markdown task record
 
-`task_tracker.type: markdown`, `task_tracker.ref` the task directory. The task file itself is the
-input to `/fig:diff` (its path), as a Notion page url is today.
+`task_tracker.type: markdown`, `task_tracker.ref` the task directory. The task file itself is named
+to `/fig:handoff` (its path), as a Notion page url is today. With `/fig:diff` removed (8), handoff's
+one line is the only thing fig writes into a task record.
 
 **fig's own default (designer's call).** `task_tracker.type` ships unset (`null`) instead of `none`.
 
-| fig `task_tracker.type` | What `/fig:diff` and `/fig:handoff` do |
+| fig `task_tracker.type` | What `/fig:handoff` does |
 |---|---|
-| unset, `pm` installed, `pm`'s resolved `task.record.type` is `markdown` | borrow `pm`'s `task.record` and write into the task file |
-| unset, any other case | print the table and callout, plus the one-line note below |
+| unset, `pm` installed, `pm`'s resolved `task.record.type` is `markdown` | borrow `pm`'s `task.record` and write its line into the task file |
+| unset, any other case | print the line, plus the note below |
 | `markdown` | write into the task file through `pm`; without `pm`, print plus the note |
 | `none` | print only, as today |
 | `notion`, `github` | unchanged |
@@ -150,12 +152,11 @@ input to `/fig:diff` (its path), as a Notion page url is today.
 - `task_tracker.ref` written without `task_tracker.type` stops with the authored-key message, the
   same guard as `task.record` in 1. The floor no longer settles what a written Notion id means.
 - **Writing.** fig asks `pm`'s `adapter.py --kind trackers --type markdown --role record` for the
-  adapter, and uses it to find and read the record. The comparison table and scope callout go
-  under the `ui_section_heading` heading of the task file, and the heading is appended if the file
-  has none. `ui_section_heading` ships `null`; when it is null, the heading is "Design changes" in
+  adapter, and uses it to find and read the record. Handoff's line goes under the
+  `ui_section_heading` heading of the task file, and the heading is appended if the file has none.
+  `ui_section_heading` ships `null`; when it is null, the heading is "Design changes" in
   `meta.language` (designer's call). It is never `## Change summary`, which is the adapter's
   append-only dated log.
-- `/fig:handoff` writes its one line the same way, since it already defers to diff's method.
 - **The note**, when printing because `pm` is missing: one line saying that installing `pm` writes
   this into the task file.
 - **Preflight.** `markdown` joins the no-connector types for `task_tracker.type`.
@@ -206,17 +207,43 @@ skills/task/
 - `allowed-tools` is the union of the three.
 - Every reference to the old names moves to the new form — fig skills, the example config comments,
   all three READMEs, `.github` diagrams. CHANGELOG history is left as written.
-- No redirect stubs (decision 6). `/pm:task-draft`, `/pm:task-publish`, `/pm:task-sync` and
-  `/fig:deck-setup` stop existing in the release that merges them. That release's CHANGELOG entry
-  in each plugin opens with the old → new names. Both root READMEs carry the same mapping where the
-  skills are listed, so someone typing an old name finds the new one.
+- No redirect stubs (decision 6). `/pm:task-draft`, `/pm:task-publish`, `/pm:task-sync`,
+  `/fig:deck-setup` and `/fig:diff` stop existing in the release that merges or removes them. That
+  release's CHANGELOG entry in each plugin opens with the old → new names (for diff: none, see 8).
+  Both root READMEs carry the same mapping where the skills are listed, so someone typing an old
+  name finds the new one.
 - **Callers outside this repository** are not seen by `verify.py`. Found on the owner's machine when
-  this was written, all name mentions rather than calls: a personal session-review skill (two lines,
-  plus its design note) and a shared team-config repository (its README and one config comment).
+  this was written, all of them name mentions rather than calls:
+  - a personal session-review skill: two lines, plus its design note
+  - a shared team-config repository: its README, one config comment, and the comment on its
+    coverage exclusion for AS-IS sections. The exclusion itself stays, since those sections remain
+    in existing files.
+
   Update them in the same change. Rerun the search before the release, because new callers may
   appear by then.
 
-### 8. Shorter descriptions
+### 8. Remove `/fig:diff`
+
+What it did: annotate the changed elements in Figma, and write an AS-IS/TO-BE table and a scope
+callout into the task doc. The table is not read (decision 7). Looking at what changed is covered by
+Dev Mode's *Compare changes*, with its limits: it compares a frame against its own version history,
+or two components with each other — not two separate frames — and it needs a Dev Mode seat.
+
+- Remove `skills/diff/`.
+- `/fig:handoff` borrowed diff's write method ("the one line … by diff's method"). Move that method
+  into handoff: for notion, insert after the `ui_section_heading` heading; for github, insert under
+  that section, or add a comment when there is none; for markdown, follow 4; for none, print.
+- Keys stay, because other skills read them. `annotation_category` is read by `/fig:draw`,
+  `ui_section_heading` by handoff, and `text_diff_max_len` by `/fig:sync`. Only their comments in
+  `conventions.example.yaml` change, along with the `task_tracker` comment that names diff.
+- Routing lines that send work to diff become something else, or go: in code, draw, handoff, setup
+  (its list of skills that write), sketch and sync. The same goes for the READMEs' rows, the
+  cycle diagram, and the two-plugins picture if it names diff.
+- The CHANGELOG entry says what replaces it: Dev Mode's *Compare changes* for looking, and no
+  written AS-IS/TO-BE record.
+- AS-IS reference sections that diff already cloned into files are left alone.
+
+### 9. Shorter descriptions
 
 Each `description`: one sentence on what it does and when, then the trigger phrases in both
 languages. Behaviour detail moves into the body. Target 500 characters or fewer, 700 for the two
@@ -225,7 +252,7 @@ unit Claude Code's listing caps use; today they run 389–1,212, about 14,800 in
 budget is shared with every other installed skill, so this is the part that pays even where nothing
 is merged.
 
-### 9. "Where the two meet"
+### 10. "Where the two meet"
 
 `plugins/pm/README.md` says the two never call each other. Reword, and carry the same into both root
 READMEs' *Where the two meet* and `.github/two-plugins.html` if the picture names it:
@@ -267,8 +294,8 @@ entry". Write "Figma Spec" for Figma's documents, always with the prefix. Renami
   - `/pm:prd` writes `docs/prd/<product>.md`.
   - `/pm:task draft` on pasted text writes `tasks/<task>.md`.
   - `/fig:draw` reads that PRD through step 3.
-  - `/fig:diff` writes its table into the task file.
-- **The same, with `pm` uninstalled:** `/fig:diff` prints the table plus the one-line note.
+  - `/fig:handoff` writes its line into the task file.
+- **The same, with `pm` uninstalled:** `/fig:handoff` prints its line plus the one-line note.
   Preflight still passes. With a config that writes `task_tracker.type: markdown`, its row shows
   `attention`.
 - **No silent new writes:** a fig config with no `task_tracker` and a pm config on Notion still
@@ -279,6 +306,8 @@ entry". Write "Figma Spec" for Figma's documents, always with the prefix. Renami
 - **Merged decks:** `/fig:deck` with no assets runs the measuring step.
 - **Merged tasks:** `/pm:task` runs all three modes. The old names appear nowhere outside CHANGELOG
   history.
+- **Diff removed:** no `/fig:diff` reference is left outside CHANGELOG history, and handoff carries
+  its own write method.
 - **Descriptions:** every one is 500 characters or fewer.
 - **Checks and docs:** `bash tools/verify-all.sh` passes, and both root READMEs are updated, English
   first.
