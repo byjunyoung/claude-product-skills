@@ -136,6 +136,34 @@ with tempfile.TemporaryDirectory() as tmp:
     check("--origin → says so where there is no config of your own",
           "every value came from the plugin's defaults" in r.stdout, r.stdout)
 
+    # 10. A script knows its plugin by plugin.json, not by the path it was installed under
+    import shutil
+
+    def run_script(script, cwd, home, *args):
+        env = dict(os.environ, HOME=str(home), PYTHONUSERBASE=site.getuserbase())
+        return subprocess.run([sys.executable, str(script), *args], cwd=cwd, env=env,
+                              capture_output=True, text=True)
+
+    ignore = shutil.ignore_patterns(".git", "__pycache__")
+    nested = Path(tmp) / "pm" / "plugins" / "fig"
+    shutil.copytree(REPO / "plugins" / "fig", nested, ignore=ignore)
+    r = run_script(nested / "_common" / "scripts" / "lib" / "resolve-config.py", empty, bare,
+                   "--need", "task_tracker.ref")
+    check("fig copied under a path containing /pm/ is still fig",
+          "/fig:setup" in r.stderr and "/pm:setup" not in r.stderr, r.stderr.strip())
+
+    (home / ".claude" / "pm-conventions.yaml").write_text("task:\n  contract:\n    level: parent\n")
+    r = run_script(SCRIPT, empty, home)
+    meta = (parse(r) or {}).get("meta", {})
+    check("pm's default name is pm-conventions.yaml",
+          any(str(home / ".claude" / "pm-conventions.yaml") in l for l in meta.get("layers", [])), r.stderr.strip())
+
+    bare_copy = Path(tmp) / "pm" / "_common"
+    shutil.copytree(REPO / "plugins" / "pm" / "_common", bare_copy, ignore=ignore)
+    r = run_script(bare_copy / "scripts" / "lib" / "resolve-config.py", empty, bare)
+    check("no plugin.json → path fallback",
+          "Traceback" not in r.stderr and r.returncode in (0, 2), f"rc={r.returncode} {r.stderr.strip()}")
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures))

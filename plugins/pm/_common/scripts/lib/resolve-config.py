@@ -38,9 +38,31 @@ A map keeps the order the schema declares; write every one of its keys to reorde
 """
 import json, os, subprocess, sys, time
 
+def plugin_name(here):
+    """The plugin these scripts ship in, read from the nearest .claude-plugin/plugin.json above
+    `here`. A checkout that happens to sit under a directory called pm/ is still the fig plugin.
+    Falls back to the path rule when no manifest is found; never raises."""
+    try:
+        d = os.path.abspath(here)
+        while True:
+            manifest = os.path.join(d, ".claude-plugin", "plugin.json")
+            if os.path.isfile(manifest):
+                with open(manifest, encoding="utf-8") as f:
+                    name = json.load(f).get("name")
+                if isinstance(name, str) and name:
+                    return name
+            parent = os.path.dirname(d)
+            if parent == d:
+                break
+            d = parent
+    except (OSError, ValueError, AttributeError):
+        pass
+    return "pm" if f"{os.sep}pm{os.sep}" in here else "fig"
+
+
 HERE = os.path.dirname(os.path.abspath(__file__))
-PLUGIN = "pm" if f"{os.sep}pm{os.sep}" in HERE else "fig"
-DEFAULT_NAME = "figma-conventions.yaml"
+PLUGIN = plugin_name(HERE)
+DEFAULT_NAME = {"pm": "pm-conventions.yaml"}.get(PLUGIN, "figma-conventions.yaml")
 
 
 def candidates(name):

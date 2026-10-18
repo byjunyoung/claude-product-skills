@@ -24,10 +24,32 @@ It says nothing when the copy is current. A hook that prints on every session st
 wallpaper by the third day, and the run it needed to be read on is the one it is skipped on.
 Two plugins sharing one work tree do not fetch it twice: the stamp is keyed by that tree.
 """
-import hashlib, importlib.util, os, subprocess, sys, tempfile, time
+import hashlib, importlib.util, json, os, subprocess, sys, tempfile, time
+
+def plugin_name(here):
+    """The plugin these scripts ship in, read from the nearest .claude-plugin/plugin.json above
+    `here`. A checkout that happens to sit under a directory called pm/ is still the fig plugin.
+    Falls back to the path rule when no manifest is found; never raises."""
+    try:
+        d = os.path.abspath(here)
+        while True:
+            manifest = os.path.join(d, ".claude-plugin", "plugin.json")
+            if os.path.isfile(manifest):
+                with open(manifest, encoding="utf-8") as f:
+                    name = json.load(f).get("name")
+                if isinstance(name, str) and name:
+                    return name
+            parent = os.path.dirname(d)
+            if parent == d:
+                break
+            d = parent
+    except (OSError, ValueError, AttributeError):
+        pass
+    return "pm" if f"{os.sep}pm{os.sep}" in here else "fig"
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PLUGIN = "pm" if f"{os.sep}pm{os.sep}" in HERE else "fig"
+PLUGIN = plugin_name(HERE)
 NAME = "pm-conventions.yaml" if PLUGIN == "pm" else "figma-conventions.yaml"
 TTL = 6 * 3600            # a work tree looked at this recently is not looked at again
 

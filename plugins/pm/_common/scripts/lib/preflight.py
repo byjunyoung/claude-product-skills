@@ -24,10 +24,32 @@ What it cannot see: Claude in Chrome is a browser extension, not an MCP server, 
 not appear in `claude mcp list`. It is reported as unknown rather than guessed at. A Figma
 seat is not visible from the shell either — the skills that write check it with `whoami`.
 """
-import importlib.util, os, re, subprocess, sys
+import importlib.util, json, os, re, subprocess, sys
+
+def plugin_name(here):
+    """The plugin these scripts ship in, read from the nearest .claude-plugin/plugin.json above
+    `here`. A checkout that happens to sit under a directory called pm/ is still the fig plugin.
+    Falls back to the path rule when no manifest is found; never raises."""
+    try:
+        d = os.path.abspath(here)
+        while True:
+            manifest = os.path.join(d, ".claude-plugin", "plugin.json")
+            if os.path.isfile(manifest):
+                with open(manifest, encoding="utf-8") as f:
+                    name = json.load(f).get("name")
+                if isinstance(name, str) and name:
+                    return name
+            parent = os.path.dirname(d)
+            if parent == d:
+                break
+            d = parent
+    except (OSError, ValueError, AttributeError):
+        pass
+    return "pm" if f"{os.sep}pm{os.sep}" in here else "fig"
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PLUGIN = "pm" if f"{os.sep}pm{os.sep}" in HERE else "fig"
+PLUGIN = plugin_name(HERE)
 QUIET = "--quiet" in sys.argv
 
 RULE = "=" * 60
