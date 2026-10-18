@@ -28,6 +28,16 @@ const EDGE_TOL = A.edge_tolerance != null ? A.edge_tolerance : 2;
 const GAP = A.gap_range || [9, 15];
 const CLEAR = A.label_clear != null ? A.label_clear : 30;
 
+// Distance from p to the frame's boundary, not to the lines through its edges. Each side is a
+// segment: clamp p onto it and measure to the clamped point, then keep the nearest. A point
+// far along an edge's line is measured to that segment's end, so it no longer passes.
+const distToEdge = (p, R) => {
+  const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
+  const onTopBottom = [R.y, R.b].map(y => Math.hypot(p.x - clamp(p.x, R.x, R.r), p.y - y));
+  const onLeftRight = [R.x, R.r].map(x => Math.hypot(p.x - x, p.y - clamp(p.y, R.y, R.b)));
+  return Math.min(...onTopBottom, ...onLeftRight);
+};
+
 const skipSection = s => !!(SEC_EXCLUDE && SEC_EXCLUDE.test(s.name));
 const isScreen = n => n.type === "FRAME" && !n.name.startsWith(LABEL) &&
   !n.name.startsWith(STATE) && !n.name.includes(ARROW);
@@ -77,8 +87,7 @@ for (const { s, ax, ay } of liveSecs) {
       if (!F || !T) { issues.push(`[arrow] ${n.name}: orphan (${!F ? fr : to} missing)`); continue; }
       const vs = n.vectorNetwork.vertices.map(toAbs), p0 = vs[0], pe = vs[vs.length - 1];
 
-      const dE = Math.min(Math.abs(p0.x - F.x), Math.abs(p0.x - F.r),
-                          Math.abs(p0.y - F.y), Math.abs(p0.y - F.b));
+      const dE = distToEdge(p0, F);
       if (dE > EDGE_TOL) issues.push(`[arrow] ${n.name}: start off the edge by ${dE.toFixed(0)}px`);
 
       const gx = pe.x < T.x ? T.x - pe.x : pe.x > T.r ? pe.x - T.r : 0;

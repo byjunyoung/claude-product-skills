@@ -66,6 +66,13 @@ test("a start that is off the source edge is reported", () => {
   assert.ok(out.some((i) => /start off the edge by 20px/.test(i)), out);
 });
 
+test("a start far along the edge's line is off the edge", () => {
+  // Sits on A's top line (y = 0) but 5000px to the right of the frame. The infinite line passes
+  // it, so a line-based distance reports 0; the frame's boundary is 4900px away.
+  const out = run([A, B, arrow("a_default --> b_default", [5000, 0], [5000, 50], [190, 50])]);
+  assert.ok(out.some((i) => /start off the edge by/.test(i)), out);
+});
+
 test("an arrowhead 10px away still fails when its last segment runs parallel to the edge", () => {
   // This is the case distance alone cannot catch: the head sits inside gap_range, but the
   // final segment is vertical against a vertical edge, so it points at empty space beside B.
