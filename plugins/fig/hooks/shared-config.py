@@ -94,7 +94,18 @@ def main():
         try:
             # A hook has no terminal: a credential or host-key prompt would sit there until the
             # timeout, on every session start. Make git fail fast instead of asking.
-            env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_SSH_COMMAND": "ssh -o BatchMode=yes"}
+            # Extend, never replace: the variable outranks core.sshCommand, so a bare value
+            # would silently drop a user's own key or options and the fetch would just fail.
+            ssh = os.environ.get("GIT_SSH_COMMAND", "").strip()
+            if not ssh:
+                try:                             # local lookup, no network
+                    r = subprocess.run(["git", "-C", root, "config", "--get", "core.sshCommand"],
+                                       capture_output=True, text=True, timeout=5)
+                    ssh = r.stdout.strip() if r.returncode == 0 else ""
+                except (OSError, subprocess.SubprocessError):
+                    ssh = ""
+            env = {**os.environ, "GIT_TERMINAL_PROMPT": "0",
+                   "GIT_SSH_COMMAND": (ssh or "ssh") + " -o BatchMode=yes"}
             subprocess.run(["git", "-C", root, *cmd], capture_output=True, timeout=20, env=env)
         except (OSError, subprocess.SubprocessError):
             pass                                 # offline is not an error worth a session's attention

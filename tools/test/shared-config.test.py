@@ -44,25 +44,36 @@ class FakeResolver:
         return []
 
 
-seen = {}
+def fetch_env(environ=None, config_value=""):
+    """Run main() with git faked out; return the env handed to the fetch call."""
+    seen = {}
+
+    def fake_run(cmd, *a, **kw):
+        if "config" in cmd:                      # the core.sshCommand lookup
+            return subprocess.CompletedProcess(cmd, 0 if config_value else 1, config_value + "\n" if config_value else "", "")
+        seen["env"] = kw.get("env")
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    hook.resolver = lambda: FakeResolver()
+    hook.due = lambda root: True
+    real_run, real_environ = hook.subprocess.run, hook.os.environ
+    hook.subprocess.run = fake_run
+    hook.os.environ = dict(environ or {})
+    try:
+        hook.main()
+    finally:
+        hook.subprocess.run = real_run
+        hook.os.environ = real_environ
+    return seen.get("env") or {}
 
 
-def fake_run(*a, **kw):
-    seen["env"] = kw.get("env")
-    return subprocess.CompletedProcess(a, 0, b"", b"")
-
-
-hook.resolver = lambda: FakeResolver()
-hook.due = lambda root: True
-real_run = hook.subprocess.run
-hook.subprocess.run = fake_run
-try:
-    hook.main()
-finally:
-    hook.subprocess.run = real_run
-env = seen.get("env") or {}
+env = fetch_env()
 check("git env: GIT_TERMINAL_PROMPT=0", env.get("GIT_TERMINAL_PROMPT") == "0", repr(env.get("GIT_TERMINAL_PROMPT")))
-check("git env: ssh BatchMode=yes", "BatchMode=yes" in env.get("GIT_SSH_COMMAND", ""), repr(env.get("GIT_SSH_COMMAND")))
+check("git env: ssh BatchMode=yes", env.get("GIT_SSH_COMMAND") == "ssh -o BatchMode=yes", repr(env.get("GIT_SSH_COMMAND")))
+env = fetch_env({"GIT_SSH_COMMAND": "ssh -i /k"})
+check("existing GIT_SSH_COMMAND is extended", env.get("GIT_SSH_COMMAND") == "ssh -i /k -o BatchMode=yes", repr(env.get("GIT_SSH_COMMAND")))
+env = fetch_env(config_value="ssh -i /c")
+check("core.sshCommand is extended", env.get("GIT_SSH_COMMAND") == "ssh -i /c -o BatchMode=yes", repr(env.get("GIT_SSH_COMMAND")))
 
 print()
 if failures:
