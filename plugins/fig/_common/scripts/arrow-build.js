@@ -51,8 +51,15 @@ function find(section, name) {
            cx: n.x + n.width / 2, cy: n.y + n.height / 2 };
 }
 
+/** The stroke paint: opts.stroke's colour and opacity over the config's colour. */
+function paintOf(st) {
+  const p = { type: "SOLID", color: st.color || COLOR };
+  if (st.opacity != null && st.opacity !== 1) p.opacity = st.opacity;
+  return p;
+}
+
 /** Creates an arrow from an array of vertices. Two points is a straight line, three or more a right-angle elbow.
- *  opts: { dashed, bidirectional, stroke: { color, weight, dash } }
+ *  opts: { dashed, bidirectional, stroke: { color, weight, dash, opacity } }
  *  A field present in opts.stroke overrides the config's COLOR / WEIGHT / DASH; `dash: null` is solid
  *  even with `dashed`. A re-sync passes in what styleOf() read off the arrow it replaces. */
 async function arrow(parent, name, pts, opts) {
@@ -68,7 +75,7 @@ async function arrow(parent, name, pts, opts) {
     })),
     segments: pts.slice(1).map((_, i) => ({ start: i, end: i + 1 }))
   });
-  v.strokes = [{ type: "SOLID", color: st.color || COLOR }];
+  v.strokes = [paintOf(st)];
   v.strokeWeight = st.weight != null ? st.weight : WEIGHT;
   const dash = "dash" in st ? st.dash : (o.dashed ? DASH : null);
   if (dash && dash.length) v.dashPattern = dash;
@@ -87,7 +94,10 @@ function styleOf(vector) {
   const dash = vector.dashPattern;
   const v0 = vector.vectorNetwork && vector.vectorNetwork.vertices && vector.vectorNetwork.vertices[0];
   return {
-    stroke: { color: s.color, weight: vector.strokeWeight, dash: dash && dash.length ? [...dash] : null },
+    stroke: {
+      color: s.color, weight: vector.strokeWeight, dash: dash && dash.length ? [...dash] : null,
+      ...(s.opacity != null && s.opacity !== 1 ? { opacity: s.opacity } : {})
+    },
     bidirectional: !!v0 && v0.strokeCap === CAP.end
   };
 }
@@ -148,17 +158,21 @@ async function pill(section, forArrowName, text, cx, cy) {
 
 /** [state] chain — a headless dashed line joining one screen's adjacent state variants.
  *  It marks a grouping, not a transition. Use it only on pairs that touch vertically in one column —
- *  another frame in between gets crossed by the straight line. */
-async function stateLink(section, fromName, toName) {
+ *  another frame in between gets crossed by the straight line.
+ *  opts.stroke works as in arrow(); a re-sync passes styleOf()'s stroke so the style survives. Dashed
+ *  unless opts.stroke.dash says otherwise (`dash: null` is solid). */
+async function stateLink(section, fromName, toName, opts) {
+  const st = (opts && opts.stroke) || {};
   const f = find(section, fromName), t = find(section, toName);
   const v = figma.createVector();
   await v.setVectorNetworkAsync({                 // no strokeCap = no arrowhead
     vertices: [{ x: 0, y: 0 }, { x: 0, y: t.y - f.b }],
     segments: [{ start: 0, end: 1 }]
   });
-  v.strokes = [{ type: "SOLID", color: COLOR }];
-  v.strokeWeight = WEIGHT;
-  v.dashPattern = DASH;
+  v.strokes = [paintOf(st)];
+  v.strokeWeight = st.weight != null ? st.weight : WEIGHT;
+  const dash = "dash" in st ? st.dash : DASH;
+  if (dash && dash.length) v.dashPattern = dash;
   v.name = chainName(fromName, toName);
   section.appendChild(v);
   v.x = f.cx; v.y = f.b;
