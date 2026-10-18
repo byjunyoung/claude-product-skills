@@ -32,8 +32,10 @@ Where `task.mirror.type` is `none`, stop with this, and nothing else:
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
   --need task.record.ref,task.link_property,task.mirror.ref \
-  --authored task.record.type,task.link_property,task.contract.level,task.progress_source
+  --authored task.record.type,task.link_property,task.contract.level
 ```
+
+Add `task.progress_source` to that `--authored` list only where `task.properties.progress` is named (non-null in the resolved config) — the progress checks are inert without the property, so a config that never mentions the key must not be stopped on the floor's copy of it.
 
 A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than reconciling against a side that was never named.
 
