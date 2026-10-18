@@ -158,7 +158,7 @@ reports as `Policy`.
 gh issue create --repo {repo} \
   --title "{task.hierarchy.parent_title, filled in}" \
   --body  "{one line: what this parent covers}" \
-  --label "{default_labels},{priority label},{project label}" \
+  --label "{project label}{,labels the rule document requires of a parent}" \
   --assignee "{mapped usernames}"
 ```
 
