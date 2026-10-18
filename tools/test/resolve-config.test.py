@@ -124,6 +124,33 @@ with tempfile.TemporaryDirectory() as tmp:
     r = run(proj, home, "--need", "task.contract.level")
     check("written null → --need still stops", r.returncode == 2, f"rc={r.returncode}")
 
+    # 8b. A key that only means something beside another stops when the other is written alone.
+    #     The floor used to fill the missing half; once it changes, a written ref would silently
+    #     point somewhere else, so the pair has to be written together.
+    pair_home = Path(tmp) / "pair-home"
+    (pair_home / ".claude").mkdir(parents=True)
+    pair_proj = Path(tmp) / "pair-proj"
+    pair_proj.mkdir()
+    pf = pair_proj / NAME
+    pf.write_text("task:\n  record:\n    ref: ./x\n")
+    r = run(pair_proj, pair_home, "--authored", "task.record.type")
+    check("paired: ref without type → --authored stops", r.returncode == 3, f"rc={r.returncode}")
+    check("paired: ref without type → message names both keys",
+          f"task.record.type is not set in {NAME}, while task.record.ref is" in r.stderr, r.stderr)
+    pf.unlink()
+    r = run(pair_proj, pair_home, "--authored", "task.record.type")
+    check("paired: neither written → passes", r.returncode == 0, r.stderr)
+    pf.write_text("task:\n  record: {type: markdown, ref: ./t}\n")
+    r = run(pair_proj, pair_home, "--authored", "task.record.type")
+    check("paired: both written → passes", r.returncode == 0, r.stderr)
+    pf.write_text("task:\n  record: {type: notion, ref: 'collection://x'}\n")
+    r = run(pair_proj, pair_home, "--authored", "task.link_property")
+    check("paired: a non-markdown type needs its link property",
+          r.returncode == 3 and "task.link_property" in r.stderr, f"rc={r.returncode} {r.stderr}")
+    pf.write_text("task:\n  record: {type: markdown, ref: ./t}\n")
+    r = run(pair_proj, pair_home, "--authored", "task.link_property")
+    check("paired: a markdown type exempts the link property", r.returncode == 0, r.stderr)
+
     # 9. --origin describes the strongest layer without asking it to declare anything
     r = run(proj, home, "--origin")
     check("--origin → names the layer in play", str(proj / NAME) in r.stdout, r.stdout)

@@ -144,13 +144,15 @@ def run(cmd, timeout=20):
 
 
 def load_config():
-    """(the user's layers merged without the bundled floor, the fully resolved config), or
-    (None, None) where no user layer exists.
+    """(the user's layers merged without the bundled floor, the fully resolved config, the
+    (key, trigger) pairs written half-way), or (None, None, []) where no user layer exists.
 
-    The floor is kept apart on purpose. Its record type is notion, and a machine whose only
-    config is a profile name must not read as "Notion required": a requirement comes from a
-    value somebody wrote, never from a default nobody chose. The resolved config is still
-    needed — for the name of the tool once a ref was written against a default type."""
+    The floor is kept apart on purpose. A machine whose only config is a profile name must not
+    read as "a tool required": a requirement comes from a value somebody wrote, never from a
+    default nobody chose. The resolved config is still needed — for the name of the tool once
+    a ref was written against a type the floor supplied. The half-written pairs are the other
+    side of the same rule: a ref whose type is left to the floor reads differently whenever
+    the floor changes, so it is reported rather than resolved."""
     spec = importlib.util.spec_from_file_location("resolve_config", os.path.join(HERE, "resolve-config.py"))
     try:
         mod = importlib.util.module_from_spec(spec)
@@ -161,8 +163,8 @@ def load_config():
                 user, found = mod.merge(user, mod.load(p)), True
         full, _ = mod.resolve(None, CONFIG_NAME)
     except (SystemExit, Exception):        # no PyYAML, no file — the host rows say which
-        return None, None
-    return (user, full) if found else (None, None)
+        return None, None, []
+    return (user, full, mod.unpaired(user)) if found else (None, None, [])
 
 
 def written(cfg, key):
@@ -196,11 +198,16 @@ def settle_requirements():
     for name in (arg_after("--require") or "").split(","):
         if name.strip():
             require(name.strip(), f"--require {name.strip()}")
-    user, full = load_config()
+    user, full, half = load_config()
     if user is None:
         because.append("no settings yet — nothing is needed until setup names your tools")
         return None
     named = False
+    # Only the ref -> type pairs fail here. task.link_property stays a check publish and sync
+    # make themselves: a record with no mirror never reads it.
+    for key, trigger in half:
+        if key.endswith(".type"):
+            row("config", key, "missing", f"{trigger} is set but {key} is not — write {key} beside it")
     for triggers, type_key, quiet, kind in NAMED_TOOLS[PLUGIN]:
         if not any(written(user, k) for k in triggers):
             continue
@@ -233,6 +240,8 @@ def host_checks():
     out, code = run(["node", "--version"], timeout=10)
     if code == 0:
         row("host", f"node {out.strip()}", "ok")
+    elif PLUGIN == "pm":
+        row("host", "node", "absent", "pm needs it only for the Notion-log importer (`import-notion-export.mjs`)")
     else:
         row("host", "node", "missing", "install it from nodejs.org — the Figma scripts are checked with it")
 

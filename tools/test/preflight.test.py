@@ -68,6 +68,31 @@ with tempfile.TemporaryDirectory() as tmp:
     out = run(proj, home)
     check("unknown type, no adapter → the type name itself", "task.record.type: gsheet" in line(out, "needed because") and "→" not in line(out, "needed because"), line(out, "needed because"))
 
+    # A ref written without its type: the floor used to fill the type in, so it must be written
+    (proj / "pm-conventions.yaml").write_text("task:\n  record:\n    ref: ./x\n")
+    out = run(proj, home)
+    fix = out.split("Fix first", 1)[1].split("\n\n", 1)[0] if "Fix first" in out else ""
+    check("ref without type → FAIL naming the key",
+          out.splitlines()[-1].endswith("· FAIL") and "task.record.type" in fix, out.splitlines()[-1] if out else "")
+
+    # A Notion record with no mirror never reads task.link_property, so preflight must not fail it
+    (proj / "pm-conventions.yaml").write_text("task:\n  record:\n    type: notion\n    ref: \"collection://x\"\n")
+    out = run(proj, home)
+    fix = out.split("Fix first", 1)[1].split("\n\n", 1)[0] if "Fix first" in out else ""
+    check("notion record, no mirror, no link property → not FAIL",
+          "task.link_property" not in fix and "task.record.type: notion" in line(out, "needed because"), fix or line(out, "needed because"))
+
+    # pm needs node only for the Notion-log importer, so no node is not a failure
+    (proj / "pm-conventions.yaml").unlink()
+    nonode = Path(tmp) / "nonode-bin"; nonode.mkdir()
+    env = dict(os.environ, HOME=str(home), PYTHONUSERBASE=site.getuserbase(), PATH=str(nonode))
+    r = subprocess.run([sys.executable, str(SCRIPT)], cwd=proj, env=env, capture_output=True, text=True, timeout=120)
+    fix = r.stdout.split("Fix first", 1)[1].split("\n\n", 1)[0] if "Fix first" in r.stdout else ""
+    last = r.stdout.splitlines()[-1] if r.stdout else ""
+    row_node = next((ln for ln in r.stdout.splitlines() if ln.startswith("host      node")), "")
+    check("pm without node → not a failure",
+          "node" not in fix and not last.endswith("FAIL") and "absent" in row_node, f"{last!r} {row_node!r} {r.stderr[-200:]}")
+
 # A renamed fork (manifest name is neither fig nor pm) must not die on a table lookup
 with tempfile.TemporaryDirectory() as tmp2:
     fork = Path(tmp2) / "forked"
