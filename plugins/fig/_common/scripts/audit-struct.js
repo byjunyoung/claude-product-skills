@@ -76,7 +76,9 @@ for (const { s, skipped } of deep) {
         issues.push(`[frame overlap] ${s.name}: ${a.name} ∩ ${b.name}`);
     }
 
-  if (SEC_RE && !SEC_RE.test(s.name))
+  // Top level only: a nested section is named by its parent's convention (a period holding work
+  // sections), so the file's section pattern does not describe it.
+  if (SEC_RE && secs.includes(s) && !SEC_RE.test(s.name))
     issues.push(`[naming] section ${s.name} (pattern mismatch)`);
 }
 

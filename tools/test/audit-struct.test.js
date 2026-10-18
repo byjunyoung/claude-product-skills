@@ -63,6 +63,23 @@ test("excluded parent excludes nested sections", async () => {
   assert.ok(!Array.isArray(out) || !out.some((i) => /\[bounds\]/.test(i)), out);
 });
 
+const patterned = () => {
+  const cfg = baseCfg();
+  cfg.naming.section_pattern = "^\\d+\\. ";
+  return cfg;
+};
+
+test("nested section names are not checked against section_pattern", async () => {
+  const out = await run([section("01. Period", 0, 0, 2000, 2000, [section("Work", 50, 50, 500, 300, [frame("A-Default", 0, 0)])])], patterned());
+  assert.strictEqual(out, "STRUCT PASS");
+});
+
+test("a top-level section name that misses section_pattern is still reported", async () => {
+  const out = await run([section("Period", 0, 0, 2000, 2000, [section("Work", 50, 50, 500, 300, [frame("A-Default", 0, 0)])])], patterned());
+  assert.ok(out.some((i) => /\[naming\] section Period/.test(i)), out);
+  assert.ok(!out.some((i) => /section Work/.test(i)), out);
+});
+
 test("a nested section inside its parent is not a section overlap", async () => {
   const out = await run([section("Outer", 0, 0, 2000, 2000, [section("Inner", 50, 50, 500, 300, [frame("A-Default", 0, 0)])])]);
   assert.strictEqual(out, "STRUCT PASS");
