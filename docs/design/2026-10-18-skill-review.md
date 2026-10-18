@@ -315,7 +315,10 @@ and only diff made pairs.
     REST needs a personal token.
 - **Held:** `pm:readout` (it waits on define-further 1 being in use) and `pm:research`.
 - **Before the new skills are built:** each gets its own design pass — inputs, outputs, who reads
-  them, write gates. This review only places them. For `fig:review`, the value is the write-back
+  them, write gates. This review only places them. The passes are written:
+  - `2026-10-18-prd-goals-metrics.md`
+  - `2026-10-18-pm-release.md`
+  - `2026-10-18-fig-review.md` For `fig:review`, the value is the write-back
   (decisions into PRD entries, open questions as pins on nodes); a summary list on its own would
   repeat diff's unread table.
 
