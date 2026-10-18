@@ -39,6 +39,7 @@ Settled with the owner, one at a time.
 | 5 | Skill granularity | Merge `deck-setup` into `deck`; merge `task-draft`, `task-publish`, `task-sync` into one `/pm:task` | No merges; a full regrouping into stage-level entry points |
 | 6 | The retired commands | Removed outright; CHANGELOG and READMEs name the new form | Redirect stubs for one version (`disable-model-invocation: true` would have kept them out of the listing) |
 | 7 | `/fig:diff` | Removed. Nobody reads the AS-IS/TO-BE table it writes into the task doc; looking at what changed is Dev Mode's *Compare changes* | Keeping it; folding it into `/fig:handoff` |
+| 8 | `/fig:handoff` | Kept — its pinned version is what the ticket's done conditions and QA steps name. What `use_figma` cannot do goes through the web app in the browser, or is left out | Removing it in favour of marking *Ready for dev* by hand |
 
 ## Goals
 
@@ -260,6 +261,34 @@ READMEs' *Where the two meet* and `.github/two-plugins.html` if the picture name
 > Each works on its own. Installed together, `fig` reads the PRD where `pm` writes it and writes into
 > task records through `pm`'s adapters. They still share two objects: the PRD and the task record.
 
+### 11. Handoff: *Ready for dev* through the web app
+
+**Status quo.**
+
+- `use_figma` rejects both `saveVersionHistoryAsync` and `devStatus`. The latest Figma plugin's API
+  reference no longer lists either (2.2.157; 2.2.127 still did), so the block is presumed to stand —
+  not re-probed.
+- The version pin already goes around it. Handoff saves the named version in the web app (*File →
+  Save to version history*) through browser automation, and asks the person to save it under the
+  given name when no browser is connected.
+- *Ready for dev* went the other way: 3.26.0 removed the step and its keys outright, because it kept
+  being offered as something a run could do.
+
+**Proposal (designer's call, decision 8).** Bring *Ready for dev* back by the same route as the
+version pin, not through `use_figma`:
+
+- After the pin, select each chosen section in the web app and mark it *Ready for dev*. Figma then
+  notifies the developers who follow the file, which is the signal a handover exists to send.
+- It is a write to a shared file, so it goes through preview → go with the rest. No browser, the
+  wrong account, or a seat without Dev Mode → list the sections and hand the marking to the person.
+  Never say it was marked without reading the status back in the page.
+- A new key `handoff.ready_for_dev` ships `null` (off). A team that marks *Ready for dev* turns it
+  on. With it off, handoff behaves exactly as today and never offers the step. That keeps 3.26.0's
+  point: nothing is offered that the run will not do.
+- **Gate.** Click it through once on a real file, with a Full or Dev seat signed in, before this
+  ships. The repository ships only calls that were run, and the seat on hand when this was written is
+  View-only. If the probe fails, this section is dropped and handoff stays as it is.
+
 ## Later: Figma Specs
 
 Not built now. This section reserves the place.
@@ -308,6 +337,10 @@ entry". Write "Figma Spec" for Figma's documents, always with the prefix. Renami
   history.
 - **Diff removed:** no `/fig:diff` reference is left outside CHANGELOG history, and handoff carries
   its own write method.
+- **Ready for dev:**
+  - Either the probe in 11 passed and was recorded — with `handoff.ready_for_dev` on, the sections
+    show *Ready for dev* when the page is read back, and with it off the step never appears.
+  - Or the probe failed and 11 was dropped.
 - **Descriptions:** every one is 500 characters or fewer.
 - **Checks and docs:** `bash tools/verify-all.sh` passes, and both root READMEs are updated, English
   first.
@@ -329,6 +362,8 @@ entry". Write "Figma Spec" for Figma's documents, always with the prefix. Renami
 10. A null `ui_section_heading` writes under "Design changes".
 11. Step 3 of the PRD order covers `prd.target: git` as well, since it also writes markdown to
     `prd.markdown.dir`.
+12. *Ready for dev* comes back through the web app. It ships off, under a new `handoff.ready_for_dev`
+    key, and only after a live probe; without the probe it stays out.
 
 ## Left to the builder
 
