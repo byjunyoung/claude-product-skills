@@ -2,7 +2,8 @@
 
 ## 0.37.1 — 2026-10-19
 
-- **The shared scripts and the session hook identify their plugin by `plugin.json`, and the hook can no longer fail a session.** A checkout with a `pm/` directory in its path made `fig` read as `pm`, and the default config file name was a constant that came out wrong on the `pm` side; the scripts now read the `name` in the nearest `plugin.json` and fall back to the old path rule when there is none. The `SessionStart` hook exited with an error when PyYAML was missing, and the fetch could stall for the whole timeout when it asked for a credential or host key there is no terminal to answer. It now fails quietly, and the fetch is told not to prompt (`BatchMode` is added to your own SSH command, taken from `GIT_SSH_COMMAND` or `core.sshCommand`, rather than replacing it)
+- **`/pm:setup` and the other config lookups read your `pm-conventions.yaml`, not `figma-conventions.yaml`.** The shared config reader worked out which plugin it belonged to from its folder path, and a call without `--name` (the one `/pm:setup` makes with `resolve-config.py --need task.record.ref`) took the default file name for `fig`. It now reads the `name` in the nearest `plugin.json`, so the default is `pm-conventions.yaml` on this side; a path with a `pm/` or `fig/` folder in it no longer decides it, and a renamed fork falls back to the old path rule instead of failing
+- **The `SessionStart` hook that fetches a shared config can no longer fail or stall a session.** It exited with an error when PyYAML was missing, and the fetch could wait out the whole timeout for a credential or host key there is no terminal to answer. It now fails quietly and tells it not to prompt: `BatchMode` is added to your own SSH command (from `GIT_SSH_COMMAND` or `core.sshCommand`) rather than replacing it, and when only `GIT_SSH` is set the hook leaves the SSH command alone
 
 ## 0.37.0 — 2026-10-12
 

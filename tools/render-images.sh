@@ -28,6 +28,11 @@
 #   two-plugins          2000x1358   2000x1366
 # Widths match. Heights run 8-40px taller than the committed files: the layout is the same, but
 # the committed PNGs were trimmed a little tighter at the bottom, which was not recorded.
+# So a re-render comes out a little taller than the picture in the repository: check the result
+# against the committed one before committing it.
+#
+# The trailing size report uses `sips`, which only macOS has; elsewhere it is skipped (an
+# unguarded call would stop the script after the first picture under `set -e`).
 #
 # 256-colour step: four of the eight committed PNGs are 8-bit palette images, four are RGB, so
 # the old step was applied by hand and not to every file. `pngquant` was not installed when this
@@ -97,10 +102,14 @@ render() {
     fi
   fi
 
-  local w h
-  w="$(sips -g pixelWidth "$png" | awk '/pixelWidth/{print $2}')"
-  h="$(sips -g pixelHeight "$png" | awk '/pixelHeight/{print $2}')"
-  echo "rendered $name.png ${w}x${h}"
+  if command -v sips >/dev/null 2>&1; then
+    local w h
+    w="$(sips -g pixelWidth "$png" | awk '/pixelWidth/{print $2}')"
+    h="$(sips -g pixelHeight "$png" | awk '/pixelHeight/{print $2}')"
+    echo "rendered $name.png ${w}x${h}"
+  else
+    echo "rendered $name.png (no sips here, size not reported)"
+  fi
 }
 
 for n in "${names[@]}"; do render "$n"; done
