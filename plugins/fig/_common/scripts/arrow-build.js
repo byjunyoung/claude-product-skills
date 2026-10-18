@@ -52,9 +52,12 @@ function find(section, name) {
 }
 
 /** Creates an arrow from an array of vertices. Two points is a straight line, three or more a right-angle elbow.
- *  opts: { dashed, bidirectional } */
+ *  opts: { dashed, bidirectional, stroke: { color, weight, dash } }
+ *  A field present in opts.stroke overrides the config's COLOR / WEIGHT / DASH; `dash: null` is solid
+ *  even with `dashed`. A re-sync passes in what styleOf() read off the arrow it replaces. */
 async function arrow(parent, name, pts, opts) {
   const o = opts || {};
+  const st = o.stroke || {};
   const minX = Math.min(...pts.map(p => p[0])), minY = Math.min(...pts.map(p => p[1]));
   const v = figma.createVector();
   await v.setVectorNetworkAsync({
@@ -65,13 +68,28 @@ async function arrow(parent, name, pts, opts) {
     })),
     segments: pts.slice(1).map((_, i) => ({ start: i, end: i + 1 }))
   });
-  v.strokes = [{ type: "SOLID", color: COLOR }];
-  v.strokeWeight = WEIGHT;
-  if (o.dashed) v.dashPattern = DASH;
+  v.strokes = [{ type: "SOLID", color: st.color || COLOR }];
+  v.strokeWeight = st.weight != null ? st.weight : WEIGHT;
+  const dash = "dash" in st ? st.dash : (o.dashed ? DASH : null);
+  if (dash && dash.length) v.dashPattern = dash;
   v.name = name;
   parent.appendChild(v);          // appendChild first, coordinates after
   v.x = minX; v.y = minY;
   return v.id;
+}
+
+/** Reads the style off an existing arrow, so a re-sync can hand it to arrow() as opts before the old
+ *  vector is deleted. Returns null when the vector has no SOLID stroke (the config's style applies).
+ *  Bidirectional means the first vertex carries the end cap, the way arrow() draws it. */
+function styleOf(vector) {
+  const s = vector.strokes && vector.strokes[0];
+  if (!s || s.type !== "SOLID") return null;
+  const dash = vector.dashPattern;
+  const v0 = vector.vectorNetwork && vector.vectorNetwork.vertices && vector.vectorNetwork.vertices[0];
+  return {
+    stroke: { color: s.color, weight: vector.strokeWeight, dash: dash && dash.length ? [...dash] : null },
+    bidirectional: !!v0 && v0.strokeCap === CAP.end
+  };
 }
 
 /* ── Three path patterns (target on the right. Other directions mirror on the axis) ─── */

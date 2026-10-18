@@ -186,7 +186,7 @@ After the audit passes, use a screenshot (cropped and zoomed if needed) to check
 
 1. Collect what to sync from the page or section — VECTORs containing `-->` (transitions) and `[state]` VECTORs containing `~` (state chains). Transitions follow steps 2–6 below; `[state]` follows the "State chains" section
 2. Parse the name as `source --> target` and find the frames by name on the same page
-3. When both exist: recompute by the geometry rules, delete the old vector and recreate it, **preserving the existing stroke style, dashPattern, and whether it was bidirectional**. Reposition the label pill too, and **raise it above the regenerated arrow in z-order again** — the new vector lands on top of the old pill, so re-append it
+3. When both exist: recompute by the geometry rules, delete the old vector and recreate it, **preserving the existing stroke style, dashPattern, and whether it was bidirectional**: before deleting the old vector, read `styleOf(old)`; pass its `stroke` and `bidirectional` into the new arrow's `opts`; where it returns `null`, the config's style applies. Reposition the label pill too, and **raise it above the regenerated arrow in z-order again** — the new vector lands on top of the old pill, so re-append it
 4. When either is missing (renamed or deleted): **do not repair it — report it as an orphan** and let the user decide
 5. Hand-drawn or hand-edited arrows are sync targets too if their names fit the convention. Say so before overwriting
 6. **Run the audit** (as in Verify) — sync is only reported complete at zero violations
@@ -242,7 +242,8 @@ Concatenate that one line, the whole of `arrow-build.js`, and the actual calls, 
 | Helper | What it does |
 |---|---|
 | `find(section, name)` | Reads frame coordinates live. **Never compute coordinates outside and pass them in** — the canvas may have changed since |
-| `arrow(parent, name, pts, opts)` | Creates from a vertex array. Two points is a straight line, three or more a right-angle elbow. `opts.dashed`, `opts.bidirectional` |
+| `arrow(parent, name, pts, opts)` | Creates from a vertex array. Two points is a straight line, three or more a right-angle elbow. `opts.dashed`, `opts.bidirectional`, `opts.stroke` (`{color, weight, dash}`, each overriding the config) |
+| `styleOf(vector)` | Reads `{stroke, bidirectional}` off an existing arrow, or `null` when it has no solid stroke. Call it before deleting the old vector in a sync |
 | `straight` · `trunkElbow` · `detour` | The three path patterns. The helper applies the naming rules |
 | `pill(section, arrowName, text, cx, cy)` | The label. Call it **after every arrow is built** so z-order comes out right |
 | `stateLink(section, from, to)` | The headless vertical dashed `[state]` line |
