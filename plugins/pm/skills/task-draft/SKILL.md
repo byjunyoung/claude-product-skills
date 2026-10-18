@@ -1,6 +1,6 @@
 ---
 name: task-draft
-description: Turns a request source — a chat thread, a page, a spoken agreement — into a task record's context table. Statements from the source are sorted into named rows, and what is fact, what is your inference, and what nobody has decided yet are labelled apart rather than blended. Creates a new record where none exists, or fills only the empty cells of one that does. Filing it in the engineering tracker belongs to /pm:task-publish. Triggers - "/pm:task-draft", "draft a task from this thread", "fill in the context table", "일감 초안 잡아줘", "맥락표 채워줘", "이 스레드로 일감 만들어줘".
+description: Turns a request source — a chat thread, a page, a spoken agreement — into a task record's context table, with fact, inference and undecided labelled apart. Creates a record where none exists, or fills only the empty cells of one that does. Filing it in the tracker is /pm:task-publish. Triggers - "/pm:task-draft", "draft a task from this thread", "fill in the context table", "일감 초안 잡아줘", "맥락표 채워줘", "이 스레드로 일감 만들어줘".
 allowed-tools: AskUserQuestion, Read, Write, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write
 ---
 
@@ -22,7 +22,7 @@ Takes a **request source** — a chat thread, a document, a conversation someone
 ## Configuration
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml --need task.record.ref
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml --need task.record.ref --authored task.record.type
 ```
 
 A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than interviewing for the value here.
@@ -43,7 +43,7 @@ Fill and revise can happen in one run — empty cells get filled, and only the f
 
 Branch on the kind of link and read it. Do this first, without asking.
 
-- **A chat thread** — read the whole thread, parent and replies, so the shape of the discussion is visible, not just the last message. For a threaded platform, resolve the thread root before reading. Attached images and video count only as filenames and context. The calls for the tool the link belongs to are in its source adapter — `adapter.py --kind sources --type slack --role chat` for a Slack permalink, the type from the link's domain or `sources.chat_type`. Exit 3 means no adapter for that tool: stop and say so rather than improvising the read.
+- **A chat thread** — read the whole thread, parent and replies, so the shape of the discussion is visible, not just the last message. For a threaded platform, resolve the thread root before reading. Attached images and video count only as filenames and context. The calls for the tool the link belongs to are in its source adapter — `adapter.py --kind sources --type slack --role chat` for a Slack permalink, the type from the link's domain or `sources.chat_type`. Exit 3 means no adapter for that tool: stop and say so rather than improvising the read. Where the adapter's read is not available in this session — the connector is absent, or its call fails on access — say so in one line, ask for the thread pasted as text, and go on from the paste. The Request source row keeps the link.
 - **A document page** — fetch the body.
 - **Anything else** (a design link, pasted text) — take what you were given as the evidence.
 
@@ -104,6 +104,8 @@ Rewrite a filled cell **only where new information arrived** — another source,
 
 ### Create
 
+Before creating, look for a record that already carries the source link. For a markdown record: `grep -rlF "{link}" {task.record.ref}`. For any other type, the adapter's search. Where one is found, offer fill or revise on it instead.
+
 Create the record in `task.record`, writing properties and body in a single write.
 
 **Properties** — infer a recommendation from the source, then confirm them **in one grouped `AskUserQuestion`**. Never settle silently. A property with no basis for a recommendation is asked plain, and if it is still unsettled, left empty.
@@ -119,7 +121,13 @@ Create the record in `task.record`, writing properties and body in a single writ
 | Version | `task.properties.version_unset`, where `task.properties.version` is named. A new record has no ticket and so no milestone to copy — not asked |
 | Link to mirror | Left empty — `/pm:task-publish` fills it |
 
-The calls are in the adapter for `task.record.type`:
+**Markdown records** (`task.record.type` is `markdown`) are one call, with each property as `--set` and each context row as `--row`, in `task.context_rows` order. Report the printed path.
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py new --dir {task.record.ref} --title "{title}" --set "Project={project}" --row "Request source={link}" --row "Initial request={text}"
+```
+
+Every other type: the calls are in the adapter for `task.record.type`:
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.record.type} --role record
@@ -129,11 +137,11 @@ It prints the file to read — the bundled one, or yours from `adapters.dirs` wh
 
 **Read the tracker's own schema immediately before writing** and match the option names it currently has. Never trust option values pinned in this document or in the config — they drift.
 
-**The body skeleton** comes from `task.notion.body_template` where one is set. Where it is `null`, write the context table alone and say that no template was applied. Some tools do not apply a database template automatically, which is why the skeleton is written explicitly rather than assumed.
+**The body skeleton**, where `task.record.type` is `notion`, comes from `task.notion.body_template` where one is set. Where it is `null`, write the context table alone and say that no template was applied. Some tools do not apply a database template automatically, which is why the skeleton is written explicitly rather than assumed.
 
 ## 5. Verify
 
-Read the record back and confirm the rows landed as intended and the table structure is intact. Report it in one line. In create mode, include the new record's URL.
+Read the record back — for a markdown record, `markdown-tracker.py list --dir {task.record.ref}` — and confirm the rows landed as intended and the table structure is intact. Report it in one line. In create mode, include the new record's URL.
 
 ## When NOT to invoke
 
