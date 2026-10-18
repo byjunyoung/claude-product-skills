@@ -41,7 +41,8 @@ import json, os, subprocess, sys, time
 def plugin_name(here):
     """The plugin these scripts ship in, read from the nearest .claude-plugin/plugin.json above
     `here`. A checkout that happens to sit under a directory called pm/ is still the fig plugin.
-    Falls back to the path rule when no manifest is found; never raises."""
+    Falls back to the path rule when no manifest is found or it names neither plugin (a renamed
+    fork); never raises."""
     try:
         d = os.path.abspath(here)
         while True:
@@ -49,7 +50,7 @@ def plugin_name(here):
             if os.path.isfile(manifest):
                 with open(manifest, encoding="utf-8") as f:
                     name = json.load(f).get("name")
-                if isinstance(name, str) and name:
+                if name in ("fig", "pm"):
                     return name
             parent = os.path.dirname(d)
             if parent == d:

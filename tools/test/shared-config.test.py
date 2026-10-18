@@ -74,6 +74,13 @@ env = fetch_env({"GIT_SSH_COMMAND": "ssh -i /k"})
 check("existing GIT_SSH_COMMAND is extended", env.get("GIT_SSH_COMMAND") == "ssh -i /k -o BatchMode=yes", repr(env.get("GIT_SSH_COMMAND")))
 env = fetch_env(config_value="ssh -i /c")
 check("core.sshCommand is extended", env.get("GIT_SSH_COMMAND") == "ssh -i /c -o BatchMode=yes", repr(env.get("GIT_SSH_COMMAND")))
+env = fetch_env({"GIT_SSH": "my-ssh"})
+check("GIT_SSH alone: GIT_SSH_COMMAND is left unset", "GIT_SSH_COMMAND" not in env, repr(env.get("GIT_SSH_COMMAND")))
+check("GIT_SSH alone: still never prompts", env.get("GIT_TERMINAL_PROMPT") == "0" and env.get("GIT_SSH") == "my-ssh", repr(env.get("GIT_TERMINAL_PROMPT")))
+env = fetch_env({"GIT_SSH": "my-ssh", "GIT_SSH_COMMAND": "ssh -i /k"})
+check("GIT_SSH with GIT_SSH_COMMAND: the command is extended as before", env.get("GIT_SSH_COMMAND") == "ssh -i /k -o BatchMode=yes", repr(env.get("GIT_SSH_COMMAND")))
+env = fetch_env({"GIT_SSH": "my-ssh"}, config_value="ssh -i /c")
+check("GIT_SSH with core.sshCommand: the config value is extended as before", env.get("GIT_SSH_COMMAND") == "ssh -i /c -o BatchMode=yes", repr(env.get("GIT_SSH_COMMAND")))
 
 print()
 if failures:

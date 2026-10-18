@@ -29,7 +29,8 @@ import hashlib, importlib.util, json, os, subprocess, sys, tempfile, time
 def plugin_name(here):
     """The plugin these scripts ship in, read from the nearest .claude-plugin/plugin.json above
     `here`. A checkout that happens to sit under a directory called pm/ is still the fig plugin.
-    Falls back to the path rule when no manifest is found; never raises."""
+    Falls back to the path rule when no manifest is found or it names neither plugin (a renamed
+    fork); never raises."""
     try:
         d = os.path.abspath(here)
         while True:
@@ -37,7 +38,7 @@ def plugin_name(here):
             if os.path.isfile(manifest):
                 with open(manifest, encoding="utf-8") as f:
                     name = json.load(f).get("name")
-                if isinstance(name, str) and name:
+                if name in ("fig", "pm"):
                     return name
             parent = os.path.dirname(d)
             if parent == d:
@@ -104,8 +105,11 @@ def main():
                     ssh = r.stdout.strip() if r.returncode == 0 else ""
                 except (OSError, subprocess.SubprocessError):
                     ssh = ""
-            env = {**os.environ, "GIT_TERMINAL_PROMPT": "0",
-                   "GIT_SSH_COMMAND": (ssh or "ssh") + " -o BatchMode=yes"}
+            env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+            # GIT_SSH names a whole ssh replacement, and GIT_SSH_COMMAND would outrank it: with
+            # only GIT_SSH set, setting the command would silently swap the user's program for ssh.
+            if ssh or not os.environ.get("GIT_SSH"):
+                env["GIT_SSH_COMMAND"] = (ssh or "ssh") + " -o BatchMode=yes"
             subprocess.run(["git", "-C", root, *cmd], capture_output=True, timeout=20, env=env)
         except (OSError, subprocess.SubprocessError):
             pass                                 # offline is not an error worth a session's attention
