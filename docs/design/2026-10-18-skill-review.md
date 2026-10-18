@@ -306,8 +306,18 @@ and only diff made pairs.
   - accepting a whole-section text signal
   - comparing against the pinned version through REST
 
-**D2. Which lifecycle gaps to fill.** See the next section. The first item is a definition, not a
-new skill.
+**D2. Which lifecycle gaps to fill — decided.** See the next section.
+
+- **In scope:**
+  - define-further 1: prd's overview gains problem, goal, success metric and In / Out
+  - a new `pm:release`
+  - a new `fig:review`, gated on probing how Figma comments can be read. The MCP is unverified, and
+    REST needs a personal token.
+- **Held:** `pm:readout` (it waits on define-further 1 being in use) and `pm:research`.
+- **Before the new skills are built:** each gets its own design pass — inputs, outputs, who reads
+  them, write gates. This review only places them. For `fig:review`, the value is the write-back
+  (decisions into PRD entries, open questions as pins on nodes); a summary list on its own would
+  repeat diff's unread table.
 
 **D3. tokens.** Its audit becomes an `[unbound]` check in lint, and tokens keeps only binding.
 Where the plan allows, point to Figma's *Check designs* instead. The plan and beta status come from
