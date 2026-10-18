@@ -7,8 +7,15 @@ the owner's review. Not built. This is the first item of the skill review's D2
 ## Intent
 
 A PRD that cannot say how success will be measured leaves the measure-and-learn stage with
-nothing to start from. The skill review first read this as "prd has no goals or metrics". That is
-true of `/pm:prd`'s body and of the bundled floor, but not of how teams actually work.
+nothing to start from. The skill review first read this as "prd has no goals or metrics". More
+exactly: the bundled floor ships a "Goals and scope" overview item (`conventions.example.yaml:44`),
+but nothing defines what goes inside it, and `/pm:prd`'s body never mentions metrics. Teams fill
+the gap on their own.
+
+**"Problem" is already covered.** The review's scope listed problem, goal, success metric and
+in / out. The problem is the Background item: the team template asks it to say "what discomfort and
+which decision it started from, separating fact from guess", and prd 2.1 already says Background
+separates fact from supposition. No new row is needed for it.
 
 **A team's own PRD template**, in use with this plugin, already carries a goals-and-scope
 subsection with three rows:
@@ -112,9 +119,13 @@ A metric row has two kinds of column.
 - **Settled now.** The interview settles these when the PRD is written. They need no data. A data
   source that nobody has confirmed exists is written as "source unconfirmed", not left looking
   settled.
-- **Waits for data.** Each holds either a number with its source — a link, a file, a query name —
-  or "TBD — who · what · when". The template's own rule holds: with any of the three missing, the
-  TBD counts as empty.
+- **Waits for data.** Each holds either a number or "TBD — who · what · when". The template's own
+  rule holds: with any of the three missing, the TBD counts as empty.
+- **Where citations go (designer's call).** The table holds only what a reader can use: the
+  source's plain name (e.g. "kiosk order records") and the number. The citation itself — the
+  file, event name, query or link the number or the source was read from — goes under the PRD's
+  References. That is prd's existing rule that internal sources stay out of the body
+  (SKILL.md:150, :175). `forbidden_terms` apply to the table cells like any other body text.
 
 ### 3. What the skill proposes
 
@@ -149,6 +160,12 @@ written.
 Each check is a warning in the verification report, with the row it points at. None of them blocks
 writing; the person decides.
 
+**A warning tier is new (designer's call).** Section 3 is a gate today: a TBD with no reason is
+rejected (SKILL.md:178), and so is one without who and when (:207). ① ② ③ go into a separate
+warning tier that is reported and never stops the write. The existing gate rules keep applying to
+what is being written. That includes the metric table's TBDs, which must carry who · what · when
+like any other.
+
 ### 5. When the checks run
 
 Decision 5 limits the change to new PRDs (designer's call on what that means in practice).
@@ -157,6 +174,15 @@ Decision 5 limits the change to new PRDs (designer's call on what that means in 
   being edited.
 - Extending an existing PRD — adding an entry, updating an entry, adding a user group — does not
   run them. An old PRD with a single "metrics TBD" is not flagged on every visit.
+- **Extend mode verifies what it writes, not the whole document (designer's call).** Today nothing
+  limits section 3 to the changed entries, so its gate would still reject an old bare "metrics
+  TBD" (SKILL.md:178). In extend mode, section 3's gate and warnings cover only the entries being
+  added or changed. The rest of the document is read for coherence, such as names an entry uses,
+  but is not judged.
+- **Editing an old PRD's goals item (designer's call).** 2.2 gains a unit of work: "editing the
+  goals item". When the item is in the old shape, the skill offers the new shape for that item
+  only. That is the person's own edit, not a backfill. If they decline, the item is written as
+  asked and ② is skipped for it.
 
 ### 6. Config, documents and the team layer
 
@@ -171,6 +197,13 @@ Decision 5 limits the change to new PRDs (designer's call on what that means in 
   language adds its names for the three keys to its config, so its PRDs keep the template's
   wording. For the owner's team-config repository, this is a shared write: preview → go at
   implementation.
+- **Upgrading a team that overrides `overview` (designer's call).** Lists replace wholesale
+  (`resolve-config.py:64-73`), so a team whose `overview` is in its own language inherits a
+  `goals_item` that names nothing in it.
+  - When `goals_item` matches no overview item, the subsection and its checks are skipped. The
+    report names the key to set, rather than stopping the write.
+  - When only some of the three keys are overridden, the output uses what is set and the report
+    names the ones still in the floor's language.
 
 ## Done when
 
@@ -180,7 +213,9 @@ Decision 5 limits the change to new PRDs (designer's call on what that means in 
   and target value is TBD with who · what · when, and every data source is either cited or
   "source unconfirmed".
 - **The checks fire.** Each of ① ② ③ fires on a fixture written to trigger it, and on none of the
-  others.
+  others. ① and ③ judge meaning, so no script can assert them. The fixtures are sample PRDs kept
+  with the expected warnings beside them, run by hand, with the run recorded in the CHANGELOG entry
+  (designer's call). No new test scripts.
 - **Old PRDs stay quiet.** Extending an existing PRD that has a bare "metrics TBD" runs none of the
   overview checks.
 - **A team with its own names** (a config that overrides the three keys) gets its own column and
@@ -201,6 +236,14 @@ Decision 5 limits the change to new PRDs (designer's call on what that means in 
 7. "New PRDs only" means the checks run when a PRD is written new, or when its goals item is
    edited.
 8. In Notion, the table replaces only the placeholder of the goals-and-metrics row.
+9. Table cells carry the source's plain name. Citations go under References, and
+   `forbidden_terms` apply to the cells.
+10. ① ② ③ form a new warning tier. The existing gate rules still apply to what is written.
+11. Extend mode verifies only what it writes. Editing an old goals item offers the new shape for
+    that item.
+12. A `goals_item` that matches nothing skips the subsection and names the key, rather than
+    stopping the write.
+13. Check fixtures are sample PRDs run by hand and recorded; no new scripts.
 
 ## Left to the builder
 
