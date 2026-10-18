@@ -38,9 +38,11 @@ works — it is finished when the sentences that describe it are still true.
 
 `tools/verify.py` catches the mechanical half: a skill missing from a README's skills table, a
 command in one language's README and not the other, a section count that has drifted apart, a config
-key or a skill reference that does not exist (in every document under a skill folder, in `_common`
-and in the example configs, including a reference to the other plugin's skills), a version with no
-changelog entry, a team's own value left in a shipped file, a plugin description that differs between
+key that does not exist (in every document under a skill folder and every document under
+`_common`), a skill reference that does not exist (in those documents, in `_common` scripts and in
+the example configs, including a reference to the other plugin's skills), a version with no
+changelog entry, a team's own value left in a shipped file (the same documents, plus the scripts),
+a plugin description that differs between
 `plugin.json` and the marketplace, and the copies of the nested-section helper that the audit scripts
 must keep identical (`sections-deep`). A description that runs long is reported as a warning.
 

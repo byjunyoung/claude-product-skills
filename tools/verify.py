@@ -173,6 +173,8 @@ def check_plugin(name, root, yaml):
     elif not team.exists():
         warns.append(f"[{name}] no team config ({team.name}) — running on bundled defaults")
 
+    cfg_ref = re.compile(r"`([a-z_]+(?:\.[a-z_]+)+)`")
+
     # Team values leak into the scripts too. Watching SKILL.md alone once shipped a team font
     # name left in a comment — because the check only covered the documents.
     if (common / "scripts").is_dir():
@@ -184,6 +186,18 @@ def check_plugin(name, root, yaml):
                 if w in t:
                     fails.append(f"[{name}] {f.name}: team value '{w}'")
 
+    # The documents under _common are read like the ones under a skill: a config key they name has
+    # to exist and a team's own value must not ship in them.
+    for f in sorted(common.rglob("*.md")):
+        s = f.read_text(errors="ignore")
+        rel = f.relative_to(REPO)
+        for ref in sorted(set(cfg_ref.findall(s))):
+            if ref.split(".")[0] in schema and ref not in known:
+                fails.append(f"[{name}] {rel}: `{ref}` is not in the schema")
+        for w in TEAM_STRINGS:
+            if w in s:
+                fails.append(f"[{name}] {rel}: team value '{w}'")
+
     # Script syntax
     chk = common / "scripts" / "lib" / "check.sh"
     if chk.exists():
@@ -193,7 +207,6 @@ def check_plugin(name, root, yaml):
         if r.returncode != 0:
             fails.append(f"[{name}] check.sh failed:\n" + r.stdout + r.stderr)
 
-    cfg_ref = re.compile(r"`([a-z_]+(?:\.[a-z_]+)+)`")
     legacy_ref = re.compile(r"(?<![\w-])figma-([a-z-]+)")
 
     # A skill is a folder, not one file: later phases move bodies out of SKILL.md into sibling mode
@@ -373,7 +386,7 @@ def check_references(plugins: dict[str, set[str]]) -> None:
         for f in sorted((root / "skills").rglob("*.md")):
             sk = f.relative_to(root / "skills").parts[0]
             targets.append((f, f"{p}:{sk}"))
-        for pat in ("*.md", "*.py"):
+        for pat in ("*.md", "*.py", "*.js"):
             targets += [(f, p) for f in sorted((root / "_common").rglob(pat))]
         targets += [(root / "README.md", p),
                     (root / "_common" / "conventions.example.yaml", p)]   # a comment there once kept a pre-rename name

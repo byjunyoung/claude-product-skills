@@ -129,6 +129,23 @@ def plant_sections_deep_drift(r):
 case("sections-deep copies differ", plant_sections_deep_drift,
      1, "[fig] sections-deep copies differ: audit-flow.js")
 
+case("unknown config key in a _common document",
+     lambda r: write(r, "plugins/pm/_common/trackers/README.md", "\n`task.nonexistent_key`\n", append=True),
+     1, "[pm] plugins/pm/_common/trackers/README.md: `task.nonexistent_key` is not in the schema")
+
+
+def plant_team_common(r):
+    write(r, "tools/team-strings.local.txt", "ZZTEAMZZ\n")
+    write(r, "plugins/pm/_common/trackers/README.md", "\nZZTEAMZZ\n", append=True)
+
+
+case("team string in a _common document", plant_team_common,
+     1, "[pm] plugins/pm/_common/trackers/README.md: team value 'ZZTEAMZZ'")
+
+case("stale reference in a _common script comment",
+     lambda r: write(r, "plugins/fig/_common/scripts/deck-base.js", "\n// see /fig:nonexistent\n", append=True),
+     1, "→ /fig:nonexistent does not exist")
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)
