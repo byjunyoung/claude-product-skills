@@ -1,6 +1,7 @@
 # Local-first defaults, and two skill merges
 
-Status: design, agreed in conversation 2026-10-18. Not built.
+Status: design, 2026-10-18. Decisions 1–6 agreed with the owner; the designer's calls are pending
+the owner's review. Not built.
 
 ## Intent
 
@@ -32,7 +33,7 @@ Settled with the owner, one at a time.
 |---|---|---|---|
 | 1 | What changes | The bundled defaults only. A config that names Notion keeps it | Moving an existing team's source of truth to markdown |
 | 2 | How far the pm floor moves | Documents and tasks go local. Chat and calendar types stay `slack` / `google`; an unreachable source is named and skipped | Every source type `none` (would silently stop chat and calendar reads for configs that rely on the floor for them) |
-| 3 | How fig is told where the PRD is | Explicit `type` / `ref` keys | Inferring the type from the value's shape |
+| 3 | How fig is told where the PRD is | Explicit `type` / `ref` keys | Inferring the type from the value's shape (for config keys; the per-call `spec_url` is still read by shape — designer's call 2) |
 | 4 | How fig writes to a markdown task record | Through `pm`'s markdown tracker adapter | A markdown row of fig's own; printing only |
 | 4a | What that does to "the two never call each other" | Reworded: each works alone; installed together, they borrow from each other | Keeping strict separation |
 | 5 | Skill granularity | Merge `deck-setup` into `deck`; merge `task-draft`, `task-publish`, `task-sync` into one `/pm:task` | No merges; a full regrouping into stage-level entry points |
@@ -209,6 +210,11 @@ skills/task/
   `/fig:deck-setup` stop existing in the release that merges them. That release's CHANGELOG entry
   in each plugin opens with the old → new names. Both root READMEs carry the same mapping where the
   skills are listed, so someone typing an old name finds the new one.
+- **Callers outside this repository** are not seen by `verify.py`. Found on the owner's machine when
+  this was written, all name mentions rather than calls: a personal session-review skill (two lines,
+  plus its design note) and a shared team-config repository (its README and one config comment).
+  Update them in the same change. Rerun the search before the release, because new callers may
+  appear by then.
 
 ### 8. Shorter descriptions
 
