@@ -1,5 +1,9 @@
 # pm
 
+## 0.37.1 — 2026-10-19
+
+- **The shared scripts and the session hook identify their plugin by `plugin.json`, and the hook can no longer fail a session.** A checkout with a `pm/` directory in its path made `fig` read as `pm`, and the default config file name was a constant that came out wrong on the `pm` side; the scripts now read the `name` in the nearest `plugin.json` and fall back to the old path rule when there is none. The `SessionStart` hook exited with an error when PyYAML was missing, and the fetch could stall for the whole timeout when it asked for a credential or host key there is no terminal to answer. It now fails quietly, and the fetch is told not to prompt (`BatchMode` is added to your own SSH command, taken from `GIT_SSH_COMMAND` or `core.sshCommand`, rather than replacing it)
+
 ## 0.37.0 — 2026-10-12
 
 - **A team kept its own table of which fields each task status must carry, and only its own scripts read it.** A daily check and a session hook flagged a task in progress with no start date or a finished one at 80%, from a table in the team config the skills never looked at. The table sat outside the schema, so the repository check failed on it on every push, and the drift it caught never reached `/pm:task-sync`, the one place that reconciles a list

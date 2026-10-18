@@ -369,7 +369,9 @@ flowchart TD
 
 <img src=".github/lint-catches.png" alt="A tidy-looking section with three numbered violations marked: an arrow crossing an unrelated screen, an arrowhead in empty space, and a screen on no flow" width="100%">
 
-Arrowhead direction isn't catchable by distance alone. An arrow can sit 12px away and still point into empty space if its last segment runs parallel to the target edge. So the audit checks perpendicularity separately.
+Arrowhead direction isn't catchable by distance alone. An arrow can sit 12px away and still point into empty space if its last segment runs parallel to the target edge. So the audit checks perpendicularity separately. The start of an arrow is held to the same standard: it is measured to the frame's edge itself, so a start point floating out in empty space no longer passes for being "on" the edge.
+
+Sections nested inside other sections are read too — frames and arrows in a sub-section go through the same checks as the rest. Only the section-name checks (numbering and pattern) look at top-level sections alone.
 
 The component audit works without any written convention. It derives the usage distribution from how other screens in the same file use that component, and compares against it.
 
