@@ -3,10 +3,22 @@
 connector: none
 roles: record
 
-For a `task.record.type` of `markdown`. `{dir}` is `task.record.ref` — a directory. One file
-per task, and the properties live in the file's front matter under the names the config uses.
-No other tool is involved, which is what makes this the tracker a team can start on today and
-the one a skill can read exhaustively.
+For a `task.record.type` of `markdown`. `{dir}` is `task.record.ref` — a directory, `./tasks`
+unless the config says otherwise. A relative `{dir}` resolves against the working directory the
+skill runs in, and every path below keeps the form `{dir}` was given in. One file per task, and
+the properties live in the file's front matter under the names the config uses. No other tool
+is involved, which is what makes this the tracker a team can start on today and the one a skill
+can read exhaustively.
+
+Every operation is one call to a script, so line endings, quoting and the file name are decided
+in one place:
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py <op> ...
+```
+
+Exit codes: `0` done, `1` usage, `2` `{dir}` exists and is not a directory, `4` the file is
+missing (for `set-link`, or has no front matter).
 
 ## The shape of a record
 
@@ -20,11 +32,12 @@ priority: medium             # a value from task.properties.priority
 assignee: jane               # whatever string your team uses. task.assignee_map's left side is this string
 start: 2026-08-01
 end: 2026-08-14
-ticket:                      # ← the key task.link_property names. empty until /pm:task-publish files it
+ticket:                      # the key task.link_property names. empty until /pm:task-publish files it
 ---
 
 ## Context
-
+| | |
+|---|---|
 | Request source | … |
 | Initial request | … |
 …                            # one row per task.context_rows, in that order
@@ -32,8 +45,19 @@ ticket:                      # ← the key task.link_property names. empty until
 ## Change summary
 ```
 
-The front matter **is** the schema. `/pm:setup` reads the keys the files already carry; a
-directory with no files yet has no schema, and the interview supplies the names.
+The header row `| | |` is there so the table renders; the label is the left column. The front
+matter **is** the schema. `/pm:setup` reads the keys the files already carry; a directory with
+no files yet has no schema, and the interview supplies the names.
+
+**The path is the id, and the file name is the slug.** Match a record to its ticket by
+`{task.link_property}`, and a record to itself by path — never by title, which gets rewritten.
+The slug is the title lower-cased, with each run of whitespace or of `/\:*?"<>|#%` turned into
+`-`, cut at 60 characters; letters of any script are kept, and an empty result is `untitled`. A
+second record with the same title gets `-2`, `-3`, … and nothing is ever overwritten.
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py slug "Notification settings"
+```
 
 ## Reading the list
 
@@ -41,56 +65,59 @@ A directory can be listed in full, so the coverage line is `exhaustive` — ther
 relevance ranking here to miss a row.
 
 ```bash
-# every record, as one JSON line each — path, then the front matter
-python3 - <<'PY'
-import json, sys, yaml, pathlib
-for p in sorted(pathlib.Path("{dir}").rglob("*.md")):
-    s = p.read_text(encoding="utf-8")
-    if not s.startswith("---\n") or "\n---\n" not in s[4:]:
-        print(json.dumps({"path": str(p), "error": "no front matter"})); continue
-    fm = yaml.safe_load(s[4:s.index("\n---\n", 4)]) or {}
-    print(json.dumps({"path": str(p), **fm}, ensure_ascii=False, default=str))
-PY
+# every record, as one JSON line each — path, then the front matter; sorted by path
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py list --dir {dir}
 ```
 
-**The path is the id.** Match a record to its ticket by `{task.link_property}`, and a record
-to itself by path — never by title, which gets rewritten.
+A file without front matter comes back as `{"path": …, "error": "no front matter"}`. A `{dir}`
+that does not exist yet prints nothing, exits 0 and says so on stderr: that is "no records",
+not a failure.
 
-**What moved on a day** (`/pm:log`) — where `{dir}` sits in a git repository, ask git; a
-file's modification time survives neither a clone nor a checkout.
+**What moved on a day** (`/pm:log`):
 
 ```bash
-git -C {dir} log --since="{date} 00:00" --until="{date} 23:59" --name-only --format= -- . | sort -u
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py moved --dir {dir} --date {date}
+# {"paths": [...], "method": "git+uncommitted" | "git" | "mtime" | "none"}
 ```
 
-Without git, fall back to `find {dir} -name "*.md" -newermt "{date}" ! -newermt "{date + 1}"`,
-and say in the log that the day was read from modification times.
+Where `{dir}` sits in a git work tree, the paths are the files committed on that date; for
+today, files edited and not yet committed are added too (`git+uncommitted`). Outside git the
+answer is the modification times (`mtime`), which survive neither a clone nor a checkout — say
+in the log that the day was read that way. A missing `{dir}` is `[]` with method `none`.
 
-`log.me.tracker_user_id` is the assignee string, since there is no user id.
+`log.me.tracker_user_id` is the assignee string, since there is no user id. Where it is null,
+rows are not split by person; Task 4 says how the log reads that.
 
 ## Writing back
 
 ```bash
-# the link property, after a ticket is filed — edit the one line, never append a second key
-python3 - <<'PY'
-import pathlib, re
-p = pathlib.Path("{path}"); s = p.read_text(encoding="utf-8")
-head, _, body = s[4:].partition("\n---\n")
-key = "{task.link_property}"
-if re.search(rf"^{key}:", head, re.M):
-    head = re.sub(rf"^{key}:.*$", f"{key}: {ticket url}", head, count=1, flags=re.M)
-else:
-    head += f"\n{key}: {ticket url}"
-p.write_text("---\n" + head + "\n---\n" + body, encoding="utf-8")
-PY
+# the link property, after a ticket is filed — replaces the one line, never adds a second key
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py set-link \
+  --path {path} --key {task.link_property} --value "{ticket url}"
 ```
 
-**A change summary is appended under its heading, never replaced.** One dated line after
-whatever is already there — the section exists to keep the history.
+**A change summary is `append-under --heading "Change summary" --line "- {date} {text}"`.**
+The line lands after what is already in that section, and the heading is added when it is
+missing — never a second one. The section exists to keep the history, so it is never replaced.
 
-**A new record** is the skeleton above, written whole. `task.notion.body_template` does not
-apply here; `task.context_rows` decides the table rows and `task.properties.status_initial`
-the status.
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py append-under \
+  --path {path} --heading "Change summary" --line "- {date} {text}"
+```
+
+**A new record:**
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py new --dir {dir} \
+  --title "{title}" --set project="{project}" --set status="{task.properties.status_initial}" \
+  --link-key {task.link_property} \
+  --row "Request source={source}" --row "Initial request={text}"
+# stdout: the new file's path
+```
+
+Each `--set` becomes a front matter line, in the order given, then the link key is written
+empty. Each `--row` becomes a row of the context table, one per `task.context_rows` entry in that
+order. `task.notion.body_template` does not apply here.
 
 ## Things that bite
 
@@ -103,5 +130,8 @@ the status.
 - **Dates are `YYYY-MM-DD`.** A relative date in front matter is a string nobody can sort.
 - **Use the config's own status words** in `status:` — `task.status_map`'s left-hand side is
   matched on the string as written.
-- **Edit with the file's own line endings and encoding.** A write that re-encodes the file
-  shows up in git as a whole-file change, and the history the change summary keeps is gone.
+- **Line endings and encoding are kept.** A file written with CRLF stays CRLF, and a leading
+  BOM stays. A write that re-encodes the file shows up in git as a whole-file change, and the
+  history the change summary keeps is gone. That is why nothing here edits a record with `sed`.
+- **A `{dir}` that is a file** stops with exit 2 and `is not a directory`. Report it; do not
+  delete or rename the file to make room.
