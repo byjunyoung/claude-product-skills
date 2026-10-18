@@ -92,7 +92,10 @@ def main():
     if due(root):
         cmd = ["fetch", "--quiet"] if mode != "pull" or st["dirty"] else ["pull", "--ff-only", "--quiet"]
         try:
-            subprocess.run(["git", "-C", root, *cmd], capture_output=True, timeout=20)
+            # A hook has no terminal: a credential or host-key prompt would sit there until the
+            # timeout, on every session start. Make git fail fast instead of asking.
+            env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_SSH_COMMAND": "ssh -o BatchMode=yes"}
+            subprocess.run(["git", "-C", root, *cmd], capture_output=True, timeout=20, env=env)
         except (OSError, subprocess.SubprocessError):
             pass                                 # offline is not an error worth a session's attention
         st = mod.origin_state(NAME)
@@ -108,5 +111,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
-        pass                                     # a session must not fail to start over this
+    except BaseException:
+        pass        # a session must not fail to start over this — including the resolver's
+                    # sys.exit() when PyYAML is missing, which Exception does not catch
