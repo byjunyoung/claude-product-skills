@@ -330,19 +330,23 @@ and only diff made pairs.
 Figma's *Check designs* was not chosen. Its plan and beta status come from the reviewer and are
 unverified: <https://help.figma.com/hc/en-us/articles/39592284074263-Check-designs-in-Figma>.
 
-**D4. proto's publish default — decided: a Code layer next to the source frame**, through the
-official figma-code-workflows (`send_code_to_figma`). The GitHub Pages gallery stays as an option.
-Conditions, from Figma's help article
+**D4. proto's publish default — decided: the GitHub Pages gallery stays the default.** A Code layer
+next to the source frame, through the official figma-code-workflows (`send_code_to_figma`), is
+offered as an option only where `whoami.code_layers_enabled` is true.
+
+First decided the other way round. Reversed the same day because the feature had not reached the
+owner's account: the toolbar showed no Code tool in Design mode. A default that cannot run would
+detour on every run. Revisit once code layers are generally available.
+
+Conditions on the option, from Figma's help article
 (<https://help.figma.com/hc/en-us/articles/44193259600535>):
 
 - Code layers are in open beta, rolling out gradually.
-- Creating one needs a Full seat and edit access. Check `whoami.code_layers_enabled` first, and fall
-  back to the gallery when it is false.
+- Creating one needs a Full seat and edit access.
 - Imports cost no AI credits. Editing a code layer through the agent is free on paid plans until
   2026-11-04 and uses credits after that.
 - The article does not say whether people without edit access can play a code layer, or whether
-  there is a share link. Sharing outside Figma — a usability test, a stakeholder on a phone without
-  Figma — keeps the gallery as its route until that is known.
+  there is a share link.
 
 **D5. The log's default — decided: on.** `log.enabled` ships `true`. This is safe because:
 
