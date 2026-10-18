@@ -32,17 +32,32 @@ const skipSection = s => !!(SEC_EXCLUDE && SEC_EXCLUDE.test(s.name));
 const isScreen = n => n.type === "FRAME" && !n.name.startsWith(LABEL) &&
   !n.name.startsWith(STATE) && !n.name.includes(ARROW);
 
-const allSecs = figma.currentPage.children.filter(c => c.type === "SECTION");
-const liveSecs = allSecs.filter(s => !skipSection(s));
+// <sections-deep>
+// Every SECTION at any depth with its absolute origin. A section's children carry x/y relative to
+// it and nested sections compose, so a loop over page.children alone never reaches a frame that
+// sits one section deeper. `skipped` is inherited: a section inside an excluded one is excluded.
+const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
+  const out = [];
+  for (const s of nodes) {
+    if (s.type !== "SECTION") continue;
+    const ax = ox + s.x, ay = oy + s.y, skipped = inherited || !!skip(s);
+    out.push({ s, ax, ay, skipped }, ...sectionsDeep(s.children, skip, ax, ay, skipped));
+  }
+  return out;
+};
+// </sections-deep>
+
+const allSecs = sectionsDeep(figma.currentPage.children, skipSection);
+const liveSecs = allSecs.filter(d => !d.skipped);
 
 // Frame dictionary (absolute coordinates). Pass-through checks and name lookups are only
-// accurate with excluded sections included.
+// accurate with excluded sections included, at any depth.
 const frames = [];
-for (const s of allSecs)
+for (const { s, ax, ay, skipped } of allSecs)
   for (const f of s.children)
     if (isScreen(f))
-      frames.push({ name: f.name, sec: s.name, excluded: skipSection(s),
-                    x: s.x + f.x, y: s.y + f.y, r: s.x + f.x + f.width, b: s.y + f.y + f.height });
+      frames.push({ name: f.name, sec: s.name, excluded: skipped,
+                    x: ax + f.x, y: ay + f.y, r: ax + f.x + f.width, b: ay + f.y + f.height });
 const byName = Object.fromEntries(frames.map(f => [f.name, f]));
 
 const dup = frames.map(f => f.name).filter((n, i, a) => a.indexOf(n) !== i);
@@ -50,10 +65,10 @@ const issues = [];
 if (dup.length)
   issues.push(`[duplicate name] ${[...new Set(dup)].join(", ")} — a name lookup catches only one, so narrow to a single section and re-run`);
 
-for (const s of liveSecs) {
+for (const { s, ax, ay } of liveSecs) {
   for (const n of s.children) {
     if (n.type !== "VECTOR") continue;
-    const toAbs = v => ({ x: s.x + n.x + v.x, y: s.y + n.y + v.y });
+    const toAbs = v => ({ x: ax + n.x + v.x, y: ay + n.y + v.y });
 
     // ── Transition arrows ──────────────────────────────────────────
     if (n.name.includes(ARROW) && !n.name.startsWith(STATE)) {
@@ -124,7 +139,7 @@ for (const s of liveSecs) {
   // too close to the arrowhead and it hides where the arrow goes; sitting on another
   // arrow's line and it becomes ambiguous which arrow it belongs to.
   const segsOf = n => {
-    const vs = n.vectorNetwork.vertices.map(v => ({ x: s.x + n.x + v.x, y: s.y + n.y + v.y }));
+    const vs = n.vectorNetwork.vertices.map(v => ({ x: ax + n.x + v.x, y: ay + n.y + v.y }));
     const out = [];
     for (let i = 1; i < vs.length; i++)
       out.push({ x: Math.min(vs[i-1].x, vs[i].x), r: Math.max(vs[i-1].x, vs[i].x),
@@ -140,7 +155,7 @@ for (const s of liveSecs) {
     if (v && s.children.indexOf(p) < s.children.indexOf(v))
       issues.push(`[label] ${p.name}: pill is below the arrow in z-order`);
     if (p.width == null) continue;
-    const box = { x: s.x + p.x, y: s.y + p.y, r: s.x + p.x + p.width, b: s.y + p.y + p.height };
+    const box = { x: ax + p.x, y: ay + p.y, r: ax + p.x + p.width, b: ay + p.y + p.height };
 
     // Does it hide its own arrowhead — a violation when the target point falls inside the pill grown by label_clear
     if (v && v.type === "VECTOR") {
@@ -166,7 +181,7 @@ for (const s of liveSecs) {
 // The connected set includes arrows from excluded sections too (a frame an archive points
 // at is still connected). But only frames in live sections are required to be connected.
 const connected = new Set();
-for (const s of allSecs)
+for (const { s } of allSecs)
   for (const c of s.children) {
     if (c.type !== "VECTOR") continue;
     if (c.name.startsWith(STATE) && c.name.includes(CHAIN))

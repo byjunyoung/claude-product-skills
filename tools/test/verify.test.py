@@ -118,6 +118,17 @@ def plant_market_drift(r):
 case("marketplace and plugin.json differ", plant_market_drift,
      1, "[pm] plugin.json and marketplace.json descriptions differ")
 
+def plant_sections_deep_drift(r):
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "audit-flow.js"
+    t = f.read_text(encoding="utf-8")
+    start = t.index("// <sections-deep>")
+    # Change one character inside the marked block only
+    f.write_text(t[:start] + t[start:].replace("inherited = false", "inherited = true", 1), encoding="utf-8")
+
+
+case("sections-deep copies differ", plant_sections_deep_drift,
+     1, "[fig] sections-deep copies differ: audit-flow.js")
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)

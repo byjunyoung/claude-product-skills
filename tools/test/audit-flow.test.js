@@ -102,3 +102,47 @@ test("a straight [state] link between the same two frames reports nothing", () =
     "FLOW PASS"
   );
 });
+
+// ── Nested sections ────────────────────────────────────────────────────────────
+// A section's children are relative to it and nested sections compose: the frames below sit at
+// abs (150, 100) and (350, 100), and the arrow's own x/y are relative to the inner section too.
+const runNested = (children, cfg = CFG) =>
+  new Function("CFG", "figma", SRC)(cfg, {
+    currentPage: {
+      name: "[UI] Fixture",
+      children: [{
+        type: "SECTION", name: "Outer", x: 100, y: 100, children: [
+          { type: "SECTION", name: "Inner", x: 50, y: 0, children },
+        ],
+      }],
+    },
+  });
+
+test("an arrow inside a nested section is audited", () => {
+  const out = runNested([A, B, arrow("a_default --> b_default", [100, 50], [150, 50], [170, 50])]);
+  assert.ok(out.some((i) => /target gap 30px/.test(i)), out);
+});
+
+test("a well-formed arrow inside a nested section passes", () => {
+  assert.strictEqual(runNested([A, B, arrow(...GOOD)]), "FLOW PASS");
+});
+
+test("an arrow inside an excluded parent is not audited, at any depth", () => {
+  const cfg = { ...CFG, pages: { exclude_sections: ["^Outer$"] } };
+  const out = runNested([A, B, arrow("a_default --> b_default", [100, 50], [150, 50], [170, 50])], cfg);
+  assert.strictEqual(out, "FLOW PASS");
+});
+
+test("a frame inside an excluded section still blocks a line passing through it", () => {
+  // Outer is excluded; the live arrow in S2 crosses the excluded frame, which stays in the dictionary.
+  const cfg = { ...CFG, pages: { exclude_sections: ["^Outer$"] } };
+  const X = frame("x_default", 130, 30); X.width = 40; X.height = 40;
+  const out = new Function("CFG", "figma", SRC)(cfg, {
+    currentPage: { name: "[UI] Fixture", children: [
+      { type: "SECTION", name: "Outer", x: 0, y: 1000, children: [
+        { type: "SECTION", name: "Inner", x: 0, y: 0, children: [X] } ] },
+      { type: "SECTION", name: "S2", x: 0, y: 1000, children: [A, B, arrow(...GOOD)] },
+    ] },
+  });
+  assert.ok(out.some((i) => /passes through x_default/.test(i)), out);
+});

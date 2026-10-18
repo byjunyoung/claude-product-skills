@@ -477,6 +477,19 @@ def main():
             groups = " vs ".join("+".join(v) for v in seen.values())
             fails.append(f"[shared] copies of {rel} have diverged: {groups}")
 
+    # The audit scripts are sent to the Figma sandbox one file at a time and cannot import a helper,
+    # so the section walker is pasted into each between markers. Compare the marked blocks.
+    for root in roots.values():
+        blocks = {}
+        for f in sorted((root / "_common" / "scripts").glob("audit-*.js")):
+            m = re.search(r"// <sections-deep>\n.*?// </sections-deep>", f.read_text(encoding="utf-8"), re.S)
+            blocks[f.name] = m.group(0) if m else None   # a deleted marker must not pass as "no copy"
+        if any(blocks.values()):
+            ref = next(b for b in blocks.values() if b)
+            for name, b in blocks.items():
+                if b != ref:
+                    fails.append(f"[fig] sections-deep copies differ: {name}")
+
     print("=" * 60)
     for x in warns:
         print("WARN ", x)

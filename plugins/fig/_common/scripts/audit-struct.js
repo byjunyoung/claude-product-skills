@@ -31,8 +31,24 @@ const skipSection = s => !!(SEC_EXCLUDE && SEC_EXCLUDE.test(s.name));
 const isScreen = n => n.type === "FRAME" && !n.name.startsWith(LABEL);
 const r = v => Math.round(v);
 
+// <sections-deep>
+// Every SECTION at any depth with its absolute origin. A section's children carry x/y relative to
+// it and nested sections compose, so a loop over page.children alone never reaches a frame that
+// sits one section deeper. `skipped` is inherited: a section inside an excluded one is excluded.
+const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
+  const out = [];
+  for (const s of nodes) {
+    if (s.type !== "SECTION") continue;
+    const ax = ox + s.x, ay = oy + s.y, skipped = inherited || !!skip(s);
+    out.push({ s, ax, ay, skipped }, ...sectionsDeep(s.children, skip, ax, ay, skipped));
+  }
+  return out;
+};
+// </sections-deep>
+
 const issues = [];
-const secs = figma.currentPage.children.filter(c => c.type === "SECTION");
+const secs = figma.currentPage.children.filter(c => c.type === "SECTION");   // top level: order and the page-level overlap
+const deep = sectionsDeep(figma.currentPage.children, skipSection);          // every depth: the per-section checks
 
 // A screen frame sitting directly on the page = the absorb step was missed.
 // clone() and createFrame default their parent to currentPage, so anything not absorbed leaks out here.
@@ -40,8 +56,8 @@ for (const f of figma.currentPage.children)
   if (isScreen(f))
     issues.push(`[membership] directly on page (not absorbed into a section): ${f.name} @abs ${r(f.x)},${r(f.y)}`);
 
-for (const s of secs) {
-  if (skipSection(s)) continue;
+for (const { s, skipped } of deep) {
+  if (skipped) continue;
   const frames = s.children.filter(isScreen);
 
   for (const f of frames) {
@@ -64,14 +80,18 @@ for (const s of secs) {
     issues.push(`[naming] section ${s.name} (pattern mismatch)`);
 }
 
-// Section overlap — an excluded section on either side is dropped from the check
-for (let i = 0; i < secs.length; i++)
-  for (let j = i + 1; j < secs.length; j++) {
-    const a = secs[i], b = secs[j];
-    if (skipSection(a) || skipSection(b)) continue;
-    if (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y)
-      issues.push(`[section overlap] ${a.name} ∩ ${b.name}`);
-  }
+// Section overlap — an excluded section on either side is dropped from the check.
+// Only siblings are compared: a nested section lies inside its parent by design, and siblings
+// share the parent's coordinate space, so their own x/y compare directly.
+const siblingGroups = [secs, ...deep.filter(d => !d.skipped).map(d => d.s.children.filter(c => c.type === "SECTION"))];
+for (const group of siblingGroups)
+  for (let i = 0; i < group.length; i++)
+    for (let j = i + 1; j < group.length; j++) {
+      const a = group[i], b = group[j];
+      if (skipSection(a) || skipSection(b)) continue;
+      if (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y)
+        issues.push(`[section overlap] ${a.name} ∩ ${b.name}`);
+    }
 
 // ── Ordering mismatch — does the NN. number agree with the canvas order (row-major) ──
 // Protected number ranges are never reassigned, so they are not checked either.
@@ -98,8 +118,8 @@ numbered.forEach((s, i) => {
 const screenOf = n => n.replace(/-[^-]+$/, "");     // [screen name] with the trailing suffix removed
 const STATE_PREFIX = N.state_chain_prefix || "[state] ";
 const CHAIN_DELIM = N.state_chain_delimiter || " ~ ";
-for (const s of secs) {
-  if (skipSection(s)) continue;
+for (const { s, skipped } of deep) {
+  if (skipped) continue;
   const chained = new Set();
   for (const v of s.children)
     if (v.type === "VECTOR" && v.name.startsWith(STATE_PREFIX) && v.name.includes(CHAIN_DELIM)) {
@@ -153,8 +173,8 @@ for (const cs of figma.currentPage.findAllWithCriteria({ types: ["COMPONENT_SET"
 // sit on top of each other. A set that grows — one variant more, a layout applied — runs past
 // the gap it was placed with and buries its neighbour.
 const isLib = c => c.type === "COMPONENT_SET" || c.type === "COMPONENT";
-for (const s of secs) {
-  if (skipSection(s)) continue;
+for (const { s, skipped } of deep) {
+  if (skipped) continue;
   const kids = s.children.filter(isLib);
   for (let i = 0; i < kids.length; i++)
     for (let j = i + 1; j < kids.length; j++) {
@@ -173,8 +193,8 @@ const inInstance = n => {
   for (let a = n.parent; a && a.type !== "PAGE"; a = a.parent) if (a.type === "INSTANCE") return true;
   return false;
 };
-for (const s of secs) {
-  if (skipSection(s)) continue;
+for (const { s, skipped } of deep) {
+  if (skipped) continue;
   for (const f of s.children.filter(isScreen)) {
     const hits = f.findAll(n => DEFAULT_NAME.test(n.name) && !inInstance(n));
     if (hits.length)
@@ -190,8 +210,8 @@ for (const s of secs) {
 const PIN_MAX = ((C.annotations || {}).max_per_screen) || 2;
 const PIN_DUP = ((C.annotations || {}).same_text_screens) || 3;
 const pinText = new Map();
-for (const s of secs) {
-  if (skipSection(s)) continue;
+for (const { s, skipped } of deep) {
+  if (skipped) continue;
   for (const f of s.children.filter(isScreen)) {
     const pinned = [f, ...f.findAll(n => n.annotations && n.annotations.length)].filter(n => n.annotations && n.annotations.length);
     const labels = pinned.flatMap(n => n.annotations.map(a => (a.labelMarkdown || a.label || "").trim())).filter(Boolean);
@@ -235,8 +255,8 @@ const boundIds = n => {
   }
   return ids;
 };
-for (const s of secs) {
-  if (skipSection(s)) continue;
+for (const { s, skipped } of deep) {
+  if (skipped) continue;
   for (const f of s.children.filter(isScreen)) {
     const ids = new Set(boundIds(f));
     f.findAll(n => { for (const id of boundIds(n)) ids.add(id); return false; });
@@ -280,8 +300,8 @@ const contentBox = n => {
 };
 const inComponent = n => { for (let a = n; a && a.type !== "PAGE"; a = a.parent) if (a.type === "INSTANCE") return true; return false; };
 const past = (b, p) => Math.max(p.x - b.x, b.x + b.width - p.x - p.width, p.y - b.y, b.y + b.height - p.y - p.height);
-for (const s of secs) {
-  if (skipSection(s)) continue;
+for (const { s, skipped } of deep) {
+  if (skipped) continue;
   for (const f of s.children.filter(isScreen)) {
     const fbox = f.absoluteBoundingBox;
     const hits = [];

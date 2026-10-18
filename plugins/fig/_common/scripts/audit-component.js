@@ -30,6 +30,21 @@ const BODY = CA.body_offset || { left: 0, top: 0 };
 const LABEL = (C.naming || {}).label_prefix || "[label] ";
 const PATTERN_PAGE = (C.naming || {}).pattern_page_pattern;
 
+// <sections-deep>
+// Every SECTION at any depth with its absolute origin. A section's children carry x/y relative to
+// it and nested sections compose, so a loop over page.children alone never reaches a frame that
+// sits one section deeper. `skipped` is inherited: a section inside an excluded one is excluded.
+const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
+  const out = [];
+  for (const s of nodes) {
+    if (s.type !== "SECTION") continue;
+    const ax = ox + s.x, ay = oy + s.y, skipped = inherited || !!skip(s);
+    out.push({ s, ax, ay, skipped }, ...sectionsDeep(s.children, skip, ax, ay, skipped));
+  }
+  return out;
+};
+// </sections-deep>
+
 const page = figma.root.children.find(p => p.name.indexOf(PAGE) !== -1);
 if (!page) return `page not found: ${PAGE}`;
 await figma.setCurrentPageAsync(page);
@@ -69,7 +84,7 @@ if (MODE === "collect") {
 const S = typeof STAT !== "undefined" ? STAT : {};
 const isPatternPage = !!(PATTERN_PAGE && new RegExp(PATTERN_PAGE).test(page.name));
 const issues = [], unknown = {};
-for (const s of page.children.filter(c => c.type === "SECTION")) {
+for (const { s } of sectionsDeep(page.children, () => false)) {
   for (const f of s.children.filter(c => c.type === "FRAME" && !c.name.startsWith(LABEL))) {
     const fb = f.absoluteBoundingBox;
     if (!fb) continue;
