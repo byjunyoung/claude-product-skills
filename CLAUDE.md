@@ -16,7 +16,7 @@ works — it is finished when the sentences that describe it are still true.
    | What a skill does | its row in `plugins/<p>/README.md`, and in both root READMEs — the skills table **and** the paragraph that describes it |
    | What a skill needs — a tool, a token, a connector | root READMEs: *Prerequisites* and *What each skill needs* |
    | A check `/fig:lint` runs | root READMEs: *What `/fig:lint` looks at* |
-   | Anything crossing `fig` ↔ `pm` | root READMEs: *Where the two meet*, and `.github/two-plugins.html` if the picture names it |
+   | Anything crossing `fig` ↔ `pm` | root READMEs: *Where the two meet*, and `.github/two-plugins.html` if the picture names it; re-render a changed picture with `bash tools/render-images.sh <name>` |
    | A default that ships on or off | wherever a README states that default — a promise turned off in code stays a promise in prose |
    | A config key a document names | `_common/conventions.example.yaml`, whose comments are the schema's own guide |
 
