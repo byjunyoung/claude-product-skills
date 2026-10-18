@@ -49,6 +49,11 @@ const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
 const issues = [];
 const secs = figma.currentPage.children.filter(c => c.type === "SECTION");   // top level: order and the page-level overlap
 const deep = sectionsDeep(figma.currentPage.children, skipSection);          // every depth: the per-section checks
+// Section -> the section holding it, built from the walk above (not from `.parent`). A variable
+// mode set on an outer section reaches every screen under it, however deep.
+const parentOf = new Map();
+for (const { s } of deep) for (const c of s.children) if (c.type === "SECTION") parentOf.set(c, s);
+const chain = s => { const out = []; for (let n = s; n; n = parentOf.get(n)) out.push(n); return out; };
 
 // A screen frame sitting directly on the page = the absorb step was missed.
 // clone() and createFrame default their parent to currentPage, so anything not absorbed leaks out here.
@@ -262,7 +267,7 @@ for (const { s, skipped } of deep) {
   for (const f of s.children.filter(isScreen)) {
     const ids = new Set(boundIds(f));
     f.findAll(n => { for (const id of boundIds(n)) ids.add(id); return false; });
-    const named = new Set([f, s, figma.currentPage].flatMap(n => Object.keys(("explicitVariableModes" in n && n.explicitVariableModes) || {})));
+    const named = new Set([f, ...chain(s), figma.currentPage].flatMap(n => Object.keys(("explicitVariableModes" in n && n.explicitVariableModes) || {})));
     const unset = {};
     for (const id of ids) {
       const col = await collectionOf(id);
@@ -272,7 +277,7 @@ for (const { s, skipped } of deep) {
     }
     for (const { col, n } of Object.values(unset)) {
       const def = (col.modes.find(m => m.modeId === col.defaultModeId) || {}).name || "default";
-      issues.push(`[mode] ${s.name} / ${f.name}: ${n} colour(s) bound to "${col.name}" with no mode set on the screen, its section or the page — renders in the default (${def})`);
+      issues.push(`[mode] ${s.name} / ${f.name}: ${n} colour(s) bound to "${col.name}" with no mode set on the screen, any section it sits in or the page — renders in the default (${def})`);
     }
   }
 }

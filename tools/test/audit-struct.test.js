@@ -84,3 +84,33 @@ test("a nested section inside its parent is not a section overlap", async () => 
   const out = await run([section("Outer", 0, 0, 2000, 2000, [section("Inner", 50, 50, 500, 300, [frame("A-Default", 0, 0)])])]);
   assert.strictEqual(out, "STRUCT PASS");
 });
+
+// ── [mode] — a mode set on an outer section reaches the screens inside nested ones ──
+const COL = { id: "C1", name: "Theme", modes: [{ modeId: "L", name: "Light" }, { modeId: "D", name: "Dark" }], defaultModeId: "D" };
+const boundFrame = (name) => ({
+  ...frame(name, 0, 0),
+  fills: [{ type: "SOLID", boundVariables: { color: { id: "V1" } } }],
+});
+const runVars = (pageChildren) =>
+  new AsyncFunction("CFG", "figma", SRC)(baseCfg(), {
+    currentPage: { name: "[UI] Fixture", children: pageChildren, findAllWithCriteria: () => [] },
+    variables: {
+      getVariableByIdAsync: async () => ({ variableCollectionId: "C1" }),
+      getVariableCollectionByIdAsync: async () => COL,
+    },
+  });
+const withModes = (sec, modes) => Object.assign(sec, { explicitVariableModes: modes });
+
+test("a mode set on an outer section covers the screens in a nested one", async () => {
+  const out = await runVars([
+    withModes(section("Outer", 0, 0, 2000, 2000, [section("Inner", 50, 50, 500, 300, [boundFrame("A-Default")])]), { C1: "L" }),
+  ]);
+  assert.ok(!/\[mode\]/.test(String(out)), out);
+});
+
+test("no mode anywhere above a nested screen is still reported", async () => {
+  const out = await runVars([
+    section("Outer", 0, 0, 2000, 2000, [section("Inner", 50, 50, 500, 300, [boundFrame("A-Default")])]),
+  ]);
+  assert.ok(out.some((i) => /\[mode\] Inner \/ A-Default/.test(i)), out);
+});
