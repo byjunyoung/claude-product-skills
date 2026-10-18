@@ -1,12 +1,15 @@
 # Local-first defaults, two skill merges, one removal
 
-Status: design, 2026-10-18. Decisions 1–6 agreed with the owner; the designer's calls are pending
-the owner's review. Not built.
+Status: design, 2026-10-18. Decisions 1–8 agreed with the owner; the designer's calls are pending
+the owner's review. Not built. Corrected after the same day's skill review
+(`2026-10-18-skill-review.md`), which also carries proposals keyed to this document's sections.
 
 ## Intent
 
 Both plugins should run with nothing connected but Figma. A person who installs them and writes no
-config gets a working loop on local markdown files: the PRD, the task records, the log. A team that
+config gets a working loop on local markdown files: the PRD and the task records. (The log is not
+part of it yet: `log.enabled` ships `false`, so `/pm:log` stops on its first run. Whether that
+default changes is an open decision in the review.) A team that
 already runs on Notion and GitHub keeps running exactly as before, because its config names those
 tools and the config wins over the bundled floor.
 
@@ -119,18 +122,24 @@ Resolution order, used by `/fig:draw`, `/fig:sketch` and `/fig:qa`:
    (designer's call), so no team config has to change.
 3. With `pm` installed and its resolved `prd.target` `markdown` or `git`: `prd.markdown.dir`. One file per
    product; pick the matching one, ask when more than one could fit (designer's call — this is the
-   synergy case of 4a).
+   synergy case of 4a). **Constraint:** run `pm`'s copy of `resolve-config.py`, not fig's. Each
+   copy finds the bundled floor relative to its own file (`resolve-config.py:40-52`), so fig's
+   copy run with `--name pm-conventions.yaml` lays fig's floor under pm's config and finds no
+   `prd.target` at all. `prd.split: domain` (one file per domain) has to be handled here too.
 4. Nothing: `/fig:draw` asks for a source or records that there is none; `/fig:sketch` goes on and
    says so. Both as today.
 
 `/fig:qa` takes no `spec_url` (its inputs are source, target, mode, env), so it starts at step 2.
-It also never resolves the config today: its `allowed-tools` has no `Bash`, `Read` or `Glob`, and
-its body never calls `resolve-config.py`. It gains all three and resolves `qa.baseline` the way the
-other fig skills resolve their keys — a larger change to qa than to draw or sketch, which only gain
-`Read` and `Glob`.
+Its body never calls `resolve-config.py`, so `qa.baseline` is not resolved today. It gains that
+step. `Bash`, `Read` and `Glob` join its `allowed-tools`. That list pre-approves tools rather than
+restricting them, so their absence today means a permission prompt mid-run, not an inability.
+draw and sketch gain `Read` and `Glob` the same way.
 
 In `preflight.py`, `qa.baseline.prd.type` joins `NAMED_TOOLS` for fig with `{none, markdown}` as the
-types that need no connector; `notion` needs the Notion connector.
+types that need no connector; `notion` needs the Notion connector. The legacy string form needs a
+special case. `dig()` returns `None` when it meets a string (`preflight.py:105-111`), so today a
+string `qa.baseline.prd` would be judged as needing no connector. Read a string as `notion` there,
+as step 2 does.
 
 ### 4. fig: writing to a markdown task record
 
@@ -152,6 +161,10 @@ one line is the only thing fig writes into a task record.
   names Notion would otherwise start writing into Notion pages where it printed yesterday.
 - `task_tracker.ref` written without `task_tracker.type` stops with the authored-key message, the
   same guard as `task.record` in 1. The floor no longer settles what a written Notion id means.
+- **The fig drafter defeats "unset" today.** `/fig:setup`'s `draft-conventions.py:215` writes
+  `task_tracker: type: none` into every drafted config, so a team that ran setup never reaches the
+  borrowing row. The drafter has to stop writing that key, and every other value it copies from the
+  floor rather than observes. See the review, structural move S2.
 - **Writing.** fig asks `pm`'s `adapter.py --kind trackers --type markdown --role record` for the
   adapter, and uses it to find and read the record. Handoff's line goes under the
   `ui_section_heading` heading of the task file, and the heading is appended if the file has none.
@@ -206,8 +219,17 @@ skills/task/
 - `SKILL.md` stays short; each mode file is one level deep from it. This also takes `task-publish`
   (over 600 lines today) under the 500-line guidance for `SKILL.md`.
 - `allowed-tools` is the union of the three.
-- Every reference to the old names moves to the new form — fig skills, the example config comments,
-  all three READMEs, `.github` diagrams. CHANGELOG history is left as written.
+- Every reference to the old names moves to the new form. CHANGELOG history is left as written.
+  Places to cover:
+  - fig skills, the example config comments, all three READMEs
+  - `.github/two-plugins.html`, where the names appear without the slash
+  - `/pm:setup`, `/pm:log`, `/pm:log-review`
+  - `_common/trackers/*.md` and `_common/sources/README.md`
+  - `preflight.py` around line 51, in both byte-identical copies
+  - for deck-setup: `deck-base.js:5` and `conventions.example.yaml` around 221–223
+
+  `verify.py` checks skill references only inside one plugin's SKILL.md files, so most of these
+  would slip past it (review, structural move S1).
 - No redirect stubs (decision 6). `/pm:task-draft`, `/pm:task-publish`, `/pm:task-sync`,
   `/fig:deck-setup` and `/fig:diff` stop existing in the release that merges or removes them. That
   release's CHANGELOG entry in each plugin opens with the old → new names (for diff: none, see 8).
@@ -219,6 +241,8 @@ skills/task/
   - a shared team-config repository: its README, one config comment, and the comment on its
     coverage exclusion for AS-IS sections. The exclusion itself stays, since those sections remain
     in existing files.
+  - a personal deck-planning skill that hands off to `/fig:deck`. It points at a template-spec path
+    that already does not exist. Point it at `deck.assets_dir` when the deck merge lands.
 
   Update them in the same change. Rerun the search before the release, because new callers may
   appear by then.
@@ -234,15 +258,26 @@ or two components with each other — not two separate frames — and it needs a
 - `/fig:handoff` borrowed diff's write method ("the one line … by diff's method"). Move that method
   into handoff: for notion, insert after the `ui_section_heading` heading; for github, insert under
   that section, or add a comment when there is none; for markdown, follow 4; for none, print.
-- Keys stay, because other skills read them. `annotation_category` is read by `/fig:draw`,
-  `ui_section_heading` by handoff, and `text_diff_max_len` by `/fig:sync`. Only their comments in
-  `conventions.example.yaml` change, along with the `task_tracker` comment that names diff.
-- Routing lines that send work to diff become something else, or go: in code, draw, handoff, setup
-  (its list of skills that write), sketch and sync. The same goes for the READMEs' rows, the
-  cycle diagram, and the two-plugins picture if it names diff.
+- Keys:
+  - `ui_section_heading` stays, because handoff reads it.
+  - `text_diff_max_len` stays, because `/fig:sync` reads it.
+  - `annotation_category` and `scope_tags` go. diff was their only reader. `/fig:draw` mentions
+    the category only to say it belongs to diff and must not be used (draw:118, :265). Remove both
+    keys from `conventions.example.yaml` and from `draft-conventions.py:216`, and reword draw's two
+    lines as "annotations carry no category".
+- Routing lines that send work to diff become something else, or go. They sit in code, draw,
+  handoff, setup (its list of skills that write), sketch and sync, and in `_common/trackers/README.md`
+  around line 75. The fig README names diff under "The other half" (around lines 109–113), not in
+  the cycle diagram. The same goes for the root READMEs' rows and the two-plugins picture if it
+  names diff.
 - The CHANGELOG entry says what replaces it: Dev Mode's *Compare changes* for looking, and no
   written AS-IS/TO-BE record.
 - AS-IS reference sections that diff already cloned into files are left alone.
+- **Consequence found in review: `/fig:sync` loses its main signal.** sync's first signal is the text
+  difference between an AS-IS/TO-BE pair (`sync.pair_patterns`, sync:74-77), and diff was the only
+  skill that made those pairs. Without them, sync falls back to scanning a section's text, which
+  misses deletions and rewordings. draw:205 and :249 also still describe the AS-IS section as where
+  before/after lives. How to respond is an open decision in the review (D1).
 
 ### 9. Shorter descriptions
 
