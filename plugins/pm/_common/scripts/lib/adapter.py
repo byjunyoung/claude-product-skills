@@ -16,6 +16,9 @@ Usage
                                                           → exit 4: the file exists but answers as a mirror
     --name pm-conventions.yaml                             the config filename, as resolve-config takes it
 
+--type is required: without it the script exits 1. A skill whose config names no tool passes
+`none` explicitly, so a forgotten flag cannot read as "no tool".
+
 Exit 3 is the one a skill stops on. It means the type names a tool nobody has written the calls
 for. The fix is /pm:setup drafting them from the tools connected on this machine — never a
 skill improvising them from what it remembers of the tool's API.
@@ -71,11 +74,14 @@ def config_dirs(name):
 def main():
     argv = sys.argv[1:]
     kind = take(argv, "--kind")
-    typ = (take(argv, "--type") or "").strip().lower()
+    raw_typ = take(argv, "--type")
+    typ = (raw_typ or "").strip().lower()
     name = take(argv, "--name") or "pm-conventions.yaml"
     role = (take(argv, "--role") or "").strip().lower()
     if kind not in KINDS:
         sys.exit("--kind is one of: " + ", ".join(KINDS))
+    if raw_typ is None:
+        sys.exit("--type is required — pass none where there is no tool")
     if role and role not in ROLES[kind]:
         sys.exit(f"--role for {kind} is one of: " + ", ".join(ROLES[kind]))
     if typ in ("", "none"):

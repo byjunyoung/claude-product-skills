@@ -86,7 +86,7 @@ answer is the modification times (`mtime`), which survive neither a clone nor a 
 in the log that the day was read that way. A missing `{dir}` is `[]` with method `none`.
 
 `log.me.tracker_user_id` is the assignee string, since there is no user id. Where it is null,
-rows are not split by person; Task 4 says how the log reads that.
+rows are not split between mine and the team's. `/pm:log` puts every row under *My tasks* and says in its summary that they were not split, naming `log.me.tracker_user_id`.
 
 ## Writing back
 

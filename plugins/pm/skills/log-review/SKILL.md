@@ -1,6 +1,6 @@
 ---
 name: log-review
-description: Turns a period of daily logs into accomplishment statements you can reuse in a self-review, a promotion case, or a CV. Stitches entries by tracker url so one piece of work spanning weeks becomes one item, then asks only what the files cannot know — your role, what the result can be measured by, what you learned — and writes the answers into an accumulating highlights document. It never rates your work for you and never supplies a number you did not give. Triggers - "/pm:log-review", "turn last month's logs into highlights", "what did I accomplish this quarter", "성과 정리해줘", "이번 분기 뭐 했는지 정리", "이력서용으로 뽑아줘".
+description: Turns a period of daily logs into accomplishment statements for a self-review, promotion case or CV, stitching entries by url so work spanning weeks is one item, asking only what the files cannot know, and never rating your work or supplying a number you did not give. Triggers - "/pm:log-review", "turn last month's logs into highlights", "what did I accomplish this quarter", "성과 정리해줘", "이번 분기 뭐 했는지 정리", "이력서용으로 뽑아줘".
 allowed-tools: AskUserQuestion, Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -41,7 +41,7 @@ If the period has no files at all, stop and say so. Do not reconstruct the perio
 
 ## 2. Stitch by url, then by title
 
-Group entries by the tracker url recorded against each task. One url appearing across many days is **one piece of work**, not many.
+Group entries by the tracker url recorded against each task, or by the record's path where the tracker is markdown. One url appearing across many days is **one piece of work**, not many.
 
 Older files may carry no urls at all — a log written before urls were recorded, or one imported from somewhere that did not have them. **Fall back to an exact title match within the period** rather than treating every day as its own item; a period of ninety single-day entries is not a review, it is the raw log again. Titles are the weaker key: a task renamed mid-period splits into two groups, and two tasks that briefly shared a name merge into one. Say which key each group was stitched with, so a surprising group can be checked.
 
@@ -56,7 +56,7 @@ For each group, derive what the files already know:
 | Evidence | Every link collected against it over the span |
 | What others said | Quotes attached to those days that name this work |
 
-An entry with neither a url nor a title cannot be stitched at all. Keep those as single-day items and say how many there were. Many url-less entries in a **recent** period mean `/pm:log` is dropping urls, which is worth fixing at the source; in an imported period it just means the old format did not carry them.
+An entry with neither a url nor a title cannot be stitched at all. Keep those as single-day items and say how many there were. Many entries with neither in a **recent** period mean `/pm:log` is dropping urls and paths, which is worth fixing at the source; in an imported period it just means the old format did not carry them.
 
 ## 3. Rank and cut
 
@@ -95,7 +95,7 @@ On go, append into `log.review.out`, creating the file and its section headings 
 
 ## 7. Summarise
 
-The document path, how many items were written under which sections, how many days the period actually had files for, and how many items were dropped for having no url. Name anything left carrying `log.review.unknown_metric`, so the user knows what to come back and fill.
+The document path, how many items were written under which sections, how many days the period actually had files for, how many groups were stitched by title rather than by url or path, and how many items were kept single-day for having neither a url nor a title. Name anything left carrying `log.review.unknown_metric`, so the user knows what to come back and fill.
 
 ## When NOT to invoke
 

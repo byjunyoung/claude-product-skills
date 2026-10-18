@@ -38,6 +38,8 @@ with tempfile.TemporaryDirectory() as tmp:
     check("bundled source → its path", r.returncode == 0 and Path(r.stdout.strip()) == COMMON / "sources" / "slack.md", r.stdout + r.stderr)
     r = run(proj, home, "--kind", "trackers", "--type", "none")
     check("none → 'none', exit 0", r.returncode == 0 and r.stdout.strip() == "none")
+    r = run(proj, home, "--kind", "trackers")
+    check("no --type → exit 1, says it is required", r.returncode == 1 and "--type is required" in r.stderr and r.stdout.strip() == "", f"rc={r.returncode} {r.stderr}")
     r = run(proj, home, "--kind", "trackers", "--type", "linear")
     check("unknown → exit 3", r.returncode == 3, f"rc={r.returncode}")
     check("unknown → template named on stderr", "_template.md" in r.stderr and "linear" in r.stderr, r.stderr)

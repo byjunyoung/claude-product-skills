@@ -1,6 +1,7 @@
 ---
 name: log
-description: Writes one day's work log as a file — what moved in the tracker, what was on the calendar, what was decided, what other people said about your work, and links to the evidence. Built to run unattended on a schedule, so it never asks and never invents; a source it cannot reach is reported as missing rather than filled in. It also looks back a few days and fills the gaps an earlier run left. Turning these files into accomplishment statements is /pm:log-review. Triggers - explicit invocation only - "/pm:log", "write the log for today", "fill in the days that were missed", "일지 써줘", "업무 일지 작성", "빠진 날 채워줘".
+description: Writes one day's work log as a file from what moved in the tracker, the calendar and chat, with decisions, quotes about your work and evidence links, never asking and never inventing, and fills the days an earlier run missed. Triggers - "/pm:log", "write the log for today", "fill in the days that were missed", "일지 써줘", "업무 일지 작성", "빠진 날 채워줘".
+disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Google_Calendar__list_events, mcp__plugin_github_github__issue_read, mcp__claude_ai_Slack__slack_read_user_profile
 ---
 
@@ -30,7 +31,7 @@ Built for a scheduler. It runs with nobody watching, so the rules below lean har
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml
 ```
 
-`log.enabled: false` means stop immediately and say so — that is a correct outcome, not an error. `task.record` gives the tracker; `log` gives everything else. A `null` source is skipped and named in the summary.
+`log.enabled` is on unless it says `false`; `false` means stop immediately and say so — that is a correct outcome, not an error. This skill runs only when called by name, so a scheduler calls `/pm:log` itself. `task.record` gives the tracker; `log` gives everything else. A `null` source is skipped and named in the summary.
 
 ## 1. Settle the date
 
@@ -48,9 +49,9 @@ date +%Y-%m-%d
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.record.type} --role record
 ```
 
-It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls, and do not fall back to a tracker the config did not name. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; 3b drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
+`--type` is required; pass `none` where `task.record.type` is `none`. It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls, and do not fall back to a tracker the config did not name. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; 3b drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
 
-Whatever the tracker, read its **current** schema or field names immediately before querying, and use what it has now — the title, status, assignee, project, grouping, priority, due-date and progress equivalents, and the exact spellings a query needs. Names drift and differ per workspace. A name pinned in a document or in config returns nothing, and nothing looks exactly like a quiet day.
+Where the type is `markdown`, the adapter's `moved` and `list` commands are the read, and there is no schema to fetch beyond the front matter the files carry. Otherwise, whatever the tracker, read its **current** schema or field names immediately before querying, and use what it has now — the title, status, assignee, project, grouping, priority, due-date and progress equivalents, and the exact spellings a query needs. Names drift and differ per workspace. A name pinned in a document or in config returns nothing, and nothing looks exactly like a quiet day.
 
 If that read fails, skip section 3 and say so. Do not fall back to guessed names.
 
@@ -61,11 +62,15 @@ Query rows the day actually touched, split by whether they are yours.
 - **Mine** — assignee contains `log.me.tracker_user_id`, last-edited on the date.
 - **The team's** — assignee is anyone else or empty, last-edited on the date.
 
+**Where `log.me.tracker_user_id` is null, nothing says whose a row is.** Put every row under *My tasks*, leave *Team tasks (reference)* to items discussed that have no row, and say in the summary that rows were not split between yours and the team's, naming `log.me.tracker_user_id` as the key that would split them. Never guess ownership from a name or from who last edited.
+
+**A markdown record** (`task.record.type: markdown`) is read with the adapter's `moved --dir {task.record.ref} --date {date}`, not a last-edited filter. It returns `{"paths": [...], "method": ...}`: the files committed on that date, plus, for today, files edited and not yet committed (`git+uncommitted`). Read each path's front matter for its row. A path that no longer exists was removed that day, or renamed away where git shows the rename — report it under that wording in the summary and never open it as a record. The summary names the `method` `moved` returned; for a backfilled day that is "commits only", because the work tree of a past day is not recoverable. An `mtime` day came from modification times, which a clone or checkout rewrites — say so. A task folder that does not exist (`method` `none`) is "no task records yet ({dir})" in the summary: it is not a failure, and the section reads `log.empty_line`.
+
 Query on **last edited or last updated**, never on created. Work in progress was created weeks ago; a created-date filter returns a nearly empty day and looks like a correct answer.
 
 How the day filter is applied is the tracker's business. A store that can be queried exhaustively takes it as a condition; one that can only be searched needs the filter applied after the fetch, and its adapter says so. **Where the exhaustive read is gated or missing, say so in the summary** — an under-covered day must never read as a quiet one.
 
-Carry each row's **stable url** alongside its title. Titles get rewritten; urls do not, and a later review stitches months of entries together by url. A row recorded without its url cannot be stitched.
+Carry each row's **stable url** alongside its title. For a markdown record the url is its `path`, exactly as `list` and `moved` print it. Titles get rewritten; urls do not, and a later review stitches months of entries together by url. A row recorded without its url cannot be stitched.
 
 Where the previous entry for the same url shows a different status, note the transition rather than the state alone — `in progress → done` says something `done` does not. Rows that reached a terminal status today go into the front matter's `completed` list as title and url.
 
@@ -73,8 +78,8 @@ Resolve assignee ids to names through `log.people`. An id that is not there is l
 
 ## 4. Collect the day around it
 
-- **Calendar** — `log.sources.calendar`, the day in local time, ordered by start. Drop working-location, birthday and out-of-office entries. Each event becomes time, title, and one or two key attendees. The calls are in the adapter for `sources.calendar_type` (`adapter.py --kind sources --role calendar`); `none` skips the calendar and says so.
-- **Chat** — `log.sources.chat_channels` for the day, plus messages the user sent or was mentioned in. Keep decisions, questions and answers, feedback, shared material, and open threads. Drop chatter, bots and reactions. The calls are in the adapter for `sources.chat_type` (`--role chat`); `none` skips chat and says so, and exit 3 means the tool has no adapter yet — skip the section, and name that in the summary rather than reading a tool the config did not name.
+- **Calendar** — `log.sources.calendar`, the day in local time, ordered by start. Drop working-location, birthday and out-of-office entries. Each event becomes time, title, and one or two key attendees. The calls are in the adapter for `sources.calendar_type` (`adapter.py --kind sources --type {sources.calendar_type} --role calendar`); `none` skips the calendar and says so.
+- **Chat** — `log.sources.chat_channels` for the day, plus messages the user sent or was mentioned in. Keep decisions, questions and answers, feedback, shared material, and open threads. Drop chatter, bots and reactions. The calls are in the adapter for `sources.chat_type` (`adapter.py --kind sources --type {sources.chat_type} --role chat`); `none` skips chat and says so, and exit 3 means the tool has no adapter yet — skip the section, and name that in the summary rather than reading a tool the config did not name.
 
 From the same pass, pull out two things that are cheap now and unrecoverable later.
 
