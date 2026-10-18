@@ -36,6 +36,7 @@ Settled with the owner, one at a time.
 | 4 | How fig writes to a markdown task record | Through `pm`'s markdown tracker adapter | A markdown row of fig's own; printing only |
 | 4a | What that does to "the two never call each other" | Reworded: each works alone; installed together, they borrow from each other | Keeping strict separation |
 | 5 | Skill granularity | Merge `deck-setup` into `deck`; merge `task-draft`, `task-publish`, `task-sync` into one `/pm:task` | No merges; a full regrouping into stage-level entry points |
+| 6 | The four retired commands | Removed outright; CHANGELOG and READMEs name the new form | Redirect stubs for one version (`disable-model-invocation: true` would have kept them out of the listing) |
 
 ## Goals
 
@@ -113,14 +114,19 @@ Resolution order, used by `/fig:draw`, `/fig:sketch` and `/fig:qa`:
    a figma.com Spec link → say it is not supported yet.
 2. `qa.baseline.prd`. A plain string is read as `{type: notion, ref: <string>}` and keeps working
    (designer's call), so no team config has to change.
-3. With `pm` installed and its resolved `prd.target: markdown`: `prd.markdown.dir`. One file per
+3. With `pm` installed and its resolved `prd.target` `markdown` or `git`: `prd.markdown.dir`. One file per
    product; pick the matching one, ask when more than one could fit (designer's call — this is the
    synergy case of 4a).
 4. Nothing: `/fig:draw` asks for a source or records that there is none; `/fig:sketch` goes on and
    says so. Both as today.
 
-Tools: `/fig:qa`, `/fig:draw` and `/fig:sketch` gain `Read` (and `Glob` for a directory ref). In
-`preflight.py`, `qa.baseline.prd.type` joins `NAMED_TOOLS` for fig with `{none, markdown}` as the
+`/fig:qa` takes no `spec_url` (its inputs are source, target, mode, env), so it starts at step 2.
+It also never resolves the config today: its `allowed-tools` has no `Bash`, `Read` or `Glob`, and
+its body never calls `resolve-config.py`. It gains all three and resolves `qa.baseline` the way the
+other fig skills resolve their keys — a larger change to qa than to draw or sketch, which only gain
+`Read` and `Glob`.
+
+In `preflight.py`, `qa.baseline.prd.type` joins `NAMED_TOOLS` for fig with `{none, markdown}` as the
 types that need no connector; `notion` needs the Notion connector.
 
 ### 4. fig: writing to a markdown task record
@@ -128,14 +134,34 @@ types that need no connector; `notion` needs the Notion connector.
 `task_tracker.type: markdown`, `task_tracker.ref` the task directory. The task file itself is the
 input to `/fig:diff` (its path), as a Notion page url is today.
 
-- **`pm` installed:** fig asks `pm`'s `adapter.py --kind trackers --type markdown --role record`
-  for the adapter and follows it. The comparison table and scope callout go under the
-  `ui_section_heading` heading of the task file; the heading is appended if the file has none.
-  `/fig:handoff` writes its one line the same way, as it already defers to diff's method.
-- **`pm` not installed:** behave as `none` does now — print the table and callout in the response —
-  and add one line: installing `pm` writes this into the task file.
-- **Preflight:** `markdown` joins the no-connector types for `task_tracker.type`. When `pm` cannot
-  be found, report WARN, not FAIL, and name the fallback.
+**fig's own default (designer's call).** `task_tracker.type` ships unset (`null`) instead of `none`.
+
+| fig `task_tracker.type` | What `/fig:diff` and `/fig:handoff` do |
+|---|---|
+| unset, `pm` installed, `pm`'s resolved `task.record.type` is `markdown` | borrow `pm`'s `task.record` and write into the task file |
+| unset, any other case | print the table and callout, plus the one-line note below |
+| `markdown` | write into the task file through `pm`; without `pm`, print plus the note |
+| `none` | print only, as today |
+| `notion`, `github` | unchanged |
+
+- Borrowing stops at `markdown`. A team whose fig config never named a tracker while its pm config
+  names Notion would otherwise start writing into Notion pages where it printed yesterday.
+- `task_tracker.ref` written without `task_tracker.type` stops with the authored-key message, the
+  same guard as `task.record` in 1. The floor no longer settles what a written Notion id means.
+- **Writing.** fig asks `pm`'s `adapter.py --kind trackers --type markdown --role record` for the
+  adapter, and uses it to find and read the record. The comparison table and scope callout go
+  under the `ui_section_heading` heading of the task file, and the heading is appended if the file
+  has none. `ui_section_heading` ships `null`; when it is null, the heading is "Design changes" in
+  `meta.language` (designer's call). It is never `## Change summary`, which is the adapter's
+  append-only dated log.
+- `/fig:handoff` writes its one line the same way, since it already defers to diff's method.
+- **The note**, when printing because `pm` is missing: one line saying that installing `pm` writes
+  this into the task file.
+- **Preflight.** `markdown` joins the no-connector types for `task_tracker.type`.
+  - With no config at all, preflight still ends early with PASS, as today. The rule that
+    requirements come only from written values stands.
+  - When a config writes `markdown` and `pm` cannot be found, the row shows `attention` with the
+    fallback named. The verdict is not FAIL.
 
 How fig finds the installed `pm` is left to the builder, with one condition: it is proven on an
 installed plugin pair, not only on a development checkout.
@@ -179,13 +205,19 @@ skills/task/
 - `allowed-tools` is the union of the three.
 - Every reference to the old names moves to the new form — fig skills, the example config comments,
   all three READMEs, `.github` diagrams. CHANGELOG history is left as written.
+- No redirect stubs (decision 6). `/pm:task-draft`, `/pm:task-publish`, `/pm:task-sync` and
+  `/fig:deck-setup` stop existing in the release that merges them. That release's CHANGELOG entry
+  in each plugin opens with the old → new names. Both root READMEs carry the same mapping where the
+  skills are listed, so someone typing an old name finds the new one.
 
 ### 8. Shorter descriptions
 
 Each `description`: one sentence on what it does and when, then the trigger phrases in both
-languages. Behaviour detail moves into the body. Target 500 characters or fewer (designer's call;
-today they run 450–1,300). The listing budget is shared with every other installed skill, so this is
-the part that pays even where nothing is merged.
+languages. Behaviour detail moves into the body. Target 500 characters or fewer, 700 for the two
+merged skills that carry several skills' triggers (designer's call). Characters, not bytes — the
+unit Claude Code's listing caps use; today they run 389–1,212, about 14,800 in all. The listing
+budget is shared with every other installed skill, so this is the part that pays even where nothing
+is merged.
 
 ### 9. "Where the two meet"
 
@@ -230,8 +262,11 @@ entry". Write "Figma Spec" for Figma's documents, always with the prefix. Renami
   - `/pm:task draft` on pasted text writes `tasks/<task>.md`.
   - `/fig:draw` reads that PRD through step 3.
   - `/fig:diff` writes its table into the task file.
-- **The same, with `pm` uninstalled:** `/fig:diff` prints the table plus the one-line note, and
-  preflight shows WARN, not FAIL.
+- **The same, with `pm` uninstalled:** `/fig:diff` prints the table plus the one-line note.
+  Preflight still passes. With a config that writes `task_tracker.type: markdown`, its row shows
+  `attention`.
+- **No silent new writes:** a fig config with no `task_tracker` and a pm config on Notion still
+  prints, and writes nothing.
 - **Existing configs:** for a config that sets Notion explicitly, `resolve-config.py` gives the same
   value for every key it writes, before and after. Floor-only differences are listed and explained.
 - **The guard:** a config with `task.record.ref` and no `type` stops with the authored-key message.
@@ -249,9 +284,16 @@ entry". Write "Figma Spec" for Figma's documents, always with the prefix. Renami
 3. Fallback to `pm`'s `prd.markdown.dir` when `pm` is installed.
 4. Without `pm`, a markdown task tracker prints and says why.
 5. Publish and sync keep stopping with no mirror; no local mirror.
-6. `task.record.type` becomes an authored key once `ref` is written.
-7. Descriptions capped at 500 characters.
+6. `task.record.type` becomes an authored key once `ref` is written, for every skill that reads
+   `task.record`, `/pm:log` included. The same applies to `task_tracker.type` once `task_tracker.ref`
+   is written. Each guard fires only on a ref a person wrote, never on the floor's.
+7. Descriptions capped at 500 characters (700 for the merged two).
 8. Figma Specs: this section only, no reserved values in code.
+9. fig's `task_tracker.type` ships unset. Unset borrows `pm`'s record only when that record is
+   markdown.
+10. A null `ui_section_heading` writes under "Design changes".
+11. Step 3 of the PRD order covers `prd.target: git` as well, since it also writes markdown to
+    `prd.markdown.dir`.
 
 ## Left to the builder
 
