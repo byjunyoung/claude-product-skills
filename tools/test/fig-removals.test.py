@@ -338,6 +338,7 @@ check("a request only to check stops after the scan", "stops before binding" in 
 check("each bind run gets its own preview and go", "its own preview and go" in tokens)
 check("tokens builds its preview from a dry run, and accept names its nodes",
       "DRY_RUN" in tokens and "nodes" in tokens and "every remaining node" not in tokens
+      and "unchecked" in tokens and "never imports" in tokens
       and "reruns the bind for that colour with `accept: true`" not in tokens)
 check("no fig document says an instance's colours are fixed at the component's source",
       not [rel for rel, text in tracked_text_files() if rel.startswith("plugins/fig") and "fixed at the component" in text])

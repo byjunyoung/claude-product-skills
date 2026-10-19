@@ -444,7 +444,8 @@ test("a dry run writes nothing and returns, per node, what would bind, what woul
   // 1. The plain mapping: what binds as it is, and what would change if accepted
   const p1 = page();
   const dry = await bind(fakeFigma(p1, lib), first, { DRY_RUN: true });
-  assert.deepStrictEqual(Object.keys(dry).sort(), ["skipped", "wouldBind"]);
+  assert.deepStrictEqual(Object.keys(dry).sort(), ["skipped", "unchecked", "wouldBind"]);
+  assert.deepStrictEqual(dry.unchecked, [], "every token here is local");
   assert.deepStrictEqual(dry.wouldBind, [
     { node: "id:Home-Default", name: "Home-Default", kind: "fill", hex: "#FFFFFF", variable: "surface", variableKey: "key:surface" },
     { node: "id:Home-Default", name: "Home-Default", kind: "stroke", hex: "#3366FF", variable: "primary", variableKey: "key:primary" },
@@ -477,4 +478,69 @@ test("a dry run writes nothing and returns, per node, what would bind, what woul
   const p3 = [section("01. Home", [frame("Soft-Default", { fills: [solid("#3366FF", { opacity: 0.2 })] })])];
   const soft = await bind(fakeFigma(p3, lib), [{ hex: "#3366FF33", variableKey: "key:primary" }], { DRY_RUN: true });
   assert.deepStrictEqual(soft.skipped.map((s) => s.change), ["opacity 20% → 100%"]);
+});
+
+test("a dry run never imports", async () => {
+  const C2 = { id: "c2", defaultModeId: "light" };
+  const lib = {
+    vars: [
+      colorVar("primary", { m1: value("#3366FF") }),                                       // local
+      colorVar("lib-ink", { light: value("#111111") }, { variableCollectionId: "c2" }),   // a library token bound on the page
+      colorVar("lib-red", { m1: value("#FF0000") }),                                       // a library token nowhere in the file yet
+    ],
+    local: ["primary"],
+    published: ["lib-ink", "lib-red"],
+    collections: [C1, C2],
+  };
+  const page = [section("01. Home", [
+    frame("Home-Default", { fills: [solid("#3366FF")] }, [
+      node("TEXT", "Ink", { fills: [{ ...solid("#111111"), boundVariables: { color: alias("lib-ink") } }] }),
+      node("TEXT", "Body", { fills: [solid("#111111")] }),
+      node("RECTANGLE", "Alert", { fills: [solid("#FF0000")] }),
+      node("RECTANGLE", "Alert 2", { strokes: [solid("#FF0000")] }),
+    ]),
+  ])];
+  const figma = fakeFigma(page, lib);
+  const MAPPING = [
+    { hex: "#3366FF", variableKey: "key:primary" },
+    { hex: "#111111", variableKey: "key:lib-ink" },
+    { hex: "#FF0000", variableKey: "key:lib-red" },
+  ];
+  const dry = await bind(figma, MAPPING, { DRY_RUN: true });
+  assert.deepStrictEqual(figma.imports, [], "nothing imported — the file is as it was");
+  assert.deepStrictEqual(dry.wouldBind.map((w) => [w.node, w.variable]), [["id:Home-Default", "primary"], ["id:Body", "lib-ink"]],
+    "a library token already bound on the page is read without importing it");
+  assert.deepStrictEqual(dry.unchecked, [{ variableKey: "key:lib-red", nodes: ["id:Alert", "id:Alert 2"] }]);
+  assert.deepStrictEqual(dry.skipped, []);
+  assert.deepStrictEqual(["Home-Default", "Body", "Alert"].map((n) => boundTo(find(page, n).fills[0])), [null, null, null]);
+
+  const real = await bind(figma, MAPPING);
+  assert.deepStrictEqual(figma.imports, ["key:lib-ink", "key:lib-red"], "the real run imports every non-local token, as before");
+  assert.deepStrictEqual(real, { bound: 4, skipped: [] });
+});
+
+test("the real run still skips a mode difference for a token the dry run could not check", async () => {
+  const modal = { id: "c1", defaultModeId: "m1", modes: [{ modeId: "m1", name: "Light" }, { modeId: "dark", name: "Dark" }] };
+  const lib = { vars: [colorVar("lib-surface", { m1: value("#FFFFFF"), dark: value("#1E1E1E") })], local: [], published: ["lib-surface"], collections: [modal] };
+  const page = [section("01. Home", [
+    frame("Light-Default", { fills: [solid("#FFFFFF")] }),
+    frame("Dark-Default", { fills: [solid("#FFFFFF")], resolvedVariableModes: { c1: "dark" } }),
+  ])];
+  const figma = fakeFigma(page, lib);
+  const MAPPING = [{ hex: "#FFFFFF", variableKey: "key:lib-surface" }];
+
+  const dry = await bind(figma, MAPPING, { DRY_RUN: true });
+  assert.deepStrictEqual(dry, { wouldBind: [], skipped: [], unchecked: [{ variableKey: "key:lib-surface", nodes: ["id:Light-Default", "id:Dark-Default"] }] });
+  assert.deepStrictEqual(figma.imports, []);
+
+  const real = await bind(figma, MAPPING);
+  assert.strictEqual(real.bound, 1);
+  assert.deepStrictEqual(["Light-Default", "Dark-Default"].map((n) => boundTo(find(page, n).fills[0])), ["lib-surface", null]);
+  assert.deepStrictEqual(real.skipped.map((s) => [s.node, s.change]), [["id:Dark-Default", "#FFFFFF → #1E1E1E (mode Dark)"]]);
+  assert.match(real.skipped[0].reason, /renders #1E1E1E here \(mode Dark\), not #FFFFFF — binding changes what you see/);
+
+  // Now the token is in the file, a dry run can check the node, and accepting it goes through the usual gate
+  const again = await bind(figma, [...MAPPING, { hex: "#FFFFFF", variableKey: "key:lib-surface", accept: true, nodes: ["id:Dark-Default"] }], { DRY_RUN: true });
+  assert.deepStrictEqual(again.unchecked, []);
+  assert.deepStrictEqual(again.wouldBind.map((w) => [w.node, w.change]), [["id:Dark-Default", "#FFFFFF → #1E1E1E (mode Dark)"]]);
 });

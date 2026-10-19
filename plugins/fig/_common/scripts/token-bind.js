@@ -22,12 +22,16 @@
  *            nodes: an entry with accept and no nodes is rejected before anything is written, so a go
  *            never covers a node its preview did not list. Without accept, any such difference is skipped.
  *   SECTION  optional — that section and the sections nested in it; without it, the whole page
- *   DRY_RUN  optional — true writes nothing (a library token is still imported to be read; no node or
- *            paint changes) and returns what the same MAPPING would do, for the preview:
- *            { wouldBind: [{ node, name, kind, hex, variable, variableKey, change? }], skipped }
- *            one entry per paint that would bind — variable the token's name, change set where the
- *            screen would show something else there ("#3B66FF → #3366FF", "opacity 20% → 100%",
- *            "#FFFFFF → #1E1E1E (mode Dark)"), which happens only on an accepted node
+ *   DRY_RUN  optional — true writes nothing at all: no node, no paint, and no import — the file is as it
+ *            was. It reads only the tokens already in the file (local ones, and library ones bound
+ *            somewhere on the page), and returns what the same MAPPING would do, for the preview:
+ *            { wouldBind: [{ node, name, kind, hex, variable, variableKey, change? }], skipped,
+ *              unchecked: [{ variableKey, nodes: [ids] }] }
+ *            wouldBind has one entry per paint that would bind — variable the token's name, change set
+ *            where the screen would show something else there ("#3B66FF → #3366FF", "opacity 20% →
+ *            100%", "#FFFFFF → #1E1E1E (mode Dark)"), which happens only on an accepted node.
+ *            unchecked lists a token not in the file yet and the nodes it was to bind: its value on
+ *            each node is checked when the bind runs, which skips any node where it would change.
  *
  * What it binds: exactly the colours audit-tokens.js reports — the <paint-scope> block, shared with it
  * byte for byte — whose colour and alpha equal a MAPPING hex. A fill, stroke or text colour is bound with
@@ -51,15 +55,17 @@
  * component set's own paint, paints switched off, and paints already bound.
  *
  * Tokens: a local colour variable with that key is used as it is (an unpublished one cannot be
- * imported); any other is imported with importVariableByKeyAsync. Every one is found before the first write.
+ * imported). In the real run any other is imported with importVariableByKeyAsync, every one before the
+ * first write. A dry run never imports: it takes a library token from a paint already bound to it on
+ * the page, and returns any other under `unchecked`.
  *
- * Returns { bound, skipped } (DRY_RUN: { wouldBind, skipped }) — bound counts paints, as collect's
+ * Returns { bound, skipped } (DRY_RUN: { wouldBind, skipped, unchecked }) — bound counts paints, as collect's
  *   `count` does; skipped is [{ node, reason, change?, variableKey? }], one per node and reason, the
  *   reason opening "<node name>: <kind> <hex> — ". change and variableKey are set where the skip is a
  *   visible difference that accept: true with that node would lift — the rows a preview asks about.
  *   MAPPING empty or malformed, accept without nodes, or SECTION not on the page → throws before
- *   anything is written. SECTION inside an excluded section → { bound: 0 (or wouldBind: []),
- *   skipped: [{ node: SECTION, reason }] }.
+ *   anything is written. SECTION inside an excluded section → { bound: 0 (or wouldBind: [] and
+ *   unchecked: []), skipped: [{ node: SECTION, reason }] }.
  * ========================================================================== */
 
 const C = typeof CFG !== "undefined" ? CFG : {};
@@ -246,7 +252,7 @@ const scope = SEC ? scopeOf(allSecs) : null;
 if (scope && scope.missing) throw new Error(`section ${SEC} is not on this page`);
 if (scope && scope.excluded) {
   const skippedAll = [{ node: SEC, reason: `section ${SEC} is excluded by pages.exclude_sections; nothing bound` }];
-  return DRY ? { wouldBind: [], skipped: skippedAll } : { bound: 0, skipped: skippedAll };
+  return DRY ? { wouldBind: [], skipped: skippedAll, unchecked: [] } : { bound: 0, skipped: skippedAll };
 }
 
 const skipped = [], skipSeen = new Set();
@@ -276,9 +282,30 @@ for (const { n } of rootsOf(page, allSecs, scope ? scope.ids : null))
 // ── Every token the targets name, found before the first write ──
 const local = new Map();
 for (const v of await figma.variables.getLocalVariablesAsync("COLOR")) local.set(v.key, v);
-const tokens = new Map();   // variableKey → { v } or { error }
+// The library tokens already in the file, by key: the variables a paint anywhere on the page is bound
+// to. A dry run reads only these and local ones, so it changes nothing — not even an import.
+let boundByKey = null;
+const boundOnPage = async () => {
+  if (boundByKey) return boundByKey;
+  boundByKey = new Map();
+  const ids = new Set();
+  const gather = n => { for (const c of coloursOf(n)) if (c.varId) ids.add(c.varId); if (n.children) for (const ch of n.children) gather(ch); };
+  for (const n of page.children) gather(n);
+  for (const id of ids) {
+    let v = null;
+    try { v = await figma.variables.getVariableByIdAsync(id); } catch (e) { v = null; }
+    if (v && v.key) boundByKey.set(v.key, v);
+  }
+  return boundByKey;
+};
+const tokens = new Map();   // variableKey → { v }, { error } or, in a dry run, { unchecked: true }
 for (const key of new Set(targets.flatMap(t => wanted.get(t.c.key).filter(e => covers(e, t.n)).map(e => e.variableKey)))) {
   if (local.has(key)) { tokens.set(key, { v: local.get(key) }); continue; }
+  if (DRY) {
+    const v = (await boundOnPage()).get(key);
+    tokens.set(key, !v ? { unchecked: true } : v.resolvedType === "COLOR" ? { v } : { error: `token ${key} is not a colour variable` });
+    continue;
+  }
   try {
     const v = await figma.variables.importVariableByKeyAsync(key);
     tokens.set(key, v && v.resolvedType === "COLOR" ? { v } : { error: `token ${key} is not a colour variable` });
@@ -334,12 +361,19 @@ const changeText = async (v, n, rk, ck) => {
 
 // ── Choose a token per colour: the first entry that names the node and can be bound to it ──
 const plan = new Map();   // node id → { n, props: Map(prop → [{ i, v }]) }
-const wouldBind = [];
+const wouldBind = [], unchecked = new Map();   // unchecked: variableKey → node ids (dry run only)
 for (const { n, c } of targets) {
-  let chosen = null, first = null;
+  let chosen = null, first = null, pending = false;
   for (const e of wanted.get(c.key)) {
     if (!covers(e, n)) continue;
     const t = tokens.get(e.variableKey);
+    if (t.unchecked) {
+      // Not in the file, so its value here cannot be read without importing it; the bind will check it.
+      if (!unchecked.has(e.variableKey)) unchecked.set(e.variableKey, new Set());
+      unchecked.get(e.variableKey).add(n.id);
+      pending = true;
+      break;
+    }
     if (t.error) { first = first || { why: t.error }; continue; }
     const v = t.v;
     if (!fits(v, n, c.kind)) { first = first || { why: `token ${v.name} is not scoped for ${c.kind} colours` }; continue; }
@@ -352,6 +386,7 @@ for (const { n, c } of targets) {
     wouldBind.push({ node: n.id, name: n.name, kind: c.kind, hex: c.key, variable: v.name, variableKey: e.variableKey, ...(change ? { change } : {}) });
     break;
   }
+  if (pending) continue;
   if (!chosen) { skip(n, c, first.why, first.extra); continue; }
   if (!plan.has(n.id)) plan.set(n.id, { n, props: new Map() });
   const props = plan.get(n.id).props;
@@ -359,7 +394,7 @@ for (const { n, c } of targets) {
   props.get(c.prop).push({ i: c.i, v: chosen });
 }
 
-if (DRY) return { wouldBind, skipped };
+if (DRY) return { wouldBind, skipped, unchecked: [...unchecked].map(([variableKey, ids]) => ({ variableKey, nodes: [...ids] })) };
 
 // ── Write: rebuild each array and reassign it — a paint array is read-only in place ──
 let bound = 0;
