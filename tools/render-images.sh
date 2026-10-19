@@ -98,7 +98,11 @@ render() {
   if [ "$name" != "social-preview" ]; then
     local keep
     keep="$(awk -v c="$BOTTOM_CSS" -v s="$scale" 'BEGIN{printf "%d", c*s+0.5}')"
-    python3 "$ROOT/tools/png-trim.py" "$png" --keep "$keep" >/dev/null
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "render-images: python3 missing, $name not trimmed" >&2
+    elif ! python3 "$ROOT/tools/png-trim.py" "$png" --keep "$keep" >/dev/null; then
+      echo "render-images: could not trim $name, left as rendered" >&2
+    fi
   fi
 
   if [ "${QUANTIZE:-0}" = "1" ]; then

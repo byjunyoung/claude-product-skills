@@ -78,6 +78,12 @@ with tempfile.TemporaryDirectory() as t:
     r = run(str(p), "--keep", "5")
     check("keep never adds rows", r.returncode == 0 and p.read_bytes() == data, r.stdout + r.stderr)
 
+    p = t / "zero.png"
+    data = make_png(10, rows_for(10, 10, 40, 3))
+    p.write_bytes(data)
+    r = run(str(p), "--keep", "0")
+    check("--keep 0 -> exit 1, untouched", r.returncode == 1 and p.read_bytes() == data, r.stdout + r.stderr)
+
     p = t / "pal.png"
     data = make_png(10, rows_for(10, 10, 40, 1), 3)
     p.write_bytes(data)

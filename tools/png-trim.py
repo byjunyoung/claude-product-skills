@@ -106,6 +106,7 @@ def parse(data):
 
 def rewrite(data, w, h2, ctype, rows):
     """Same chunks as `data`, IDAT replaced by one re-filtered (type 0) stream, height updated."""
+    # Filter 0 on every row: larger than Chrome's adaptive output; QUANTIZE or the committer handles size.
     raw = b"".join(b"\x00" + r for r in rows)
     out, wrote = [SIG], False
     for kind, body in _chunks(data):
@@ -127,8 +128,8 @@ def main(argv):
     path, mode = argv[0], argv[1]
     keep = None
     if mode == "--keep":
-        if len(argv) != 3 or not argv[2].isdigit():
-            print("png-trim: --keep needs a number", file=sys.stderr)
+        if len(argv) != 3 or not argv[2].isdecimal() or int(argv[2]) < 1:
+            print("png-trim: --keep needs a whole number of at least 1", file=sys.stderr)
             return 1
         keep = int(argv[2])
     elif mode != "--count":
