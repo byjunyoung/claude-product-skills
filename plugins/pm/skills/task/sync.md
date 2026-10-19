@@ -93,7 +93,7 @@ Only what was approved goes to step 5.
 
 ### 5. Apply
 
-Run the approved changes and nothing else. A call that fails is counted under `errors` in the result and the rest go on — except a call still marked `(unverified)` in the adapter, which stops the run: report what was already applied, then name the call (*`(unverified)` marks* in `SKILL.md`).
+Run the approved changes and nothing else. A call that fails is counted under `errors` in the result and the rest go on — except a write still marked `(unverified)` in the adapter, which stops the run: report what was already applied, then name the call (*`(unverified)` marks* in `SKILL.md`).
 
 **Creating follows `filing.md`** — the parent is resolved and confirmed rather than assumed, the ticket carries the configured title and labels, the milestone lands on the level `task.hierarchy.milestone_on` names, and the link property is written back afterwards — and its title follows the title rules in `SKILL.md`. A project with no entry in `task.label_map.project` is skipped, not guessed at.
 

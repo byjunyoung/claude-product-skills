@@ -31,7 +31,7 @@ A newly created parent is titled by `task.hierarchy.parent_title`, is built on `
 
 **Before anything is created, look for the ticket already there.** List the mirror's newest issues and match the exact title about to be sent — the adapter says how. A match stops the run and offers to link that ticket instead; filing past it is how a run that died after the write, or a second run of the same task, makes a duplicate.
 
-Create it with the assembled title, body, labels and assignee. **Right after the create returns, write the link property into the record** — still inside the same "go", and before the ticket is attached to anything. Attaching is the part that can fail halfway, and a ticket that exists with no link in the record is one the next run cannot match and files again.
+Create it with the title `task.ticket.title` assembles, filled in from the record, and the body, labels and assignee. **Right after the create returns, write the link property into the record** — still inside the same "go", and before the ticket is attached to anything. Attaching is the part that can fail halfway, and a ticket that exists with no link in the record is one the next run cannot match and files again.
 
 ## Milestone
 

@@ -2,6 +2,14 @@
 
 Files a single task record as a ticket in the engineering tracker, or updates the one already there.
 
+**Contents**
+
+- *What decides where things go* · *Inputs* · *When NOT to invoke*
+- *Procedure* — 0 take the record · 1 read it and its materials · 2 draft the two binding sections · 3 interview, once · 4 resolve the parent · 5 assemble the body · 6 preview → "go" · 7 create · 8 attach · 9 write back · 10 report
+- *Bringing a ticket back to the template* — the `--template` pass
+- *The update path* — where the link property is already filled
+- *Constraints*
+
 **The ticket carries a summary and links, not a copy of the body.** Detail — the spec, the design, the description of what changed — stays in the record, and the ticket points at it. Two copies means one gets edited and they drift; there is also no reliable way to carry embedded images across, so a copied body arrives broken.
 
 **Two sections are the exception, and they originate here.** The done conditions and the QA checklist are not a copy of anything. They are the contract the work is finished against, and the boxes are ticked where engineering works, so that is where they live. The record answers *why this is being done*; the tracker answers *what counts as done*. Writing them on both sides would be the drift this rule exists to prevent.
@@ -336,6 +344,8 @@ Contract     : {level} → #{n} {title}   (or "this ticket", or "off")
 Template     : {task.template.task or .parent}   (or "none published")
                left for a person: {section} — the template's own placeholder kept
 Drafted from : {spec entry} · {design, or "no design"}
+Design section : {heading}
+               (task.design_heading "{x}" not found — read by role)   ← only where step 1 fell back
 Coverage     : behaviour {n}/{n} · states {n}/{n} · rules {n}/{n} · round trip {n}
                covered elsewhere: {row} — {which line}
 Materials    : {entry name} ({entry kind})
@@ -413,6 +423,8 @@ Parent        : #{n}
 Contract      : {n} conditions · {n} steps · {n} rows skipped → #{n} {level}
                 (or "placeholder — run again before work starts", or "off")
 Link property : written at create
+Design section : {heading}
+                (task.design_heading "{x}" not found — read by role)   ← only where step 1 fell back
 {spec link stored, where applicable}
 {change summary written, where applicable}
 ```

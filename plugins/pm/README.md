@@ -53,7 +53,7 @@ A ticket filed before its requirement exists says so, as a quote rather than a c
 
 ## Tools it has never seen
 
-How to work with one tool is written in one file, and the tool's name in your settings picks it. Notion, GitHub, markdown, Slack and Google Calendar come built in. Name anything else — Linear, Jira, Teams — and `/pm:setup` writes the support for it from the tools connected on your machine, into `pm-adapters/` next to your settings, marking what it could not verify. Until that file exists, the skills stop and say the tool is not supported yet, rather than guessing. A mark comes off the first time a `/pm:task` run makes that call succeed; a marked call that fails stops the run and names the call. A mark on a call only `/pm:log` makes stays until you remove it. What such a file has to cover is in [`trackers/README.md`](_common/trackers/README.md) and [`sources/README.md`](_common/sources/README.md).
+How to work with one tool is written in one file, and the tool's name in your settings picks it. Notion, GitHub, markdown, Slack and Google Calendar come built in. Name anything else — Linear, Jira, Teams — and `/pm:setup` writes the support for it from the tools connected on your machine, into `pm-adapters/` next to your settings, marking what it could not verify. Until that file exists, the skills stop and say the tool is not supported yet, rather than guessing. A mark comes off the first time a `/pm:task` run makes that call succeed; a marked write that fails stops the run and names the call. A mark on a call only `/pm:log` makes stays until you remove it. What such a file has to cover is in [`trackers/README.md`](_common/trackers/README.md) and [`sources/README.md`](_common/sources/README.md).
 
 ## Starting from nothing
 

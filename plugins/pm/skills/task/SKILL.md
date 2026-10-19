@@ -1,7 +1,7 @@
 ---
 name: task
-description: Drafts a task from a request, files it as a ticket in the engineering tracker, or keeps the task list in step with that tracker. Triggers - "/pm:task", "/pm:task draft", "/pm:task publish", "/pm:task sync", "draft a task from this thread", "fill in the context table", "file this task as a ticket", "update the GitHub task", "reconcile the tasks", "sync notion and github", "일감 초안 잡아줘", "맥락표 채워줘", "깃헙에 일감 등록해줘", "티켓 갱신해줘", "일감 동기화해줘", "노션 깃헙 맞춰줘".
-allowed-tools: AskUserQuestion, Read, Write, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_figma_figma__get_metadata
+description: Drafts a task from a request, files it as a ticket in the engineering tracker, or keeps the task list in step with that tracker. Triggers - "/pm:task", "/pm:task draft", "/pm:task publish", "/pm:task sync", "draft a task from this thread", "fill in the context table", "file this task as a ticket", "update the GitHub task", "reconcile the tasks", "sync notion and github", "일감 초안 잡아줘", "맥락표 채워줘", "이 스레드로 일감 만들어줘", "깃헙에 일감 등록해줘", "이 일감 티켓 만들어줘", "티켓 갱신해줘", "일감 동기화해줘", "노션 깃헙 맞춰줘", "정합화 돌려줘".
+allowed-tools: AskUserQuestion, Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_figma_figma__get_metadata
 ---
 
 # task — one task record, three ways to work on it
@@ -54,6 +54,8 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-co
   --need task.record.ref,task.link_property,task.mirror.ref \
   --authored task.record.type,task.record.ref,task.link_property,task.contract.level
 ```
+
+Under `--template`, leave `task.contract.level` out of that `--authored` list. The template pass only renames, reorders and drops headings — it writes no contract — so a level nobody chose cannot put anything on the wrong ticket, and stopping on it would block the one way out `sync` names.
 
 `sync`, the same, with a shorter `--authored`:
 
@@ -127,7 +129,7 @@ These are the title rules. A task is read by whoever picks the work up, and by e
 
 ## `(unverified)` marks
 
-`/pm:setup` 4c drafts an adapter for a tool this plugin has never seen, and writes each call it could not run — the writes, mostly — into the person's adapter file marked `(unverified)`. A run in any `/pm:task` mode — `draft`, `publish` or `sync` — that runs a marked call successfully removes the mark from that line once the result reads back: in the person's adapter file under `adapters.dirs`, never in a bundled one under `${CLAUDE_PLUGIN_ROOT}`, which an update would overwrite. Whichever preview covers the call gets one more line, `Adapter marks : {call} ({file}) — comes off if it succeeds`, so the same "go" covers the edit — draft's preview, publish's ticket or template-pass preview, either of sync's two tiers. A marked call that fails keeps its mark and stops the run in every mode, naming the call and the file it came from; `sync` first reports what it had already applied.
+`/pm:setup` 4c drafts an adapter for a tool this plugin has never seen, and writes each call it could not run — the writes, mostly — into the person's adapter file marked `(unverified)`. A run in any `/pm:task` mode — `draft`, `publish` or `sync` — that runs a marked call successfully removes the mark from that line once the result reads back: in the person's adapter file under `adapters.dirs`, never in a bundled one under `${CLAUDE_PLUGIN_ROOT}`, which an update would overwrite. Whichever preview covers the call gets one more line, `Adapter marks : {call} ({file}) — comes off if it succeeds`, so the same "go" covers the edit — draft's preview, publish's ticket or template-pass preview, either of sync's two tiers. A marked call that fails keeps its mark either way. A marked **write** that fails stops the run in every mode, naming the call and the file it came from; `sync` first reports what it had already applied. A marked **read** that fails goes the way its mode handles any read it cannot make — in `draft`, a chat thread it cannot read is asked for as pasted text (`draft.md`, step 1) — rather than stopping on the mark.
 
 ## Modes
 

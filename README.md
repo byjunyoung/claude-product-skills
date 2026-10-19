@@ -244,7 +244,7 @@ answer is `null`**, and the file keeps the question beside it as a comment for w
 And a tool it has never seen — Linear, Jira, Teams — is not a dead end: name it in your
 settings and it writes the support from what is connected. What it could not try out is marked
 unverified, and the mark comes off the first time a `/pm:task` run makes that call work; a marked
-call that fails stops the run and names the call.
+write that fails stops the run and names the call.
 
 **deck.** `/fig:deck-setup` measures your team's slide template into `~/.claude/deck-assets`.
 The plugin ships no template values at all, because deck backgrounds carry company wordmarks

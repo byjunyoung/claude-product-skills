@@ -174,7 +174,19 @@ check("allowed-tools match the calls (setup: Edit)", "Edit" in tools_of("plugins
 
 # descriptions in one shape: one sentence, then the trigger phrases
 task_desc = frontmatter("plugins/pm/skills/task/SKILL.md")["description"]
-need = ["/pm:task", "update the GitHub task", "sync notion and github", "일감 초안 잡아줘", "티켓 갱신해줘", "일감 동기화해줘"]
+# The trigger lists of the three old skills at 7c40e6f, the last commit that had them, verbatim.
+OLD_TRIGGERS = [
+    # task-draft
+    "/pm:task-draft", "draft a task from this thread", "fill in the context table",
+    "일감 초안 잡아줘", "맥락표 채워줘", "이 스레드로 일감 만들어줘",
+    # task-publish
+    "/pm:task-publish", "file this task as a ticket", "깃헙에 일감 등록해줘", "이 일감 티켓 만들어줘", "티켓 갱신해줘",
+    # task-sync
+    "/pm:task-sync", "reconcile the tasks", "sync notion and github", "일감 동기화해줘", "노션 깃헙 맞춰줘", "정합화 돌려줘",
+]
+# The old slash names were removed on purpose, so each is looked for under its new spelling.
+# "update the GitHub task" was dropped before 7c40e6f, and the 0.39.0 changelog says it is back.
+need = [t.replace("/pm:task-", "/pm:task ") for t in OLD_TRIGGERS] + ["update the GitHub task"]
 check("task description restores its triggers", all(n in task_desc for n in need),
       f"missing {[n for n in need if n not in task_desc]}")
 for sk in sorted(p.name for p in (REPO / "plugins/pm/skills").iterdir() if (p / "SKILL.md").exists()):
