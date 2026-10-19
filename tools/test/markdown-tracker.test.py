@@ -14,8 +14,15 @@ SCRIPT = REPO / "plugins" / "pm" / "_common" / "scripts" / "lib" / "markdown-tra
 failures = []
 
 
+def clean_env(**extra):
+    # Inside a git hook, GIT_DIR and friends point at the real repository; a child git would then
+    # act on it instead of the temp dir. Drop every GIT_* key, then add only the case's own.
+    base = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    return dict(base, **extra)
+
+
 def run(cwd, *args, env=None):
-    env = dict(os.environ, PYTHONUSERBASE=site.getuserbase(), **(env or {}))
+    env = clean_env(PYTHONUSERBASE=site.getuserbase(), **(env or {}))
     return subprocess.run([sys.executable, str(SCRIPT), *args], cwd=cwd, env=env,
                           capture_output=True, text=True)
 
@@ -28,7 +35,7 @@ def check(label, cond, detail=""):
 
 def git(cwd, *args, date=None):
     # Global/system config is blanked so a developer's hooks or signing settings cannot leak in.
-    env = dict(os.environ, GIT_CONFIG_GLOBAL="/dev/null", GIT_CONFIG_SYSTEM="/dev/null")
+    env = clean_env(GIT_CONFIG_GLOBAL="/dev/null", GIT_CONFIG_SYSTEM="/dev/null")
     if date:
         env["GIT_AUTHOR_DATE"] = env["GIT_COMMITTER_DATE"] = f"{date}T12:00:00"
     return subprocess.run(["git", *args], cwd=cwd, env=env, capture_output=True, text=True, check=True)
