@@ -58,7 +58,7 @@ headings are yours; the questions are not. A question the tool cannot answer is 
 | **A new record** — with the properties the interview settled and the context table as its body | `/pm:task-draft` | The call. Whether a database template is applied on create — usually not, which is what `task.notion.body_template` and its equivalents are for |
 | **Writing the link property** | `/pm:task-publish` | The call. This is the one property matching runs on, so say how to verify it landed |
 | **Appending a change summary** — one dated line after what is already there | `/pm:task-publish` | Append, never replace. How to catch the end of the existing text |
-| **Appending a line under a heading** | `/pm:task-publish` | Append after what is already in that section; add the heading when it is missing; never a second heading |
+| **Appending a line under a heading** | `/pm:task-publish`, `/fig:handoff` | Append after what is already in that section; add the heading when it is missing; never a second heading |
 | **A user directory** — id to display name | `/pm:log` | The call, so a name is looked up rather than guessed |
 
 ### As the mirror — `task.mirror.type`
@@ -73,7 +73,7 @@ headings are yours; the questions are not. A question the tool cannot answer is 
 | **Milestones** — list open ones, create one, set it on the parent | `/pm:task-publish` | Only where `task.hierarchy.milestone_projects` names a project |
 | **Updating a ticket's body** | `/pm:task-publish` | Read before overwrite. Keep the row that links back to the record |
 
-`/fig:diff` writes into a task doc too, with notion and github calls of its own; it does not read these files.
+`/fig:handoff` writes its one line into a markdown record through `append-under`. `/fig:diff` writes into a task doc too, with notion and github calls of its own; it does not read these files.
 
 ### Always
 

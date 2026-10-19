@@ -1,5 +1,10 @@
 # pm
 
+## 0.38.1 — 2026-10-19
+
+- **The shared config reader and machine check carry `fig`'s pair and PRD rows.** `resolve-config.py` and `preflight.py` are held byte for byte identical across the two plugins, and `fig` 3.28.0 changed both: `task_tracker.ref` written without `task_tracker.type` stops under `--authored`, a plain-string `qa.baseline.prd` requires Notion, and `task_tracker.type: markdown` needs no connector. The attention row for a missing `pm` runs on the `fig` side only. None of it touches a `pm` key, so nothing changes for `pm` configs
+- ***The other half* in the README no longer says the two never call each other.** Installed together, `fig` 3.28.0 reads the PRD folder this plugin writes and puts `/fig:handoff`'s line into its markdown task files, with nothing set on either side. The section now says so, and that `fig`'s own two settings are for pointing somewhere else. `trackers/README.md` names `/fig:handoff` among the skills that append a line under a heading
+
 ## 0.38.0 — 2026-10-19
 
 - **Starting needed a tool before it needed you.** With no settings file, the bundled defaults pointed tasks at a Notion database nobody had named and kept the daily log switched off, so the first run of a task skill stopped on `task.record.ref is not set`, and `/pm:setup` opened by reading a tracker's schema. Somebody with no tracker yet, or no wish to connect one, met a config question before any result

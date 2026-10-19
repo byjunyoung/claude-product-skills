@@ -17,20 +17,15 @@
 # (and, for arrows-before-after, the body width), then takes the screenshot with a window of
 # exactly that size.
 #
-# Committed sizes at the time this script was written, and what the script produced:
-#   picture              committed   rendered
-#   arrows-before-after  see note    see note
-#   config-layers        2000x1364   2000x1400
-#   context-table        2000x1362   2000x1400
-#   lint-catches         2000x1804   2000x1844
-#   prep-stubs           2000x2160   2000x2194
-#   qa-report            2000x1403   2000x1434
-#   social-preview       1280x640    1280x640
-#   two-plugins          2000x1358   2000x1366
-# Widths match (arrows-before-after: 1345 committed vs 1362 rendered tall, same measured width). Heights run 8-40px taller than the committed files: the layout is the same, but
-# the committed PNGs were trimmed a little tighter at the bottom, which was not recorded.
-# So a re-render comes out a little taller than the picture in the repository: check the result
-# against the committed one before committing it.
+# Bottom margin (measured 2026-10-19). Each diagram's height is its deepest content plus the
+# 48 CSS px of bottom padding its own CSS declares, and that is what the screenshot comes out as.
+# The committed PNGs disagree with that CSS and with each other: five of the six diagrams end on
+# 37-38 background rows at 2000 px (about 26 CSS px), two-plugins on 67 (about 47). No measuring
+# rule reproduces both, so the script does not measure differently. It trims every re-render
+# (all but social-preview, whose size is fixed) to one margin of BOTTOM_CSS x scale rows through
+# tools/png-trim.py: 37 rows at 2000 px wide, 26 at scale 1. A picture whose own margin is
+# already that small is left as it is. The report line shows the trailing row count and the
+# committed picture's size, so a re-render can be checked against it before committing.
 #
 # The trailing size report uses `sips`, which only macOS has; elsewhere it is skipped (an
 # unguarded call would stop the script after the first picture under `set -e`).
@@ -44,6 +39,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIR="$ROOT/.github"
+# Bottom margin every trimmed picture ends on, in CSS px; see the header.
+BOTTOM_CSS=26
 ALL=(arrows-before-after config-layers context-table lint-catches prep-stubs qa-report social-preview two-plugins)
 
 find_chrome() {
@@ -98,6 +95,16 @@ render() {
     --force-device-scale-factor="$scale" --window-size="$width,$height" \
     --screenshot="$png" "file://$html" >/dev/null 2>&1
 
+  if [ "$name" != "social-preview" ]; then
+    local keep
+    keep="$(awk -v c="$BOTTOM_CSS" -v s="$scale" 'BEGIN{printf "%d", c*s+0.5}')"
+    if ! command -v python3 >/dev/null 2>&1; then
+      echo "render-images: python3 missing, $name not trimmed" >&2
+    elif ! python3 "$ROOT/tools/png-trim.py" "$png" --keep "$keep" >/dev/null; then
+      echo "render-images: could not trim $name, left as rendered" >&2
+    fi
+  fi
+
   if [ "${QUANTIZE:-0}" = "1" ]; then
     if command -v pngquant >/dev/null 2>&1; then
       pngquant --force --ext .png 256 "$png"
@@ -106,14 +113,19 @@ render() {
     fi
   fi
 
+  local trailing committed="n/a" old
+  trailing="$(python3 "$ROOT/tools/png-trim.py" "$png" --count 2>/dev/null | sed -n 's/.*trailing=//p' || true)"
+  old="$(git -C "$ROOT" show "HEAD:.github/$name.png" 2>/dev/null \
+         | python3 -c 'import struct,sys; b=sys.stdin.buffer.read(24); print("%dx%d" % struct.unpack(">II", b[16:24]))' 2>/dev/null || true)"
+  [ -n "$old" ] && committed="$old"
+  local size="(size not reported: no sips here)"
   if command -v sips >/dev/null 2>&1; then
     local w h
     w="$(sips -g pixelWidth "$png" | awk '/pixelWidth/{print $2}')"
     h="$(sips -g pixelHeight "$png" | awk '/pixelHeight/{print $2}')"
-    echo "rendered $name.png ${w}x${h}"
-  else
-    echo "rendered $name.png (no sips here, size not reported)"
+    size="${w}x${h}"
   fi
+  echo "rendered $name.png $size trailing=${trailing:-n/a} committed=$committed"
 }
 
 for n in "${names[@]}"; do render "$n"; done

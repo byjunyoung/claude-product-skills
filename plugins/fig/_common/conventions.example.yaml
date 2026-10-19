@@ -156,7 +156,10 @@ arrows:
 component_audit:
   min_samples: 5                              # below this, no convention is inferred
   dominance: 0.9                              # only properties this lopsided count as convention
-  body_offset: { left: 270, top: 120 }        # shared chrome (nav width, top bar height) — exempt
+  # The shared shell's width and height (nav on the left, bar on top), measured on one of your
+  # screens as { left: <nav width>, top: <bar height> }. Anything inside that band is not
+  # examined, so the shell itself is not reported. null exempts nothing: the whole frame is read.
+  body_offset: null
 
 # --- Design system -------------------------------------------------------------
 
@@ -210,11 +213,21 @@ handoff:
     ref:   "{label} · {date}"                 # how it is written into the task doc and the ticket
 
 # --- Task tracker --------------------------------------------------------------
-# With none, /fig:diff stops at the Figma annotations and emits the table as markdown.
+# Where the task doc lives — /fig:handoff writes its one line there, and /fig:diff its
+# comparison table. type decides which of these happens:
+#   null      unset: /fig:handoff borrows pm's task record, but only where pm is installed and
+#             keeps its records as markdown. Anywhere else, and for /fig:diff, this behaves like none
+#   markdown  /fig:handoff writes through pm into its markdown task folder (ref, where written,
+#             names the folder). /fig:diff treats it as none
+#   none      write nothing; /fig:handoff prints its line, /fig:diff stops at the Figma
+#             annotations and prints the table
+#   notion | github   the tracker named, with ref pointing at it (database id, repo name)
+# A ref written without a type is stopped by --authored: it no longer says which kind of
+# tracker it points at.
 task_tracker:
-  type: none                                  # notion | github | none
+  type: null                                  # null | markdown | notion | github | none
   ref: null                                   # database id, repo name, and so on
-  ui_section_heading: null                    # heading in the doc where changes are written up
+  ui_section_heading: null                    # heading in the doc where changes are written up. null writes under "Design changes"
   annotation_category: "Changed"              # a shared category to reuse. never create new ones
   scope_tags: []                              # classification tags prefixed to labels
 
@@ -239,7 +252,13 @@ deck:
 qa:
   # Where the basis for a judgement is found. null skips that collection.
   baseline:
-    prd:    null                              # spec location, e.g. a page id or collection url
+    # Where the PRD is, as { type, ref }.
+    #   type  markdown | notion | none
+    #   ref   a file, a folder holding one file per product, or a Notion page or collection url
+    # A plain string is read as { type: notion, ref: <string> }, so an older config keeps working.
+    # An explicit null, or type: none, means this team has no PRD: that collection is skipped and
+    # pm is not consulted. ref: null means pm's PRD, where pm is installed.
+    prd:    { type: markdown, ref: null }
     design: figma                             # design source — figma | none
     tasks:  null                              # task tracker, for past decisions and reversals
 

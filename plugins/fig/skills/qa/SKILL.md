@@ -1,7 +1,7 @@
 ---
 name: qa
-description: Audits a feature that has shipped to a dev or staging server against the plan of record — spec entries and the Figma design. One mode stops once the checklist is drawn; the other clicks through the browser and files a defect report. Defects are written as reproduction steps, expected, actual, and evidence (request results, screens) so they can be handed to engineering as they are. Triggers - "/fig:qa", "QA this", "check what is on the dev server", "file the defects", "QA 해줘", "개발서버 확인해줘", "결함 정리해줘".
-allowed-tools: AskUserQuestion, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__read_console_messages, mcp__claude-in-chrome__read_network_requests
+description: Audits a feature shipped to a dev or staging server against the plan of record — the PRD (markdown, Notion, or pm's) and the Figma design. One mode stops at the checklist; the other clicks through the browser and files a defect report written as reproduction steps, expected, actual and evidence, ready to hand to engineering. Triggers - "/fig:qa", "QA this", "check what is on the dev server", "file the defects", "QA 해줘", "개발서버 확인해줘", "결함 정리해줘".
+allowed-tools: AskUserQuestion, Bash, Read, Glob, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__read_console_messages, mcp__claude-in-chrome__read_network_requests
 ---
 
 # qa — baseline-referenced QA (checklist → verification → defect report)
@@ -41,6 +41,26 @@ Even in `full`, the step-3 checklist is **shown before verification begins**. St
 
 ---
 
+## Where the rules come from
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --js {fileKey}
+```
+
+`qa.baseline` and `qa.environments` are read from it. The PRD is then looked up, not read from the config directly:
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/borrow-pm.py prd {fileKey}
+```
+
+This skill takes no `spec_url`. The script answers `{type, ref, from, split, candidates, note}`; act on it, do not re-derive it.
+
+- `markdown`, one candidate → `Read` it. Several → ask which, offering the products. Split `domain` → `Read` `index.md` and the domain file the target belongs to
+- `markdown`, no candidates → pm's PRD folder exists but holds no document yet. Treat it as `none` and say so
+- `notion` → `notion-fetch` the `ref`
+- `none` → no PRD: every item that would rest on it is marked `needs confirmation`. A `note` is shown in one line
+- Exit 1 (fig's own config cannot be read) → say what it printed and stop; the config needs fixing first
+
 ## 1. Settle the target (reading, no confirmation needed)
 
 Read the source and pull out the following. Do not guess.
@@ -54,11 +74,11 @@ Whatever the source does not say, leave as `TBD`, and only ask about the parts t
 
 ## 2. Collect the baseline (reading)
 
-Gather the documents the verdicts will rest on. **Internal assets first.** Where to look is set by `qa.baseline`, and any entry that is `null` is skipped.
+Gather the documents the verdicts will rest on. **Internal assets first.** Where to look is set by `qa.baseline` and, for the PRD, by the lookup above; any entry that is `null` is skipped.
 
 | Source | What to pull |
 |---|---|
-| Spec feature and policy entries | Detailed behaviour (Given/When/Then), states and cases, rules and exceptions |
+| The PRD (from the lookup above) | Detailed behaviour (Given/When/Then), states and cases, rules and exceptions |
 | The design | Screen composition, state variants, copy |
 | Existing tickets | Past decisions and reversals, undecided items |
 | The request itself | What is newly asked for in this round |

@@ -83,7 +83,8 @@ CONNECTORS = {
 #   (keys the user must have written, the type key, type values that need no connector, adapter kind)
 NAMED_TOOLS = {
     "fig": [
-        (("task_tracker.ref", "task_tracker.type"), "task_tracker.type", {"none"}, "trackers"),
+        (("task_tracker.ref", "task_tracker.type"), "task_tracker.type", {"none", "markdown"}, "trackers"),
+        (("qa.baseline.prd",), "qa.baseline.prd.type", {"none", "markdown"}, None),
         (("guide_source.ref", "guide_source.type"), "guide_source.type", {"none", "file", "url"}, None),
     ],
     "pm": [
@@ -99,6 +100,10 @@ NAMED_TOOLS = {
 # `connector:` line near the top says what the connector is called, because the type a team
 # writes (gsheet) and the connector's name (Google Drive) are rarely the same word. Failing
 # both, the type name itself is matched, which is at least honest about what it looked for.
+# An older config wrote the PRD as one plain string, a Notion page. Where the type key resolves to
+# nothing and its parent is such a string, the type is what that string always meant.
+#   type key → (parent key, the type a string there stands for)
+LEGACY_STRING = {"qa.baseline.prd.type": ("qa.baseline.prd", "notion")}
 CONNECTOR_NAME = {"notion": "Notion", "github": "GitHub", "slack": "Slack", "google": "Google Calendar"}
 COMMON = os.path.normpath(os.path.join(HERE, "..", ".."))
 
@@ -194,6 +199,39 @@ def declared_connector(cfg, kind, typ):
     return None
 
 
+def load_borrow():
+    """The borrow-pm helpers, or None. Only fig borrows from pm, and only fig ships the file; a
+    copy that cannot be loaded reads as "pm not found" rather than stopping the check."""
+    path = os.path.join(HERE, "borrow-pm.py")
+    if PLUGIN != "fig" or not os.path.exists(path):
+        return None
+    try:
+        spec = importlib.util.spec_from_file_location("borrow_pm", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+    except (SystemExit, Exception):
+        return None
+
+
+def borrow_checks(user):
+    """Where the config says task files are markdown, a handoff writes its line through pm. No pm,
+    or one too old, is worth a line and never a failure: the handoff prints the line instead."""
+    if str(dig(user, "task_tracker.type") or "").lower() != "markdown":
+        return
+    mod, pm = load_borrow(), None
+    if mod:
+        try:
+            pm = mod.find_pm(dict(os.environ), os.getcwd())
+        except Exception:
+            pm = None
+    if pm and mod.version_ok(pm.get("version")):
+        return
+    why = (f"pm {pm.get('version')} is older than {mod.PM_MIN}" if pm else "pm is not installed here")
+    row("tracker", "task_tracker.type: markdown", "attention",
+        f"{why} — /fig:handoff prints its line instead of writing it into the task file")
+
+
 def settle_requirements():
     for name in (arg_after("--require") or "").split(","):
         if name.strip():
@@ -213,12 +251,19 @@ def settle_requirements():
             continue
         if triggers[0].startswith("log.") and not dig(full, "log.enabled"):
             continue                       # channels named in a log that is switched off
-        typ = str(dig(full, type_key) or "none").lower()
+        typ = dig(full, type_key)
+        if typ is None and type_key in LEGACY_STRING:
+            parent, legacy = LEGACY_STRING[type_key]
+            if isinstance(dig(user, parent), str):
+                typ = legacy
+        typ = str(typ or "none").lower()
         if typ in quiet:
             continue
         name = CONNECTOR_NAME.get(typ) or declared_connector(full, kind, typ) or typ.capitalize()
         require(name, f"{type_key}: {typ}" + (f" → {name}" if name.lower() != typ else ""))
         named = True
+    if PLUGIN == "fig":
+        borrow_checks(user)
     if not named:
         because.append("your settings name no tool — nothing beyond this machine is needed")
     return full

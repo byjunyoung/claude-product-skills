@@ -1,6 +1,6 @@
 ---
 name: arrows
-description: Generates and re-syncs flow arrows and their labels on a Figma design page. Reproduces in code what Autoflow-style plugins do — edge-midpoint anchors, right-angle elbows, branch trunks, element anchors, line styles that carry meaning. Flow information is stored in the node name (`source --> target`), so the whole page re-syncs with one command after frames move. Triggers - "/fig:arrows", "draw the flow arrows", "connect these screens", "re-sync the arrows", "화살표 그려줘", "흐름 화살표 추가", "화살표 sync", "플로우 연결해줘".
+description: Generates and re-syncs flow arrows and their labels on a Figma design page. Reproduces in code what Autoflow-style plugins do — edge-midpoint anchors, right-angle elbows, branch trunks, element anchors, line styles that carry meaning. The flow lives in the node name (`source --> target`), so the whole page re-syncs with one command after frames move. Triggers - "/fig:arrows", "draw the flow arrows", "connect these screens", "re-sync the arrows", "화살표 그려줘", "흐름 화살표 추가", "화살표 sync", "플로우 연결해줘".
 allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__whoami
 ---
 
@@ -242,7 +242,7 @@ Concatenate that one line, the whole of `arrow-build.js`, and the actual calls, 
 | Helper | What it does |
 |---|---|
 | `find(section, name)` | Reads frame coordinates live. **Never compute coordinates outside and pass them in** — the canvas may have changed since |
-| `arrow(parent, name, pts, opts)` | Creates from a vertex array. Two points is a straight line, three or more a right-angle elbow. `opts.dashed`, `opts.bidirectional`, `opts.stroke` (`{color, weight, dash}`, each overriding the config) |
+| `arrow(parent, name, pts, opts)` | Creates from a vertex array. Two points is a straight line, three or more a right-angle elbow. `opts.dashed`, `opts.bidirectional`, `opts.stroke` (`{color, weight, dash, opacity}`, each overriding the config) |
 | `styleOf(vector)` | Reads `{stroke, bidirectional}` off an existing arrow, or `null` when it has no solid stroke. Call it before deleting the old vector in a sync |
 | `straight` · `trunkElbow` · `detour` | The three path patterns. The helper applies the naming rules |
 | `pill(section, arrowName, text, cx, cy)` | The label. Call it **after every arrow is built** so z-order comes out right |

@@ -1,7 +1,7 @@
 ---
 name: draw
-description: Draws a screen, or fills a stub `/fig:prep` left behind, inside the file's own conventions rather than as a loose fragment. It looks up the file's own arrangement pattern first and, where none exists, stops and has one defined rather than inventing a one-off. It anchors to the nearest canonical screen and clones it, so what comes out is the whole screen with the change in it, not a swatch of the part that is new. Copy comes from a spec, from the running system, or from the file's own precedent — never from what sounds plausible. One undecided fact is pinned on the node it belongs to, never left as a blank frame standing in for the whole screen. Where a screen is about to look or behave differently, the direction is agreed first with `/fig:sketch` — item by item, then as a rough text sketch of each state — before anything reaches the file. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "design this state", "이 화면 그려줘", "placeholder 채워줘", "이 상태 디자인해줘".
-allowed-tools: AskUserQuestion, Bash, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__search_design_system, mcp__plugin_figma_figma__get_design_context, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
+description: Draws a screen, or fills a stub `/fig:prep` left behind, inside the file's conventions. Finds the file's arrangement pattern (or has one defined), then clones the nearest canonical screen so the whole screen comes out with the change in it. Copy comes from the PRD (markdown, Notion, or pm's), the running system or the file's precedent, never invented. Direction is agreed first in `/fig:sketch`. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "이 화면 그려줘", "placeholder 채워줘".
+allowed-tools: AskUserQuestion, Bash, Read, Glob, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__search_design_system, mcp__plugin_figma_figma__get_design_context, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
 ---
 
 # fig:draw — draw the screen
@@ -35,7 +35,7 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 ## Inputs
 
 - `target` (required): a stub `/fig:prep` left — its URL, or its name and section — or, with nothing stubbed yet, a description of the screen or state to draw
-- `spec_url` (optional): the requirements the drawn content has to match. **Omitted, `qa.baseline.prd` from the config is used** — the same spec `/fig:qa` judges against later, so a screen is drawn against the document it will be measured by. Where that is `null` too, ask for a source or record that there is none
+- `spec_url` (optional): the requirements the drawn content has to match. **Omitted, the lookup decides** (see "Where the PRD comes from"): the config, then pm's PRD where pm is installed — the same spec `/fig:qa` judges against later, so a screen is drawn against the document it will be measured by. Where the lookup finds none, ask for a source or record that there is none
 
 ## Where the rules come from — the config file (same source as fig:prep, fig:lint, fig:sync)
 
@@ -43,7 +43,7 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --js <fileKey>
 ```
 
-Sections read: `naming` (frame and section patterns, state suffixes, the common and pattern pages) · `pages` (strictness, the canonical axis, excluded sections) · `placeholder_style` (how a stub is recognized, and what its removal has to leave behind) · `design_system` (which library is searched first) · `references` (screen-reference services consulted only when a pattern has to be newly defined) · `layout` (spacing, where nothing existing says where to put something) · `qa.baseline.prd` (the default spec).
+Sections read: `naming` (frame and section patterns, state suffixes, the common and pattern pages) · `pages` (strictness, the canonical axis, excluded sections) · `placeholder_style` (how a stub is recognized, and what its removal has to leave behind) · `design_system` (which library is searched first) · `references` (screen-reference services consulted only when a pattern has to be newly defined) · `layout` (spacing, where nothing existing says where to put something) · `qa.baseline.prd` (the default spec, read through the lookup below).
 
 - **Strictness comes from the target page's name**, the same way `/fig:prep` reads it. A match in `pages.readonly` means refuse the work and say so. On `pages.free` the drawing discipline still applies in full — anchoring, pattern reference and grounding are not a `pages.strict` luxury — only the section and layout rules are relaxed
 - `pages.canonical` names the page everything is compared against, the same axis `/fig:sync` resolves. `null` means it has not been settled for this file: resolve it once the way `/fig:sync` does, by name pattern or by the divider band it sits in, and ask rather than guessing per screen
@@ -135,6 +135,21 @@ Copy, labels and sample values come from somewhere real: the spec, the file's ow
 
 The sketch does not replace preview → go. It is what makes the preview something the person can judge: they are no longer weighing the direction and the details in the same breath.
 
+## Where the PRD comes from
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/borrow-pm.py prd [--spec-url {spec_url}] {fileKey}
+```
+
+The script answers `{type, ref, from, split, candidates, note}`; act on it, do not re-derive it.
+
+- `markdown`, one candidate → `Read` it. Several → ask which, offering the products. Split `domain` → `Read` `index.md` and the domain file the target belongs to
+- `markdown`, no candidates → pm's PRD folder exists but holds no document yet. Treat it as `none` and say so
+- `notion` → `notion-fetch` the `ref`
+- `none` → ask for a source or record that there is none. A `note` is shown in one line; if it asks for a link, ask for it
+- Exit 6 (the `--spec-url` is a Figma link or a kind the script cannot tell) → say what it printed and ask for another source
+- Exit 1 (fig's own config cannot be read) → say what it printed and stop; the config needs fixing first
+
 ## Procedure
 
 ### 1. Take the target
@@ -143,7 +158,7 @@ A stub: read its name, its position, and its `TBD (needs confirmation): …` des
 
 ### 2. Read the sources
 
-The spec, the file's own precedent, and where the content is something a running system produces, that system. This is the step that decides whether step 7 writes sourced copy or invented copy, and it cannot be done afterwards.
+The spec — read through the lookup in "Where the PRD comes from", with whatever source it asked for — the file's own precedent, and where the content is something a running system produces, that system. This is the step that decides whether step 7 writes sourced copy or invented copy, and it cannot be done afterwards.
 
 ### 3. Anchor to canonical
 

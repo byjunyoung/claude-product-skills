@@ -15,7 +15,7 @@ Most Claude Code plugins are aimed at the codebase. These two are aimed at the w
 
 <sub>**New to Claude Code?** It is Anthropic's assistant, and it runs in a terminal, a desktop app, or your editor. Install it from [claude.com/claude-code](https://claude.com/claude-code) first — a *plugin* like these two adds commands to it, and a *marketplace* is where it downloads them from.</sub>
 
-Neither needs the other. Most of what follows is about `fig`; `pm` has [its own section](#pm--product-docs), and the two settings you match up when you run both are in [Where the two meet](#where-the-two-meet).
+Neither needs the other. Most of what follows is about `fig`; `pm` has [its own section](#pm--product-docs), and what changes when you run both is in [Where the two meet](#where-the-two-meet).
 
 [What it solves](#what-it-solves) · [Who it's for](#who-its-for) · [Getting started](#getting-started) · [**fig**](#fig--the-design-file) · [**pm**](#pm--product-docs) · [Where the two meet](#where-the-two-meet) · [Configuration](#configuration) · [Troubleshooting](#troubleshooting) · [Where it fits](#where-it-fits) · [Design principles](#design-principles)
 
@@ -89,7 +89,7 @@ The short version first, then what it needs, then each step in full.
 
 ### Your first five minutes
 
-Follow whichever one you installed. With both, start at the top — the two settings you then match up are in [Where the two meet](#where-the-two-meet).
+Follow whichever one you installed. With both, start at the top — what the two do together is in [Where the two meet](#where-the-two-meet).
 
 **fig — the file you draw in**
 
@@ -149,6 +149,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | `/pm:log` | **A calendar and a chat tool** — both optional, named by `sources.calendar_type` and `sources.chat_type`; Google Calendar and Slack ship. Named as `none` they are skipped and the log says so. A scheduler on your own machine, if you want it unattended |
 | `/pm:prd` | **Notion** — only where `prd.target` is `notion`. **Web search** — only where `prd.precedent.enabled` is true (the default), and only for a feature entry drafted for the first time. **A screen-reference connector** — optional, only for the services `prd.precedent.reference_sources` names |
 | `/fig:draw` | **A screen-reference connector** — optional, only for the services `references.sources` names, and only when a new pattern has to be defined |
+| `/fig:draw` `/fig:sketch` `/fig:qa` `/fig:handoff` | **pm** — optional. Installed alongside (0.38.0 or later), its PRD and its markdown task files are read and written. Without it, they still run, and say what they could not borrow |
 
 The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The Chrome rows are not — those three open a browser.
 
@@ -192,13 +193,21 @@ takes, shows its steps, and names each one as it begins — read-only until it w
 it writes you see first: one settings file, plus, for `pm`'s local start, a few folders and a
 README. Questions come in your words, with options and a recommendation, and "leave it blank"
 is always one of them: a blank is `null`, written with the question beside it for whoever can
-answer. It ends on a first result rather than a file — `pm` drafts a context table from one
-message you paste, `fig` audits one page — and names the commands to run next.
+answer — or, where the plugin's own default already answers it, the line left out. It ends on
+a first result rather than a file — `pm` drafts a context table from one message you paste,
+`fig` audits one page — and names the commands to run next.
 
 **fig.** Nothing is written to Figma — this step only reads. It counts how the file already
 names frames, spaces sections, and styles arrows, takes the dominant value as the convention,
 and **leaves anything it can't settle as `null` rather than guessing.** A thin sample or a split
 vote produces a `null`, and it asks you about those rather than filling them in.
+
+Then it asks what no file can show: the screen width, where the PRD is, and where the handover
+line goes. With `pm` installed alongside and keeping its files locally, as it does by default,
+leaving those last two blank is the answer that uses `pm`'s — a blank leaves the line out of the
+file, while a written `null` for the PRD would say there is none. The draft holds what it
+observed and what you answered, nothing else; every other setting stays with the plugin's
+defaults, so a later change to one still reaches you.
 
 With nothing to observe — a first file, a team with no conventions yet — it proposes a starter
 set instead: four rules in plain words, three questions, a config that says on every line that
@@ -262,7 +271,7 @@ That's setup done. [**fig**](#fig--the-design-file) covers the loop from here.
 /fig:draw     Fill each stub — following your file's own pattern, cloned from canonical
 /fig:arrows   Wire transition arrows and state groups
 /fig:lint     Audit structure, flow, and components in one pass
-/fig:handoff  Gate the passing sections and hand over the links
+/fig:handoff  Gate the passing sections, hand over the links, leave one line in the task
 /fig:diff     For revisions to existing screens, pin change annotations
 ```
 
@@ -272,7 +281,7 @@ That's setup done. [**fig**](#fig--the-design-file) covers the loop from here.
 
 Where a screen is about to look or behave differently, `sketch` comes before any of that. It agrees the direction in the conversation — the decisions one at a time, then a rough text wireframe of each state and a tree of which follows which — and writes nothing, to Figma or anywhere else: once agreed, each part already has a home in the spec, the stubs and the arrows. It is just as useful with no drawing planned, to settle a direction before a spec gets written.
 
-`draw` fills them in, but not in isolation — it clones the screen the stub belongs to, so what lands is the actual final screen, not a component floating on its own. It reuses whatever the design system already has for that state before inventing anything, and where one fact is genuinely still undecided, it draws the rest for real and pins the open question as an annotation on the one node it affects, rather than leaving the whole frame blank.
+`draw` fills them in, but not in isolation — it clones the screen the stub belongs to, so what lands is the actual final screen, not a component floating on its own. It reuses whatever the design system already has for that state before inventing anything, and where one fact is genuinely still undecided, it draws the rest for real and pins the open question as an annotation on the one node it affects, rather than leaving the whole frame blank. Its copy comes from the PRD (a markdown file, a Notion page, or `pm`'s own where `pm` is installed), the running system or the file's own precedent — never from what sounds plausible.
 
 Before it draws anything, though, it asks a question that is easy to skip: **how does this file build this kind of thing already?** Inconsistency is rarely carelessness — draw an alert row today and another one a fortnight from now and both will be defensible, but they will not be the same, because nothing in the file said how that row is arranged here. A design system holds the parts; what it does not hold is the arrangement. So `draw` looks for that rule on a page of its own — a **pattern page**, alongside the one holding your repeated states — and where a rule exists it follows it, where two screens already agree it writes the rule down, and where nothing answers it stops and has you decide, because that decision binds every screen after this one rather than just this one.
 
@@ -310,7 +319,7 @@ Neither touches the file. Run one when you inherit a file someone else has been 
 
 `deck` moves one source document into a presentation flow and builds a Figma Slides deck. It uses the team template's coordinates, colors and type as-is — when a content shape isn't in the catalog it never invents a layout, it fits the nearest archetype by trimming content or splitting the slide. `/fig:deck-setup` measures those values into local assets, which stay out of the published plugin since template backgrounds carry company wordmarks.
 
-`qa` audits what actually shipped against the spec. The rule is that a finding reads "this breaks rule X in document Y", never "this looks off" — anything without a baseline is filed as needs-checking rather than a defect.
+`qa` audits what actually shipped against the spec, found the same way `draw` finds it. The rule is that a finding reads "this breaks rule X in document Y", never "this looks off" — anything without a baseline is filed as needs-checking rather than a defect.
 
 <img src=".github/qa-report.png" alt="Two findings side by side: a defect citing the spec row it breaks, and an observation with no baseline filed as a question" width="100%">
 
@@ -353,20 +362,20 @@ flowchart TD
 
 | Command | What it does |
 |---|---|
-| `/fig:setup` | Observe a file's conventions and draft a config |
+| `/fig:setup` | Observe a file's conventions and draft a config · ask what the file cannot show — the screen width, where the PRD is, where the handover line goes |
 | `/fig:read` | Collect the page and screen inventory |
 | `/fig:prep` | Normalize names · place into sections · stub missing screens |
 | `/fig:sketch` | Agree the direction before anything is drawn — one decision at a time, a rough text wireframe of each state, a transition tree. Writes nothing |
-| `/fig:draw` | Draw a screen or fill a stub — after `/fig:sketch` where the screen changes, following the file's own pattern, cloned from its nearest canonical screen |
+| `/fig:draw` | Draw a screen or fill a stub — after `/fig:sketch` where the screen changes, following the file's own pattern, cloned from its nearest canonical screen, with copy from the PRD |
 | `/fig:arrows` | Create and re-sync flow arrows |
 | `/fig:lint` | Read-only audit gate (zero writes) |
-| `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task doc |
+| `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task — `pm`'s markdown task file, a Notion page or a GitHub issue — or printed where there is none |
 | `/fig:tokens` | Audit design system token binding for colors |
 | `/fig:sync` | Full canonical-page audit → apply → archive |
 | `/fig:diff` | Annotate changes · write up the task doc |
 | `/fig:proto` | Working single-file HTML prototype |
 | `/fig:code` | Apply the design to a frontend repo |
-| `/fig:qa` | Audit a shipped screen against the spec and report defects, each with screenshots |
+| `/fig:qa` | Audit a shipped screen against the PRD (a markdown file, a Notion page, or `pm`'s) and the design, and report defects, each with screenshots |
 | `/fig:deck-setup` | Measure a team slide template into local deck assets |
 | `/fig:deck` | Turn a source document into a Figma Slides deck |
 
@@ -388,7 +397,7 @@ The component audit works without any written convention. It derives the usage d
 
 The two overlap checks read coordinates alone, so they run on a file with no config at all — and they run on a component page, which the frame-overlap check above never looked at. A set with no auto-layout drops each new variant on the last one's coordinates: the top variant draws fine and the rest are simply not visible, which is why review keeps letting it through.
 
-The mode check catches a duplicated screen that looked right only because of where it used to sit. A colour tied to a token with several modes (light and dark, say) renders in whatever mode the screen, its section or its page names, and in the token's default where none does. Move a screen off a page that set light onto one that sets nothing, and it comes back dark, with nothing on the node looking wrong. So any screen using such a token has to name its mode somewhere above it, even when the default is what it wants.
+The mode check catches a duplicated screen that looked right only because of where it used to sit. A colour tied to a token with several modes (light and dark, say) renders in whatever mode the screen, any section it sits in, or its page names, and in the token's default where none does. Move a screen off a page that set light onto one that sets nothing, and it comes back dark, with nothing on the node looking wrong. So any screen using such a token has to name its mode somewhere above it, even when the default is what it wants.
 
 ---
 
@@ -516,18 +525,20 @@ plugin's own defaults, which nobody on your team chose. …
 
 ## Where the two meet
 
-The two plugins never call each other. What they share is two objects, each named twice — once in `figma-conventions.yaml` and once in `pm-conventions.yaml`. **Install both and you point each pair at the same place.**
+Each works on its own. Installed together, `fig` reads the PRD where `pm` writes it and writes into task records through `pm`'s adapters. They still share two objects: the PRD and the task record. Each is named twice — once in `figma-conventions.yaml` and once in `pm-conventions.yaml` — and **with `fig`'s half left unset, it follows `pm`'s.**
 
 | The object | `fig` calls it | `pm` calls it |
 |---|---|---|
 | The requirements doc | `qa.baseline.prd` | `prd.target`, and the `prd.notion` block |
 | The task record | `task_tracker.ref` | `task.record.ref` |
 
-Those two are the whole of the configuration, and each half of it exists for a reason. The spec is read twice, at both ends of the same feature: `/fig:draw` reads it while the screens are being drawn, so the words in the file are the words the document settled rather than plausible ones written to fill a label — and `/fig:qa` reads it afterwards, because a defect report is only worth handing over when it reads *this breaks rule X in document Y*. `/pm:prd` is what wrote document Y. `/fig:diff` needs the task record because an AS-IS/TO-BE table belongs beside the request that caused it — and `/pm:task-draft` is what opened that record.
+**Left unset, `fig` borrows — but only what `pm` keeps in local files.** The PRD is looked up in one order: a document you pass to the run, then `qa.baseline.prd`, then — with `pm` 0.38.0 or later installed — `pm`'s PRD folder (`prd.markdown.dir`, where `prd.target` is `markdown` or `git`), then none. `/fig:handoff` writes its one line into `pm`'s task file only where `pm` keeps its records as markdown, as its local start does. A `pm` that keeps either in Notion is not followed there: the PRD has to be named in `qa.baseline.prd`, and the handover line is printed, so `fig` never starts writing into pages nobody pointed it at. Without `pm` — not installed, switched off, or older than 0.38.0 — nothing is written through it: there is no PRD unless you name one, and the line is printed with a note saying why. `/fig:diff` does not borrow; it writes only where `task_tracker` names Notion or GitHub.
+
+Each of the two is shared for a reason. The spec is read twice, at both ends of the same feature: `/fig:draw` reads it while the screens are being drawn, so the words in the file are the words the document settled rather than plausible ones written to fill a label — and `/fig:qa` reads it afterwards, because a defect report is only worth handing over when it reads *this breaks rule X in document Y*. `/pm:prd` is what wrote document Y. `/fig:handoff` and `/fig:diff` need the task record because the line saying what was handed over, and an AS-IS/TO-BE table, belong beside the request that caused them — and `/pm:task-draft` is what opened that record.
 
 That first read matters more than it sounds. A ticket's acceptance conditions are written from the design's own structure and copy, so a label somebody invented while drawing becomes a line engineering builds against and ticks off. Reading the spec while drawing is what stops a guess from hardening into a requirement.
 
-Neither link is required. Leave `qa.baseline.prd` **empty** — written as `null`, which is how these settings say *not set*, and the check that needs it is skipped rather than failed — `/fig:qa` then files everything as needs-checking rather than as a defect, and `/fig:draw` asks you for a source instead of assuming one. Leave `task_tracker.type` at `none` and `/fig:diff` prints its table as markdown instead. You lose the linkage, not the skill.
+Neither link is required. Write `qa.baseline.prd` **empty** — as `null`, which is how these settings say *deliberately left empty*, and the check that needs it is skipped rather than failed — and `pm`'s PRD is not consulted either: `/fig:qa` then files everything as needs-checking rather than as a defect, and `/fig:draw` asks you for a source instead of assuming one. Set `task_tracker.type` to `none` and `/fig:diff` prints its table as markdown instead, and `/fig:handoff` its line. You lose the linkage, not the skill.
 
 **One more thing crosses, and it travels as data rather than as config.** Where `handoff.version` is on, `/fig:handoff` pins the moment it hands over — a Figma named version — and writes its label and date into the task doc. `/pm:task-publish` reads that line to fill the ticket's referenced-version row, and where `contract.design_match_line` is set, the done condition reads *the build matches the {version} design*. Without the pin that condition points at a target that moves the next time somebody opens the file.
 
@@ -687,6 +698,14 @@ task:
 ```
 
 The same stop names `task.link_property` where the type is anything other than `markdown`: write the name of the field that holds the ticket's link, since the default is now the markdown one. `/pm:setup` writes the missing half when you run it again, and its machine check already lists the first case as something to fix first.
+
+`fig` has the same pair since 3.28.0: `task_tracker.ref` written without `task_tracker.type`. The type used to fall back to `none`, so a ref written alone pointed nowhere. Left unset, it now borrows `pm`'s task record, and a ref alone no longer says which kind of tracker it names. Write the kind it points at beside it:
+
+```yaml
+task_tracker:
+  type: github          # the line to add — notion or github, whichever the ref names
+  ref:  "<the ref already in your file>"
+```
 
 </details>
 

@@ -77,6 +77,7 @@ AUTHORED_WITH = (
     ("task.record.type", "task.record.ref", frozenset()),
     ("task.link_property", "task.record.type", frozenset({"markdown"})),
     ("task.record.ref", "task.record.type", frozenset({"markdown", "none"})),
+    ("task_tracker.type", "task_tracker.ref", frozenset()),
 )
 
 # Why each pair stops, said after `{key} is not set in {name}, while {trigger} is —`. {value} is
@@ -92,6 +93,9 @@ AUTHORED_WHY = {
     ("task.record.ref", "task.record.type"):
         "a record kept in {value} has to say which database or repository it points at, and the "
         "plugin's own default is a local folder",
+    ("task_tracker.type", "task_tracker.ref"):
+        "the plugin's own default leaves {key} unset, which borrows pm's task record where there is "
+        "one, so a ref written alone no longer says which kind of tracker it points at",
 }
 AUTHORED_RULE = "{key} is read together with {trigger}, so the two are written together"
 

@@ -35,7 +35,7 @@ Compares AS-IS and TO-BE designs, **finds what changed and pins it with native F
 - `task_ref` (optional): the task to write up. Without it, the tracker is searched by screen or feature keyword and the candidates confirmed. Failing that, the tracker step is skipped (with the user's confirmation).
 - `shared_category` (optional): the name of the shared annotation category to reuse. Omitted, `task_tracker.annotation_category` from the config.
 
-The rules come from `figma-conventions.yaml` — `resolve-config.py --js <fileKey>` supplies `task_tracker` and `sync.pair_patterns`.
+The rules come from `figma-conventions.yaml` — `resolve-config.py --js <fileKey> --authored task_tracker.type` supplies `task_tracker` (a `task_tracker.ref` written without its type stops here too) and `sync.pair_patterns`.
 
 Always load the `figma:figma-use` skill before calling `use_figma`.
 
@@ -110,6 +110,7 @@ Only where and how they go in is decided by `task_tracker.type`.
 |---|---|---|
 | `notion` | the `ui_section_heading` section of the task page (usually behind an empty callout) | `update_content`, catching the heading and callout as `old_str` and **inserting after them**. Never replace the whole body |
 | `github` | the task issue | If the body has that section, insert beneath it; if not, add it as a comment |
+| unset (`null`) | — | As `none`. |
 | `none` | — | Nothing is written. **Emit the comparison table and the callout as markdown in the response** and stop |
 | any other | — | As `none`. The write belongs to `pm`'s adapter for that type, which this skill does not read — emit the markdown, and say which type was not handled |
 

@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Reads an unfamiliar Figma file and works backwards to its conventions, drafting a figma-conventions.yaml. Page roles, naming patterns, state suffixes, spacing tokens, section style, and arrow style are observed from actual nodes and taken as the dominant value; anything with too few samples or a split vote is left null rather than guessed, then filled in by interview. It finishes by running /fig:lint and judging the draft by its false-positive rate. Run this first when opening these skills on a new company or a new file. Triggers - "/fig:setup", "work out this file's conventions", "draft the config", "이 파일 관례 뽑아줘", "설정 초안 만들어줘", "이 파일에 맞게 세팅해줘".
+description: Reads an unfamiliar Figma file and drafts its figma-conventions.yaml. Naming, spacing, section and arrow style are observed from actual nodes; a thin or split sample stays null. What only a person knows — which pages count, the screen width, where the PRD and tasks live — is asked; the rest is left to the defaults. Ends with /fig:lint, judged by its false positives. Triggers - "/fig:setup", "work out this file's conventions", "draft the config", "이 파일 관례 뽑아줘", "설정 초안 만들어줘", "이 파일에 맞게 세팅해줘".
 allowed-tools: AskUserQuestion, Bash, Read, Write, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
 ---
 
@@ -110,13 +110,18 @@ The probe does not judge; it only reports observations. What counts as conventio
 
 ### 3. Generate the draft
 
-Save each probe result as JSON, then:
+Save each probe result as JSON, then, with the fileKey from `figma_url`:
 
 ```
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/draft-conventions.py probe1.json probe2.json ... > draft.yaml
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/draft-conventions.py --file-key {fileKey} probe1.json probe2.json ... > draft.yaml
 ```
 
-Where the sample is below `MIN_SUPPORT`, or the most common value is below `DOMINANCE`, the generator **writes no value and leaves `null`.** The `n/m` in the comment on each line is the evidence.
+The draft holds two kinds of line and nothing else:
+
+- **What the probes observed**, with the evidence as a comment — the `n/m` is how many observations out of how many carried that value. Where the sample is below `MIN_SUPPORT`, or the most common value is below `DOMINANCE`, the generator **writes no value and leaves `null`**, with the reason
+- **What only a person can answer**, left `null` for step 4
+
+Everything else — delimiters, tolerances, the tracker, the tools — is not written. The bundled defaults supply it, and the team keeps getting them as they change; a default copied into the file would read as somebody's choice and stay frozen there. Sections that look like scaffolding (`Template`, `Archive …`) are drafted as exclusion candidates under `files.{fileKey}.pages`, because they belong to this file.
 
 `null` is not a failure, it is **a record of not knowing.** Left alone, it means that check is skipped.
 
@@ -129,15 +134,26 @@ Some things never come out of observation. Show the full list first so the scale
 | `pages.strict` · `free` · `readonly` | Which page is canonical is not written on the canvas |
 | `naming.required_states` | Requires first deciding the screen type (list, form, search) |
 | `layout.section_padding` | Frame positions alone don't separate out a section's inner padding |
+| `layout.reference_frame_width` | The screen width. The probe measures sections, not the screens inside them |
 | the `arrows.trunk` family | Only shows up along elbow paths, so inference is unreliable |
 | `component_audit.body_offset` | You have to open one screen and measure nav width and top bar height |
-| `task_tracker` · `design_system` | Facts that live outside the file |
+| `qa.baseline.prd` | Lives outside the file. Where is the PRD? pm's (installed alongside: leave it unset, fig reads it) · a markdown file · a Notion page · none |
+| `task_tracker` | Lives outside the file. Where does the handover line go? pm's task files (installed alongside: leave it unset) · Notion · GitHub · nowhere |
 
-If it isn't known, leave `null`. **Do not invent a value to fill the blank.** Offer "leave it blank" on every question, out loud — a blank is a complete answer, written with the question beside it.
+**Do not invent a value to fill the blank.** Offer "leave it blank" on every question, out loud — a blank is a complete answer. Where the draft wrote the key as `null`, a blank keeps it there, with the question beside it. Where the draft did not write the key — the page rules, `component_audit.body_offset`, the PRD, the handover line — a blank leaves it out, and the bundled default answers. Writing `null` there is not the same thing: it replaces an empty page list with nothing, and a written `qa.baseline.prd: null` says this team has no PRD, while left out, the PRD and the handover line both read pm's where pm is installed.
 
 ### 5. Preview → go → write
 
-Show the full draft plus three groups — what observation filled, what the interview filled, and what stayed `null` — and get a go. If a config already exists, do not overwrite it; show **only the differences**.
+Show the full draft plus three groups — what observation filled, what the interview filled, and what stayed `null` — and get a go. If a config already exists, do not overwrite it; show **only the differences**. A key the draft leaves out is not a deletion — the existing config keeps its value, so the differences are the lines the draft adds or changes.
+
+Where each answer is written:
+
+- **Pages** — `pages.strict` · `free` · `readonly`, and the three sync axes if they came up — under `files.{fileKey}.pages`, beside any exclusion candidates the draft put there. Which page is canonical is a fact about this file; at the top level it would govern every file this config reads
+- **The PRD** — a markdown file or folder as `{ type: markdown, ref: <path> }`, a Notion page as `{ type: notion, ref: <url> }`, none as `{ type: none }`, all under `qa.baseline.prd`. pm's writes nothing
+- **The handover line** — Notion or GitHub as `task_tracker.type` together with `task_tracker.ref` (the database id, or `owner/repo`), always both; nowhere as `task_tracker.type: none`. pm's task files write nothing
+- **The rest** — at the top level, under the key the table names
+
+A key that was neither observed nor answered stays out of the file, so the bundled default stands.
 
 ### 6. First result — test the draft by its false-positive rate (required)
 
@@ -268,4 +284,4 @@ the state this whole convention exists to prevent.
 - The probe measures gaps between **adjacent pairs only.** Counting all pairs lets two- and three-step distances flood the list and collapse the mode — measured, `frame_gap` fell to 35% and became un-inferable
 - Section style, arrow style, and label pills observe accurately. In practice, color, weight, font and padding all matched the hand-written config exactly
 - Items with few samples, like `domain_row_gap`, do not come out well — staying `null` is the expected outcome
-- Anything that differs per file (the three `pages` axes, typically) belongs under `files.<fileKey>`, not in the shared section
+- Anything that differs per file belongs under `files.<fileKey>`, not in the shared section. Page rules are the usual case, so the observed draft puts its exclusion candidates under `files.<fileKey>.pages`, and step 5 writes the answers about `pages.strict` · `free` · `readonly` and the three sync axes beside them
