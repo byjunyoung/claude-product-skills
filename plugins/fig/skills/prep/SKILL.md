@@ -12,7 +12,7 @@ Like *mise en place* in a kitchen: before the design work and the arrows, every 
 
 Takes one page of a design file and (1) normalizes frame names to the convention, (2) groups them into feature-level sections and lays them out, and (3) reads what is actually on each screen to find missing cases and stub them as placeholder frames. A tidied page is only a third done — `/fig:draw` fills the stubs, then connecting the flow with `/fig:arrows` completes the set.
 
-**Prerequisites**: always load the `figma:figma-use` skill before calling `use_figma`.
+**Prerequisites**: always load the `figma:figma-use` skill before calling `use_figma`, and, before the first mutating call, `figma:figma-generate-design` alongside it (figma-use asks for both); in the `skillNames` of every mutating call name both: `figma-use,figma-generate-design`. This skill uses generate-design only for component discovery, never its page-level wrapper, which would put a new frame at the page's top level where prep places things itself. Discovery before the go stays read-only: it reads components and screens and writes nothing.
 
 **Seat check before the first write** — call `whoami` once. Where every plan it lists carries `seat: View`, stop before any `use_figma` write and say so: the reading half of this skill runs on a View seat, the writing half needs an Edit seat on the file's plan, and no retry changes that. Where the seats are mixed, go ahead — and if the first write comes back as a permission error, report the seat table and stop rather than retrying.
 
@@ -124,7 +124,7 @@ Present renames, section composition, and layout as a table:
 
 ### 3. Execute (split into steps)
 
-Never all at once — verify after each step before the next:
+Split where a failure is hard to recover (creating, absorbing); verify after a step the next one depends on (see Constraints):
 
 1. **Rename** — font-independent, safe to do in bulk
 2. **Create sections** — empty sections at the target position and size. Immediately after creation, send them to the bottom of z-order with `figma.currentPage.insertChild(0, s)` (otherwise a new section covers existing frames with a white background)
@@ -191,7 +191,7 @@ Write scripts use `${CLAUDE_PLUGIN_ROOT}/_common/scripts/prep-ops.js` as a pream
 
 - **Preview → go before writing** — renames/sections/layout (step 2) and the placeholder list (step 4) each need their own go
 - Sections matching `pages.exclude_sections` are untouched at every step: rename, move, resize, placeholder
-- No more than ten operations per call, verifying with metadata or screenshots between steps
+- **Size each call for safe retry, not to a count** (`figma-use`: "Size construction calls for safe retry and validate from evidence"). `clone()` and `createFrame` land on the page and need `absorb` before they sit in a section, so a batch that fails halfway leaves orphans on the page: keep a creation batch to one section's worth, verifying after a mutation that bears on the next step, not as a checkpoint between splits (`figma-use` forbids splitting for checkpoints). A rename is font-independent and leaves nothing behind when it fails, so renames may batch freely
 - **`clone()` and `createFrame` default their parent to currentPage, not the original node's section.** To land inside a section you must absorb (group+ungroup) and then set coordinates — otherwise the node stays page-level, and section-relative coordinates written onto it are read as absolute and it shoots off somewhere else. **Right after duplicating or creating: confirm the parent (`f.parent.type === "SECTION"`), absorb, set coordinates, audit bounds** — that is one set. Never finish on an isolated screenshot alone (see step 5)
 - A screenshot of an empty section does not render overlapping non-child frames (you get a white box) — verify absorption by querying the frame's parent instead
 - Never write an unsourced policy into a placeholder as though it were settled — behaviour without evidence is all TBD

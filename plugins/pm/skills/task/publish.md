@@ -55,7 +55,7 @@ Then read the two things step 2 is drafted from:
 
 **Read the design for what exists, not for how it looks.** Colour, spacing and size never become conditions — step 2 says why. Copy is taken from the spec first: a design still carrying placeholder text would otherwise freeze a wrong string into the contract, and reading a screen in full costs far more than reading its structure. Go deeper on one screen only where the spec left its copy blank.
 
-The design section is the one headed `task.design_heading`. Where no section carries that heading, publish falls back to the section that plays that role in the record — the one holding the design link and handover line — and the report says which heading it read. Where the record's design section carries a handover line — the links, the date, and the version the handover was pinned to — **that line is what the referenced-version row is built from, verbatim.** Do not restate it in your own words and do not substitute today's date: the point of the pin is that it names a moment somebody else can go back to.
+The design section is the one headed `task.design_heading`. Where no section carries that heading, publish falls back to the section that plays that role in the record — the one holding the design link and the handover lines — and the report says which heading it read. Where the record's design section carries handover lines — each the links, the date, and the version the handover was pinned to, appended oldest to newest — **the last handover line is what the referenced-version row is built from, verbatim.** Where there is more than one, the preview says so: "referenced version: from the last of N handover lines", so nobody reads an older pin as the current one. Do not restate it in your own words and do not substitute today's date: the point of the pin is that it names a moment somebody else can go back to.
 
 Then branch:
 
@@ -121,7 +121,7 @@ Three reasons it belongs there and not here, worth knowing because they decide t
 
 `contract.design_match_line` is appended **only where the design side is handing something over**. A ticket the engineering side filed for itself does not carry it — that side writes its own QA checklist too.
 
-**The line and the pinned version travel together: neither is written without the other.** A condition naming a version that was never saved cannot come out true or false, and it reads as satisfiable, which is worse than absent — the checker ticks it because there is nothing to check against. So where the record's design section carries no handover line, the match line, the per-screen comparison steps and the referenced-version row all stay out, and the ticket says in its links section that the design has not been handed over yet. They go in on the update pass, once it has. Where the label can be read back from the design tool, confirm it exists before writing it rather than trusting the record's text; where it cannot, the record's handover line is the authority and an invented label is never a substitute.
+**The line and the pinned version travel together: neither is written without the other.** A condition naming a version that was never saved cannot come out true or false, and it reads as satisfiable, which is worse than absent — the checker ticks it because there is nothing to check against. So where the record's design section carries no handover line at all, the match line, the per-screen comparison steps and the referenced-version row all stay out, and the ticket says in its links section that the design has not been handed over yet. They go in on the update pass, once it has. Where the label can be read back from the design tool, confirm it exists before writing it rather than trusting the record's text; where it cannot, the record's last handover line is the authority and an invented label is never a substitute.
 
 **Where that line is present, the QA section carries one step per screen** — `contract.design_match_step`, filled in for each:
 
@@ -183,7 +183,7 @@ Ask everything still missing in one `AskUserQuestion` round. **Never ask for wha
 | What changed | The body's change summary if it has one. Empty → ask, and write it back in step 9 |
 | Spec link | The record's spec property if set. Empty → ask, and store it back so the next run has it |
 | Design link | The design section of the body, else ask |
-| Referenced design version | The handover line in the record's design section, where the design side pinned one. Ask only where the line has no version, and drop the row where nobody can supply one — an invented label is worse than an absent row |
+| Referenced design version | The last handover line in the record's design section, where the design side pinned one (the preview says "from the last of N handover lines" when N > 1). Ask only where the line has no version, and drop the row where nobody can supply one — an invented label is worse than an absent row |
 | Other links | Ask — dependencies, policies |
 | Milestone | Only where `task.hierarchy.milestone_on` is not `none`, and only for a project listed in `milestone_projects`. With no `milestone_format` entry for that project, the options are the milestones already open and none is created |
 
@@ -265,7 +265,7 @@ The preview counts them apart — `{n} specific · {n} from defaults` — becaus
 
 **The spec row carries the entry's name, not only its url.** A bare link says nothing about which requirement this ticket answers, and the reader has to open it to find out.
 
-**The design link goes in exactly as it was handed over.** Where it is pinned to a specific version of the file, that pin is what makes the design-match line checkable at all; rewriting the link to a plain one silently unpins the contract. The referenced version is a file-level label, so tickets out of one handover share it and differ only in which screen they point at.
+**The design link goes in exactly as it was handed over.** Where it is pinned to a specific version of the file, that pin is what makes the design-match line checkable at all; rewriting the link to a plain one silently unpins the contract. The referenced version is a file-level label — the one on the last handover line — so tickets out of one handover share it and differ only in which screen they point at.
 
 The record link is **for a person to click**. It is not what matching reads.
 
@@ -308,7 +308,7 @@ Only where `contract.sections.requirements` is set. It answers a different quest
 
 A section written to satisfy a gate and nothing else is worth noticing rather than filling: where there is no entry to point at, the requirement does not exist yet, and step 6's fork is the honest path.
 
-**The version goes inside the match line, not on a line of its own.** `contract.design_match_line` takes `{version}`, so the condition reads as a verdict somebody can reach without looking elsewhere, and the section stays checkboxes with nothing else mixed in. The same label goes into each comparison step in the QA section, and those steps go last — they are the only ones with no click path, so putting them among the click-through steps breaks the reading order. Because the version is file-level, every ticket out of one handover carries the same label and only the node differs — which is why the link itself lives once, in the contract's links rows, rather than beside every task.
+**The version goes inside the match line, not on a line of its own.** `contract.design_match_line` takes `{version}`, so the condition reads as a verdict somebody can reach without looking elsewhere, and the section stays checkboxes with nothing else mixed in. The same label goes into each comparison step in the QA section, and those steps go last — they are the only ones with no click path, so putting them among the click-through steps breaks the reading order. Because the version is file-level, every ticket out of one handover carries the same label (the last handover line's) and only the node differs — which is why the link itself lives once, in the contract's links rows, rather than beside every task.
 
 #### When the requirement does not exist yet
 
@@ -346,6 +346,7 @@ Template     : {task.template.task or .parent}   (or "none published")
 Drafted from : {spec entry} · {design, or "no design"}
 Design section : {heading}
                (task.design_heading "{x}" not found — read by role)   ← only where step 1 fell back
+Referenced ver.: {label} — from the last of {N} handover lines   ← only where N > 1
 Coverage     : behaviour {n}/{n} · states {n}/{n} · rules {n}/{n} · round trip {n}
                covered elsewhere: {row} — {which line}
 Materials    : {entry name} ({entry kind})
@@ -511,7 +512,7 @@ On top of *Rules every mode follows* and *The tracker's own rules — `publish` 
 - **Never draft a condition the materials do not support.** A plausible-sounding line nobody agreed to is worse than a short list, because it will be built
 - **Never let a thin draft pass as a finished one.** The coverage line in the preview names every row that produced nothing and why. A short list is fine when the work is short, and visibly wrong when it is not
 - **Never write a done condition that sends the reader to the design for behaviour.** Behaviour, state, thresholds and copy are words; only what is checked by comparing a value belongs to the design, under one line
-- **Never name a version that was not pinned.** No handover line means no match line, no comparison steps and no version row — an unverifiable condition reads as satisfied
+- **Never name a version that was not pinned.** No handover line under the design heading means no match line, no comparison steps and no version row — an unverifiable condition reads as satisfied
 - **Never file a task whose done conditions are defaults only.** A list that would fit any sibling says nothing about this one
 - **Read the tracker's current schema before writing** rather than trusting ids pinned in the config — options get renamed
 - **Never edit a checklist and leave the progress and the dates behind.** The tick is what a progress figure is counted from, so an edit that moves one without the other puts the record and the ticket in disagreement the moment it lands. They move in the same approval

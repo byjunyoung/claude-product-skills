@@ -128,7 +128,7 @@ The rest of this section has each step in full. From there, [**fig**](#fig--the-
 | **The Figma MCP plugin** (`plugin:figma`) | Every `fig` skill reads and writes Figma through it. Confirm it answers before going further |
 | **A Figma file** | `/fig:setup` infers conventions by measuring a file you already work in. An empty one, or a first one, takes the starter path instead — four rules proposed in plain words, then the first skeleton laid on a page |
 | **`python3` with PyYAML, and `node`** | Config resolution runs on the host. `node` is for `fig`'s audit scripts, which are syntax-checked with `node --check`, and on the `pm` side only for the importer that brings in an existing Notion log |
-| **A Figma personal access token** *(optional)* | A key you generate in Figma yourself (Settings → Security), which lets a skill ask Figma directly instead of going through the app. `/fig:read` enumerates every page over the REST API with one; without it, it falls back to the MCP and may see only some pages. `/fig:handoff` and `/fig:sync` read a saved version back through the same API — handoff where `handoff.version` is on, sync where `sync.named_version` is set. With no token, `/fig:handoff` asks for the version's link to be pasted instead and never hands over unpinned; `/fig:sync`, which has no link to pin, reports that the version could not be confirmed |
+| **A Figma personal access token** *(optional)* | A key you generate in Figma yourself (Settings → Security), which lets a skill ask Figma directly instead of going through the app. `/fig:handoff` and `/fig:sync` read a saved version back through the same API — handoff where `handoff.version` is on, sync where `sync.named_version` is set. With no token, `/fig:handoff` asks for the version's link to be pasted instead and never hands over unpinned; `/fig:sync`, which has no link to pin, reports that the version could not be confirmed |
 | **The `gh` command** *(pm, where the tracker is GitHub)* | GitHub's own command-line tool, installed on your machine and logged in separately from Claude. The GitHub side runs on it, not on Claude's connection. Log in with the account that can see the tracker — a personal account looking at a company repository sees nothing — and give it board access once with `gh auth refresh -s read:project` |
 
 `pm` needs none of the Figma side. If you only write specs, install it alone.
@@ -146,6 +146,8 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | `/fig:handoff` `/fig:sync` | **Claude in Chrome** — optional, only to save a named version in Figma's web app; without it they hand the step back to you, with the name to use |
 | `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — only where `task_tracker.type` / `task.mirror.type` is `github`. Two logins are involved: Claude's connection, and the `gh` command the tracker is read through — `/pm:task` uses `gh` alone. The check covers both, and names the account `gh` is on |
+| `/fig:handoff` | **Notion search, or GitHub issue search** — read-only, and only where no task page is passed to the run: handoff looks in the tracker `task_tracker.ref` names for the task, and lists what it found and asks, when it finds none or several; it uses the Notion/GitHub connection above |
+| `/fig:qa` | **Write access to a folder** — only where `qa.report_dir` names one, to save the report there as a markdown file after your go. Left `null`, the report stays in the response and no report file is written |
 | `/fig:qa` `/pm:task draft` | **A chat tool** — only where the request source is a thread. For `pm`, `sources.chat_type` names it; `/fig:qa` takes the tool from the link. Slack ships |
 | `/pm:log` | **A calendar and a chat tool** — both optional, named by `sources.calendar_type` and `sources.chat_type`; Google Calendar and Slack ship. Named as `none` they are skipped and the log says so. A scheduler on your own machine, if you want it unattended |
 | `/pm:prd` | **Notion** — only where `prd.target` is `notion`. **Web search** — only where `prd.precedent.enabled` is true (the default), and only for a feature entry drafted for the first time. **A screen-reference connector** — optional, only for the services `prd.precedent.reference_sources` names. **Slack and Figma** — optional, only to read a thread or a design file among the material you hand it |
@@ -323,7 +325,7 @@ When the structure matches, it edits values rather than replacing the whole scre
 
 `deck` moves one source document into a presentation flow and builds a Figma Slides deck. It uses the team template's coordinates, colors and type as-is — when a content shape isn't in the catalog it never invents a layout, it fits the nearest archetype by trimming content or splitting the slide. `/fig:deck` measures those values into local assets on first use (a new mirror file in Figma, which it names at the end so you can delete it, and a go before each Figma write), and they stay out of the published plugin since template backgrounds carry company wordmarks.
 
-`qa` audits what actually shipped against the spec. `draw` and `sketch` take a document passed to the run; `qa` takes none and starts at `qa.baseline.prd`; left unset, that means `pm`'s PRD where `pm` is installed. The rule is that a finding reads "this breaks rule X in document Y", never "this looks off" — anything without a baseline is filed as needs-checking rather than a defect.
+`qa` audits what actually shipped against the spec. `draw` and `sketch` take a document passed to the run; `qa` takes none and starts at `qa.baseline.prd`; left unset, that means `pm`'s PRD where `pm` is installed. The rule is that a finding reads "this breaks rule X in document Y", never "this looks off" — anything without a baseline is filed as needs-checking rather than a defect. It judges against the design as the file stands now; the version a handover pinned is not yet compared. Past decisions come from `qa.baseline.tasks` (a tracker as a type and a reference, `null` to skip). The report goes to the response, and also to a markdown file in `qa.report_dir` after a preview and a "go" — `null`, the default, writes no report file.
 
 <img src=".github/qa-report.png" alt="Two findings side by side: a defect citing the spec row it breaks, and an observation with no baseline filed as a question" width="100%">
 
@@ -550,7 +552,7 @@ That first read matters more than it sounds. A ticket's acceptance conditions ar
 
 Neither link is required. Write `qa.baseline.prd` **empty** — as `null`, which is how these settings say *deliberately left empty*, and the check that needs it is skipped rather than failed — and `pm`'s PRD is not consulted either: `/fig:qa` then files everything as needs-checking rather than as a defect, and `/fig:draw` asks you for a source instead of assuming one. Set `task_tracker.type` to `none` and `/fig:handoff` prints its line instead. You lose the linkage, not the skill.
 
-**One more thing crosses, and it travels as data rather than as config.** Where `handoff.version` is on, `/fig:handoff` pins the moment it hands over — a Figma named version — and writes its label and date into the task doc. `/pm:task publish` reads that line from under `task.design_heading` to fill the ticket's referenced-version row — in a record without that heading, from the section that plays its role, saying which heading it read — and where `contract.design_match_line` is set, the done condition reads *the build matches the {version} design*. Without the pin that condition points at a target that moves the next time somebody opens the file.
+**One more thing crosses, and it travels as data rather than as config.** Where `handoff.version` is on, `/fig:handoff` pins the moment it hands over — a Figma named version — and writes its label and date into the task doc. `/pm:task publish` reads the last of the handover lines under `task.design_heading` (each handoff adds one, oldest to newest; with more than one, its preview says "from the last of N handover lines") to fill the ticket's referenced-version row — in a record without that heading, from the section that plays its role, saying which heading it read — and where `contract.design_match_line` is set, the done condition reads *the build matches the {version} design*. Without the pin that condition points at a target that moves the next time somebody opens the file.
 
 Drawn out, one feature goes round like this.
 
@@ -635,14 +637,7 @@ The file arrived without permission to run on its own. Call it as `bash <path>` 
 <details>
 <summary><b>A Figma token request comes back 401.</b></summary>
 
-Figma rejected the token — it exists, but it is expired or wrong. `/fig:read` checks that the token is set before calling, so a 401 is never "no token". Issue a new one in Figma's Security tab.
-
-</details>
-
-<details>
-<summary><b>`/fig:read` only returns some of the pages.</b></summary>
-
-Without a token it can only see what the desktop app has open. To list every page it needs a token — see the prerequisites.
+Figma rejected the token — it exists, but it is expired or wrong. `/fig:handoff` and `/fig:sync` check that the token is set before calling, so a 401 is never "no token". Issue a new one in Figma's Security tab.
 
 </details>
 

@@ -1,7 +1,7 @@
 ---
 name: code
 description: Applies a Figma design to a frontend repo once it is ready to build, as a branch and a PR that port what changed with minimal edits or build what exists only in the design, following the repo's own conventions. Triggers - "/fig:code", "apply this design to the code", "implement this screen in the frontend", "시안 코드에 반영해줘", "피그마 바뀐 거 앱에 적용", "시안대로 코드 고쳐줘".
-allowed-tools: AskUserQuestion, Bash, Read, Write, Edit, Glob, Grep, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_variable_defs, mcp__plugin_figma_figma__download_assets, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__read_console_messages
+allowed-tools: AskUserQuestion, Bash, Read, Write, Edit, Glob, Grep, Skill, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_variable_defs, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__read_console_messages
 ---
 
 # fig:code — Figma design → frontend repo code
@@ -72,7 +72,7 @@ Follow exactly what turns up here. Even where a better approach suggests itself,
 - Take structure, numbers, and tokens from `get_design_context` and the visual from `get_screenshot`, together. Either one alone goes wrong.
 - Where token names are needed, `get_variable_defs`. If the design is bound to variables, **bind the code to the corresponding tokens. No hardcoded hex or px.**
 - **Labels and copy verbatim from the design.** Even where better wording suggests itself, do not change it — copy was decided alongside the plan doc.
-- Do not redraw images, icons, or illustrations in code; pull the originals with `download_assets`. Imitating them in code ends up inventing behaviour the design never had.
+- Do not redraw images, icons, or illustrations in code; take the originals from the `get_design_context` response, downloaded as that response describes, with no temporary Figma asset URL left in the code (`figma-design-to-code`: "DO NOT use other tools to download assets unless explicitly told to do so"). Imitating them in code ends up inventing behaviour the design never had.
 - **In change mode, build the comparison table here first** — design values beside current code values, so only the places that actually moved are picked out.
 
 | Item | Design | Current code | Action |

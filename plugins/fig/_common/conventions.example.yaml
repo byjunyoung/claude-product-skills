@@ -239,13 +239,6 @@ task_tracker:
 # company wordmark, which must never ship inside a plugin.
 deck:
   assets_dir: "./deck-assets"   # use ~/.claude/deck-assets if several projects share a template
-  template_file: null           # Slides file key of the team template. null means the measuring step asks
-  # Archetype fidelity. A template is a menu, so the more archetypes you draw
-  # from, the more title positions scatter across the deck.
-  #   title-unified       keep each archetype's coordinates, but allow one title family
-  #   archetype-original  every archetype as-is. content tops landing on several values is expected
-  fidelity: title-unified
-  batch_size: 4                 # slides built per use_figma call
 
 # --- QA (/fig:qa) --------------------------------------------------------------
 # Audit against a plan of record. Labels and field names are whatever your bug
@@ -261,7 +254,12 @@ qa:
     # pm is not consulted. ref: null means pm's PRD, where pm is installed.
     prd:    { type: markdown, ref: null }
     design: figma                             # design source — figma | none
-    tasks:  null                              # task tracker, for past decisions and reversals
+    # Where past decisions and reversals are kept, as { type, ref } — the same shape as
+    # task_tracker above.
+    #   type  markdown | notion | none
+    #   ref   a folder of task files, or a Notion database (qa has no GitHub read path)
+    # null for either (or type: none) means qa does not read past decisions: that collection is skipped.
+    tasks:  { type: null, ref: null }
 
   severity:  [Critical, High, Medium, Low]    # worst first
   frequency: [Always, Sometimes, Once]
@@ -269,13 +267,18 @@ qa:
   # Fields written per defect. Match your bug report form one to one.
   report_fields: [Severity, Frequency, Steps, Expected, Actual, Evidence]
 
+  # Where the defect report goes besides the response. A folder: qa writes one markdown file there,
+  # named for the feature and the date, after showing it and getting a "go". null means
+  # response only — no report file is written (screenshots taken while testing are saved either way).
+  report_dir: null
+
   environments: {}                            # name → url, e.g. dev: "https://dev.example.com"
   allow_write: false                          # even when true, creates and deletes are confirmed each time
 
 # --- Tools ---------------------------------------------------------------------
 tools:
-  figma_token_env: FIGMA_TOKEN                # env var holding the PAT, for REST paths
-  frame_count_guard: 20                       # above this many frames, confirm before collecting screenshots
+  figma_token_env: FIGMA_TOKEN                # env var holding the PAT (scope file_versions:read), for the version read-back in handoff and sync; version-pin.md step 4 reads it and checks it is non-empty before calling
+  frame_count_guard: 20                       # above this many frames, confirm before collecting screenshots (/fig:read, default 20)
   proto_output_dir: "."                       # where working prototypes are written
   proto_publish:                              # an unset repo stays local and never offers to publish
     repo: null                                # <owner>/<repo>

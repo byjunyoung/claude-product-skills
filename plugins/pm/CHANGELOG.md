@@ -1,5 +1,9 @@
 # pm
 
+## 0.40.0 — 2026-10-19
+
+- **`/pm:task publish` reads the last handover line under the design heading as the referenced version, and says so when there is more than one.** `fig` appends a line in each handoff run, oldest to newest, in all three trackers; publish had said "the handover line" as if there were one, so a second handover left it with nothing to choose by. Now the referenced-version row is built from the last line verbatim, and with more than one the preview reads "referenced version: from the last of N handover lines", so an older pin is not mistaken for the current one. No config key, script or adapter changes; `resolve-config.py` and `preflight.py` are untouched and still identical with `fig`'s
+
 ## 0.39.1 — 2026-10-19
 
 - Two documents describing `fig` caught up with `fig` 3.29.0, which removed `/fig:diff`: the trackers README no longer says `/fig:diff` writes into a task doc with calls of its own, and this plugin's README, in "The other half", says that where `task_tracker` names Notion or GitHub it is `/fig:handoff` that writes its line there. Both had named a skill that no longer exists. No skill, config key or script changes; `resolve-config.py` and `preflight.py` are untouched and still identical with `fig`'s

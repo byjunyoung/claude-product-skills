@@ -28,7 +28,7 @@ The source template file is usually outside MCP's reach. When it is, make a mirr
 
 1. **Check the seat first** — `whoami`. A plan listed with `seat: View` cannot take the `use_figma` writes that steps 1 and 5 are made of; stop and say so rather than creating a file that cannot be built in
 2. **Preview, then wait for the go.** Say what will be created — a new empty Slides file named `deck-template-mirror`, in the person's drafts, which this run will leave behind and name in the closing report — and ask "go?" Nothing is created before it
-3. After the go, create the empty Slides file — `create_new_file`, editorType `slides`. Keep its name and link for the report
+3. After the go, load `figma:figma-create-new-file` (before every `create_new_file` call), then create the empty Slides file — `create_new_file`, editorType `slides`. The file starts with Figma's default light theme, which is scaffolding only (`figma-use-slides`): take nothing from it. Keep its name and link for the report
 4. **Ask the user to apply the team template from the Templates panel, and wait.** MCP cannot apply it
 5. Applying it pulls in the sample slides wholesale. Those are the source for the catalog
 

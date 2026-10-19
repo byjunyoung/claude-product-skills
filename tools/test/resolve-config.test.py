@@ -281,6 +281,14 @@ with tempfile.TemporaryDirectory() as tmp:
     r = run_script(FIG, old_proj, bare, "--name", FIG_NAME)
     check("retired keys are tolerated", r.returncode == 0 and parse(r) is not None, f"rc={r.returncode} {r.stderr.strip()}")
 
+    # 13. The deck keys nothing reads (template_file, fidelity, batch_size) left the example; a
+    #     config that still sets them must keep resolving.
+    dk_proj = Path(tmp) / "dk-proj"
+    dk_proj.mkdir()
+    (dk_proj / FIG_NAME).write_text("deck:\n  template_file: abc\n  fidelity: title-unified\n  batch_size: 4\n")
+    r = run_script(FIG, dk_proj, bare, "--name", FIG_NAME)
+    check("retired deck keys are tolerated", r.returncode == 0 and parse(r) is not None, f"rc={r.returncode} {r.stderr.strip()}")
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures))
