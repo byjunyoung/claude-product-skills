@@ -65,7 +65,9 @@ It prints `{"action", "dir", "heading", "script", "adapter", "note"}`, and `acti
 | `notion`, `github` | Unchanged — the method `/fig:diff` uses for that tracker |
 
 - **Exit 3** — fig's own config has a `task_tracker.ref` without its `task_tracker.type`. Stop, and name the setting the message names
-- **The task file** (`write` only) is the `task` input. Without one, run `python3 {script} list --dir {dir}` and pick: one record whose `title` clearly matches the feature → use it, and say which; otherwise ask
+- **Exit 1** — say what it printed and stop. Do not fall back to `print`
+- **`action` always decides; the `task` input never overrides it.** Under `print`, nothing is written even when a file path was given — show the line and the note. Under `notion` or `github`, a `task` url names the page or issue to update, as before. When the input's kind disagrees with the action (a GitHub issue while the action is `write`, say), the action decides and the skill says so
+- **The task file** (`write` only) is the `task` input; `Read` the path before the preview, and a missing file stops there and says so. Without one, run `python3 {script} list --dir {dir}` and pick: one record whose `title` clearly matches the feature → use it, and say which; otherwise ask
 - **`list` prints nothing** — the folder is missing or empty, so no task exists yet. Handle it as `print`, with the note "no task file yet — `/pm:task-draft` makes one, and the next handoff writes into it"
 
 ## Procedure
@@ -136,7 +138,7 @@ The task-doc line, where `action` writes one — nothing in the Figma file. For 
 python3 {script} append-under --path {file} --heading "{heading}" --line "{line}"
 ```
 
-It adds the heading when it is missing, and a second run gives one heading. Exit 4 means the file is missing — stop and say so. Under `print` the line goes in the response instead.
+It adds the heading when it is missing, and a second run gives one heading. Exit 4 means the file named in the preview is missing — stop and say so. Under `print` the line goes in the response instead.
 
 ### 6. Read back
 
