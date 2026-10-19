@@ -152,7 +152,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | `/fig:draw` | **A screen-reference connector** — optional, only for the services `references.sources` names, and only when a new pattern has to be defined |
 | `/fig:draw` `/fig:sketch` `/fig:qa` `/fig:handoff` | **pm** — optional. Installed alongside (0.38.0 or later), its PRD and its markdown task files are read and written. Without it, they still run, and say what they could not borrow |
 
-The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The first Chrome row is not — those three open a browser.
+The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The Claude in Chrome row for `/fig:proto`, `/fig:code` and `/fig:qa` is not — those three open a browser.
 
 Notion, GitHub, markdown, Slack and Google Calendar come with support built in; the rows read the same for any other tool your settings name.
 
@@ -247,7 +247,9 @@ settings and it writes the support from what is connected. What it could not try
 unverified, and the mark comes off the first time a `/pm:task` run makes that call work; a marked
 write that fails stops the run and names the call.
 
-**deck.** On first use, `/fig:deck` measures your team's slide template into `~/.claude/deck-assets`.
+**deck.** On first use, `/fig:deck` measures your team's slide template into `./deck-assets` — a folder in the
+project you run it from, the default of `deck.assets_dir`. Run it from another folder and it measures again there;
+a team sharing one template across projects can point `deck.assets_dir` at a shared folder, such as `~/.claude/deck-assets`.
 The plugin ships no template values at all, because deck backgrounds carry company wordmarks
 and can't be distributed. It runs the first time you use `/fig:deck`, and again whenever you tell it the template was revised.
 
@@ -377,7 +379,7 @@ flowchart TD
 | `/fig:qa` | Audit a shipped screen against the PRD (a markdown file, a Notion page, or `pm`'s) and the design, and report defects, each with screenshots |
 | `/fig:deck` | Turn a source document into a Figma Slides deck |
 
-`/fig:diff` → (removed — Dev Mode's *Compare changes* shows what changed; no written AS-IS/TO-BE record)
+`/fig:diff` → (removed — Dev Mode's *Compare changes* shows what changed, on a Dev Mode seat and between a frame and its own version history rather than two separate frames; no written AS-IS/TO-BE record)
 
 `/fig:deck-setup` → `/fig:deck` (measuring the slide template is now its first step)
 
@@ -641,7 +643,7 @@ Without a token it can only see what the desktop app has open. To list every pag
 <details>
 <summary><b>`/fig:deck` asks for the team template and creates a file before building anything.</b></summary>
 
-That is the first-use measuring step: the slide template has not been measured into `~/.claude/deck-assets` yet. It creates an empty mirror Slides file (after your go), asks you to apply the team template there, and reads the values from it. The plugin ships no template, because template backgrounds carry company wordmarks. It stops here if your seat in the plan is View (it checks first), or if there is no template to apply.
+That is the first-use measuring step: the slide template has not been measured into `deck.assets_dir` yet — `./deck-assets` in the folder you run it from, unless you pointed it at a shared folder, so a project opened from another folder measures again. It creates an empty mirror Slides file (after your go), asks you to apply the team template there, and reads the values from it. The plugin ships no template, because template backgrounds carry company wordmarks. It stops here if your seat in the plan is View (it checks first), or if there is no template to apply.
 
 </details>
 

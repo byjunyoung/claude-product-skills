@@ -75,6 +75,8 @@ transition tree     ->  the flow arrows                /fig:arrows
 what differs        ->  Dev Mode's Compare changes     (in Figma)
 ```
 
+*Compare changes* needs a Dev Mode seat, and it compares a frame with its own version history, not two separate frames — so it shows what differs once the screen itself has been changed in place.
+
 So this skill writes no file and no Figma node, and the report says where each settled item goes next rather than storing it. Where somebody needs the sketch outside this conversation, it is the conversation's own text — copy it from there.
 
 ## Handing on to draw

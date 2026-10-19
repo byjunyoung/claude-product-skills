@@ -32,7 +32,7 @@ preview → go.
 
 - Laying the skeleton and stubbing missing states → `/fig:prep`
 - Checking rules only → `/fig:lint`
-- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma
+- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma — it needs a Dev Mode seat, and compares a frame with its own version history, not two separate frames
 - Filing the task as a ticket → `/pm:task publish`
 - After release, bringing canonical current → `/fig:sync`
 

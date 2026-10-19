@@ -276,6 +276,31 @@ for rel in ("README.md", "README.ko.md"):
     check(f"{rel} Notion row no longer names lint and sync",
           bool(row) and "/fig:lint" not in row and "/fig:sync" not in row, row)
 
+# ---- sentences that have to stay true ----------------------------------------------------------------
+# Compare changes is offered as diff's replacement, so wherever it is, its limits are said beside it
+limits = []
+for rel in ("README.md", "README.ko.md"):
+    for l in read(rel).splitlines():
+        if "Compare changes" in l and not ("Dev Mode seat" in l or "Dev Mode 좌석" in l):
+            limits.append(rel)
+for sk in ("code", "draw", "handoff", "sync", "sketch"):
+    for l in read(f"plugins/fig/skills/{sk}/SKILL.md").splitlines():
+        if "Compare changes" in l and "->" not in l and "Dev Mode seat" not in l:
+            limits.append(sk)
+check("every offer of Compare changes says it needs a Dev Mode seat and compares one frame's history",
+      not limits and "Dev Mode seat" in read("plugins/fig/skills/sketch/SKILL.md"), ", ".join(limits))
+check("CLAUDE.md says a long description fails", "reported as a warning" not in read("CLAUDE.md"))
+seat = read("plugins/fig/skills/setup/SKILL.md").split("The seat is not visible", 1)[-1].split("\n- ", 1)[0]
+check("setup does not claim handoff checks the seat with whoami",
+      not re.search(r"`/fig:handoff`[^—]*— check it themselves with `whoami`", seat), seat[:200])
+for rel in ("README.md", "README.ko.md"):
+    t = read(rel)
+    check(f"{rel} gives the deck assets default and the shared-folder option",
+          "`./deck-assets`" in t and "deck.assets_dir" in t
+          and all("deck.assets_dir" in l for l in t.splitlines() if "~/.claude/deck-assets" in l))
+check("README names the Chrome row rather than counting it",
+      "The first Chrome row" not in read("README.md") and "첫 Chrome 줄" not in read("README.ko.md"))
+
 # ---- descriptions in one shape ---------------------------------------------------------------------
 import glob
 for f in sorted(glob.glob(str(REPO / "plugins/fig/skills/*/SKILL.md"))):

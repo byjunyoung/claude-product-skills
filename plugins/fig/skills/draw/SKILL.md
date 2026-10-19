@@ -28,7 +28,7 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 - Checking for violations only, zero writes → `/fig:lint`
 - Auditing token bindings → `/fig:tokens`
 - Applying finished work into the canonical page → `/fig:sync`
-- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma
+- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma — it needs a Dev Mode seat, and compares a frame with its own version history, not two separate frames
 - Turning a finished design into a working prototype → `/fig:proto`
 - Applying a finished design to front-end code → `/fig:code`
 

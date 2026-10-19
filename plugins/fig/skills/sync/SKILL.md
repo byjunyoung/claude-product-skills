@@ -23,7 +23,7 @@ The canonical page is supposed to be "what is running right now", but shipping a
 
 ## When NOT to invoke
 
-- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma
+- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma — it needs a Dev Mode seat, and compares a frame with its own version history, not two separate frames
 - Naming and section tidying, stubbing placeholders → `/fig:prep`
 - Checking for violations only → `/fig:lint`
 - Flow arrows → `/fig:arrows`
