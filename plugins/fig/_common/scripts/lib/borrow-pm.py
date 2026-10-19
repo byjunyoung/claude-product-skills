@@ -15,7 +15,19 @@ Usage
 Each prints one JSON object. Exit 0 for every answer — "print the line instead" is an answer, not
 a failure. Exit 3 when fig's own config stops on a key written without its pair; its message
 passes through untouched, so it reads the same as from every other skill. Exit 6 when --spec-url
-names something this cannot read as a PRD. Exit 1 on a usage error.
+names something this cannot read as a PRD. Exit 1 on a usage error, or where fig's own config
+could not be read at all — a malformed figma-conventions.yaml, or its reader timing out — with
+that reader's stderr passed through.
+
+The PRD is looked for in this order, and the first step that answers is the answer:
+    1. --spec-url, read by spec_kind.
+    2. qa.baseline.prd in fig's config. null, or type none: no PRD, and pm is not asked. A ref:
+       that document. A type other than markdown with no ref: none, with a note asking for the
+       link — the config says the PRD lives somewhere pm's files are not, so pm's files are not
+       a stand-in for it. A plain string is an older config's Notion page, an empty one included.
+    3. pm's prd.markdown.dir — only where the type is markdown (written, or the floor's) and the
+       ref is null, and pm is installed, new enough, and keeps its PRD in markdown or git.
+    4. none.
 
 It reads and never writes. pm's config is read by pm's own resolve-config.py, never by fig's
 copy: each copy finds the bundled defaults beside itself, so fig's copy would read pm's file
@@ -317,7 +329,23 @@ def pm_config(pm, cwd):
                 return cfg, None
         except ValueError:
             pass
-    return None, "pm's config could not be read — " + (lines[-1] if lines else f"exit {r.returncode}")
+    return None, "pm's config could not be read — " + (failure(r.stderr) or f"exit {r.returncode}")
+
+
+def failure(stderr):
+    """The part of a reader's stderr that says why it failed. Under a traceback that is the
+    exception line and every line after it — a YAML error carries the file, line and column on
+    lines of their own, and the exception line alone would drop where the mistake is. Without a
+    traceback, the last line."""
+    raw = (stderr or "").splitlines()
+    heads = [i for i, l in enumerate(raw) if l.startswith("Traceback (most recent call last)")]
+    if heads:
+        tail = raw[heads[-1] + 1:]
+        for i, l in enumerate(tail):
+            if l.strip() and not l[0].isspace():          # frames are indented; the exception is not
+                return "; ".join(x.strip() for x in tail[i:] if x.strip())
+    lines = lines_of(stderr)
+    return lines[-1] if lines else None
 
 
 def dig(cfg, dotted):
@@ -398,7 +426,7 @@ def decide_prd(cfg, pm, cwd):
     out = {"type": "none", "ref": None, "from": None, "split": None, "candidates": [], "note": None}
     baseline = dig(cfg, "qa.baseline")
     prd = baseline.get("prd") if isinstance(baseline, dict) else None
-    if isinstance(prd, str):                       # an older config: a string is a Notion page
+    if isinstance(prd, str):                       # an older config: a string is a Notion page, "" too
         prd = {"type": "notion", "ref": prd}
     if not isinstance(prd, dict):
         if prd is not None:
@@ -406,6 +434,12 @@ def decide_prd(cfg, pm, cwd):
         return out                                 # null: this team has no PRD, and pm is not asked
     kind, ref = word(prd.get("type")), text(prd.get("ref"))
     if kind in (None, "none"):
+        return out
+    if not ref and kind != "markdown":
+        # The config says the PRD is in notion (or elsewhere) without saying which page. pm's
+        # markdown files are not that document, so they are not offered in its place.
+        out.update(note=f"qa.baseline.prd names {str(prd.get('type')).strip()} but no page "
+                        f"— pass the PRD's link", **{"from": "qa.baseline.prd"})
         return out
     if ref:
         if kind == "notion":
@@ -425,7 +459,7 @@ def decide_prd(cfg, pm, cwd):
             out["note"] = (f"qa.baseline.prd.type {prd.get('type')} is not one fig reads "
                            f"(markdown, notion or none), so no PRD is read.")
         return out
-    # ref null: pm's PRD, where pm is installed
+    # type markdown and ref null: pm's PRD, where pm is installed
     if pm is None:
         out["note"] = "qa.baseline.prd names no document and pm is not installed, so there is no PRD to read."
         return out

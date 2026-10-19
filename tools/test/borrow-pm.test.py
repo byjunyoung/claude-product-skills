@@ -12,7 +12,7 @@ pre-push hook exports GIT_DIR, and the children inherit whatever this hands them
 pm is "installed" by copying plugins/pm into <cfg>/plugins/cache/m/pm/<ver> and naming it in a
 registry as pm@m. The machine's own registry is never read.
 """
-import importlib.util, json, os, shutil, site, subprocess, sys, tempfile
+import importlib.util, json, os, re, shutil, site, subprocess, sys, tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -154,8 +154,23 @@ with tempfile.TemporaryDirectory() as tmp:
     cwd = project(pm="task:\n  record:\n    type: notion\n    ref: \"collection://x\"\n  link_property: Ticket\n")
     before = tree(cwd)
     r = run(cfg_ok, cwd, "task")
+    out = parse(r)
     check("unset + pm record on notion → print",
-          parse(r).get("action") == "print" and tree(cwd) == before, f"{r.stdout}{r.stderr} {tree(cwd)}")
+          out.get("action") == "print" and "markdown task files" in (out.get("note") or "")
+          and tree(cwd) == before, f"{r.stdout}{r.stderr} {tree(cwd)}")
+
+    r = run(cfg_ok, project(pm="task:\n  record:\n    type: notion\n"), "task")
+    out = parse(r)
+    check("pm's own guard exits 3 → print, with a note quoting the first stderr line",
+          r.returncode == 0 and out.get("action") == "print"
+          and "task.record.ref is not set" in (out.get("note") or ""), r.stdout + r.stderr)
+
+    r = run(cfg_ok, project(pm="task:\n  record: {type: [\n"), "task")
+    note = parse(r).get("note") or ""
+    check("pm's config unreadable → print, the note keeps the error and where it is",
+          parse(r).get("action") == "print" and "while parsing" in note
+          and "pm-conventions.yaml" in note and re.search(r"line \d+, column \d+", note) is not None,
+          r.stdout + r.stderr)
 
     fig_md = "task_tracker:\n  type: markdown\n  ref: ./work\n"
     r = run(cfg_ok, project(fig=fig_md), "task")
@@ -193,6 +208,14 @@ with tempfile.TemporaryDirectory() as tmp:
     check("prd: explicit null → none, pm not tried",
           out.get("type") == "none" and "from" in out and out["from"] is None and out.get("candidates") == [],
           r.stdout + r.stderr)
+
+    for label, fig in (("prd: notion without ref → none, note", "prd: {type: notion, ref: null}"),
+                       ("prd: notion with an empty ref → none, note", "prd: {type: notion, ref: \"\"}"),
+                       ("prd: legacy empty string → none, note", "prd: \"\"")):
+        r = run(cfg_ok, project(fig=f"qa:\n  baseline:\n    {fig}\n", files={"docs/prd/store-app.md": store}), "prd")
+        out = parse(r)
+        check(label, out.get("type") == "none" and out.get("from") == "qa.baseline.prd"
+              and out.get("candidates") == [] and "link" in (out.get("note") or ""), r.stdout + r.stderr)
 
     r = run(cfg_ok, project(files={"docs/prd/store-app.md": store}), "prd")
     out = parse(r)
