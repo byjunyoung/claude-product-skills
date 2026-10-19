@@ -1,5 +1,9 @@
 # pm
 
+## 0.39.1 — 2026-10-19
+
+- Two documents describing `fig` caught up with `fig` 3.29.0, which removed `/fig:diff`: the trackers README no longer says `/fig:diff` writes into a task doc with calls of its own, and this plugin's README, in "The other half", says that where `task_tracker` names Notion or GitHub it is `/fig:handoff` that writes its line there. Both had named a skill that no longer exists. No skill, config key or script changes; `resolve-config.py` and `preflight.py` are untouched and still identical with `fig`'s
+
 ## 0.39.0 — 2026-10-19
 
 - **The three task skills are now one, `/pm:task`, with the mode as a word after it: `/pm:task-draft` → `/pm:task draft`, `/pm:task-publish` → `/pm:task publish`, `/pm:task-sync` → `/pm:task sync`.** The old names stop answering in this release — nothing is left under them to redirect — so a saved prompt or a scheduled run that types one finds no skill; both root READMEs carry the same map. The three had each kept their own copy of the config steps, the adapter lookup and the rules they shared, and a fix to one copy reached the others only when somebody remembered to make it again

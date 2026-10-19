@@ -143,6 +143,7 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 | 스킬 | 추가로 필요한 것 |
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — 실제 브라우저를 띄웁니다 |
+| `/fig:handoff` `/fig:sync` | **Claude in Chrome** — 선택. 피그마 웹앱에서 이름 붙인 버전을 저장할 때만 씁니다. 없으면 그 단계를 쓸 이름과 함께 사용자에게 넘깁니다 |
 | `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — 설정이 Notion 페이지를 가리킬 때만 |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — `task_tracker.type` / `task.mirror.type`이 `github`일 때만. 로그인이 둘입니다 — Claude의 연결 하나, 트래커를 읽는 `gh` 명령 하나. `/pm:task`는 `gh`만 씁니다. 점검이 둘 다 보고 `gh`가 어느 계정인지 알려줍니다 |
 | `/fig:qa` `/pm:task draft` | **채팅 도구** — 요청 출처가 스레드일 때만. `pm`은 `sources.chat_type`이 지목하고, `/fig:qa`는 링크에서 도구를 압니다. Slack이 딸려 옵니다 |
@@ -151,7 +152,7 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 | `/fig:draw` | **화면 레퍼런스 연결** — 선택, `references.sources`가 지목한 서비스만, 그것도 새 패턴을 정의해야 할 때만 |
 | `/fig:draw` `/fig:sketch` `/fig:qa` `/fig:handoff` | **pm** — 선택. 함께 깔려 있으면(0.38.0 이상) 그 기획서를 읽고 마크다운 일감 파일에 씁니다. 없어도 그대로 돌고, 무엇을 빌리지 못했는지 말합니다 |
 
-연결 줄은 조건부입니다. 설정을 `none`이나 마크다운으로 두면 스킬은 그대로 돌고 결과만 다른 곳에 씁니다. Chrome 줄은 조건부가 아닙니다 — 저 셋은 브라우저를 엽니다.
+연결 줄은 조건부입니다. 설정을 `none`이나 마크다운으로 두면 스킬은 그대로 돌고 결과만 다른 곳에 씁니다. 첫 Chrome 줄은 조건부가 아닙니다 — 저 셋은 브라우저를 엽니다.
 
 지원이 딸려 오는 도구는 Notion·GitHub·markdown·Slack·Google Calendar입니다. 설정이 다른 도구를 지목해도 위 줄들은 같은 뜻으로 읽힙니다.
 
@@ -290,7 +291,7 @@ claude plugin update fig        # pm 도 깔았으면 함께. 적용은 재시�
 /fig:sync     작업분이 정본에 반영됐는지 전수 대조 → 반영 → 아카이브 이관
 ```
 
-작업본과 정본은 화면 이름이 똑같아서 이름 비교로는 뭐가 빠졌는지 알 수 없습니다. 화면 안의 글자, 화면 높이, 컴포넌트 연결 세 가지를 함께 보고 판정합니다.
+작업본과 정본은 화면 이름이 똑같아서 이름만으로는 바뀐 게 넘어갔는지 알 수 없습니다. 작업 화면마다 이름이 같은 `[화면]-[상태]`의 정본 화면을 짝으로 놓고, 그 짝의 글자, 화면 높이, 컴포넌트 연결 세 가지를 함께 보고 판정합니다. 이름이 `[화면]-[상태]` 꼴이 아닌 작업 화면은 짐작하지 않고 물어보며, 이름 정리는 `/fig:prep`이 먼저 합니다.
 
 구조가 같으면 화면을 통째로 옮기지 않고 값만 고칩니다. 노드 id가 유지돼 기획서나 티켓에 걸어둔 딥링크가 안 끊깁니다.
 
@@ -770,6 +771,7 @@ plugins/
       proto   code  qa     deck           각 SKILL.md (+ setup.md, pitfalls.md)
     _common/
       conventions.example.yaml           설정 스키마 + 내장 기본값
+      version-pin.md                     이름 붙인 버전 저장 절차 하나, 핸드오프와 sync가 같이 읽음
       scripts/
         audit-struct.js                  소속·경계·겹침·네이밍·순번
         audit-flow.js                    화살표 수치·진입방향·관통·라벨·커버리지

@@ -143,6 +143,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | Skill | Also needs |
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — they drive a real browser |
+| `/fig:handoff` `/fig:sync` | **Claude in Chrome** — optional, only to save a named version in Figma's web app; without it they hand the step back to you, with the name to use |
 | `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — only where `task_tracker.type` / `task.mirror.type` is `github`. Two logins are involved: Claude's connection, and the `gh` command the tracker is read through — `/pm:task` uses `gh` alone. The check covers both, and names the account `gh` is on |
 | `/fig:qa` `/pm:task draft` | **A chat tool** — only where the request source is a thread. For `pm`, `sources.chat_type` names it; `/fig:qa` takes the tool from the link. Slack ships |
@@ -151,7 +152,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | `/fig:draw` | **A screen-reference connector** — optional, only for the services `references.sources` names, and only when a new pattern has to be defined |
 | `/fig:draw` `/fig:sketch` `/fig:qa` `/fig:handoff` | **pm** — optional. Installed alongside (0.38.0 or later), its PRD and its markdown task files are read and written. Without it, they still run, and say what they could not borrow |
 
-The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The Chrome rows are not — those three open a browser.
+The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The first Chrome row is not — those three open a browser.
 
 Notion, GitHub, markdown, Slack and Google Calendar come with support built in; the rows read the same for any other tool your settings name.
 
@@ -294,7 +295,7 @@ Before it draws anything, though, it asks a question that is easy to skip: **how
 /fig:sync     Full audit of what made it into canonical → apply → archive
 ```
 
-Working copies and the canonical page use identical screen names, so comparing names tells you nothing about what's missing. The audit judges on three signals together: the text inside a screen, the screen's height, and its component links.
+Working copies and the canonical page use identical screen names, so a name alone cannot say whether a change made it across. The audit pairs each working screen with the canonical one of the same `[screen]-[state]` name and judges on three signals together: the text inside the pair, the screen's height, and its component links. A working screen whose name does not follow `[screen]-[state]` is asked about rather than guessed at; `/fig:prep` normalises names first.
 
 When the structure matches, it edits values rather than replacing the whole screen. Node ids survive, so deep links from specs and tickets keep working.
 
@@ -775,6 +776,7 @@ plugins/
       proto   code  qa     deck           one SKILL.md each (plus setup.md, pitfalls.md)
     _common/
       conventions.example.yaml           config schema + bundled defaults
+      version-pin.md                     saving a named version, one procedure read by handoff and sync
       scripts/
         audit-struct.js                  membership, bounds, overlap, naming, ordering
         audit-flow.js                    arrow geometry, entry direction, pass-through, labels, coverage
