@@ -12,6 +12,10 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 
 **Prerequisites**: always load the `figma:figma-use` skill before calling `use_figma`. **Assembly is not this skill's work** — where a screen needs components discovered, imported and composed, load `figma:figma-generate-design` and let it do that; where a component master or a variant set has to be built, `figma:figma-generate-library`. This skill decides what gets drawn, where it belongs and what it has to match, and hands the building to them.
 
+**What draw takes from `figma:figma-generate-design`:** its component discovery (the Code Connect check and the inspection of screens already in the file) and its way of editing an existing screen. **What it does not take:** the page-level wrapper frame and `html_to_figma`, because draw clones a canonical screen, so the screen already exists inside its section and there is nothing to wrap or to build from HTML.
+
+**Before the first mutating `use_figma` call**, load `figma:figma-generate-design` alongside `figma:figma-use` (`figma-use` SKILL.md:15), and in the `skillNames` of every mutating call name both: `figma-use,figma-generate-design`.
+
 **Seat check before the first write** — call `whoami` once. Where every plan it lists carries `seat: View`, stop before any `use_figma` write and say so: reading the file works on a View seat, writing to it needs an Edit seat on that file's plan, and no retry changes that. Where the seats are mixed, go ahead — and if the first write comes back as a permission error, report the seat table and stop rather than retrying.
 
 ## When to invoke

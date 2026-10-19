@@ -68,6 +68,24 @@ ex = read("plugins/fig/_common/conventions.example.yaml")
 tl = next((l for l in ex.splitlines() if l.strip().startswith("figma_token_env:")), "")
 check("figma_token_env comment says handoff and sync use it", "handoff" in tl and "sync" in tl, tl)
 
+# ---- Task 2: draw and prep name what they take from generate-design; prep's batching has a reason ----
+draw = read(SK + "draw/SKILL.md")
+prep = read(SK + "prep/SKILL.md")
+used = next((l for l in draw.splitlines() if "What draw takes from" in l), "")
+used_part, _, not_part = used.partition("What it does not take")
+check("draw names generate-design's parts used and not used",
+      "component discovery" in used_part and "existing screen" in used_part
+      and "wrapper" in not_part and "html_to_figma" in not_part
+      and "canonical screen" in not_part and "html_to_figma" not in used_part
+      and draw.count("html_to_figma") == 1, used[:120])
+check("draw names both skills in mutating calls",
+      "skillNames" in draw and "figma-generate-design" in draw.split("skillNames", 1)[1][:200]
+      and "before the first mutating" in draw.lower())
+bat = next((l for l in prep.splitlines() if "safe retry" in l or "retry-safe" in l), "")
+check("prep's batching states retry safety, not a count",
+      bool(bat) and "orphan" in bat and "absorb" in bat and "rename" in bat.lower()
+      and "ten operations" not in prep and not re.search(r"≤\s*10|no more than ten", prep, re.I), bat[:120])
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")
