@@ -56,9 +56,22 @@ def fm_of_text(text):
 # ---- /fig:diff -----------------------------------------------------------------------------------
 check("diff skill folder is gone", not (REPO / "plugins/fig/skills/diff").exists())
 
-stale = [f"{rel}:{n}" for rel, text in tracked_text_files()
-         for n, line in enumerate(text.splitlines(), 1)
-         if "/fig:diff" in line and "/fig:diff` → (" not in line]
+MAP_FILES = ("README.md", "README.ko.md")
+
+
+def stale_lines(files, name, map_start):
+    """Lines naming a retired skill. The one exemption is the map line of the two root READMEs."""
+    return [f"{rel}:{n}" for rel, text in files
+            for n, line in enumerate(text.splitlines(), 1)
+            if name in line and not (rel in MAP_FILES and line.startswith(map_start))]
+
+
+DIFF_MAP, SETUP_MAP = "`/fig:diff` → (", "`/fig:deck-setup` → `/fig:deck`"
+check("the map-line exemption covers the root READMEs' map lines only",
+      stale_lines([("plugins/fig/skills/x/SKILL.md", DIFF_MAP + "removed — …)")], "/fig:diff", DIFF_MAP)
+      and stale_lines([("plugins/fig/README.md", SETUP_MAP + " (…)")], "deck-setup", SETUP_MAP)
+      and not stale_lines([("README.md", DIFF_MAP + "removed — …)")], "/fig:diff", DIFF_MAP))
+stale = stale_lines(tracked_text_files(), "/fig:diff", DIFF_MAP)
 check("no tracked file still names /fig:diff (outside the README map)", not stale, ", ".join(stale))
 
 cfg = read("plugins/fig/_common/conventions.example.yaml")
@@ -202,9 +215,7 @@ check("handoff's description says it pins a named version", "named version" in h
 
 # ---- deck-setup folds into deck --------------------------------------------------------------------
 check("deck-setup folder is gone", not (REPO / "plugins/fig/skills/deck-setup").exists())
-stale = [f"{rel}:{n}" for rel, text in tracked_text_files()
-         for n, line in enumerate(text.splitlines(), 1)
-         if "deck-setup" in line and " → " not in line]
+stale = stale_lines(tracked_text_files(), "deck-setup", SETUP_MAP)
 check("no tracked file names deck-setup (outside history and the README map)", not stale, ", ".join(stale))
 for rel in ("README.md", "README.ko.md"):
     check(f"{rel} maps deck-setup to deck", "`/fig:deck-setup` → `/fig:deck`" in read(rel))
@@ -215,8 +226,9 @@ check("deck names setup.md and pitfalls.md", "setup.md" in deck and "pitfalls.md
 setup = read(deck_dir + "setup.md") if (REPO / (deck_dir + "setup.md")).exists() else ""
 mirror = setup.split("## 1.", 1)[1].split("## 2.", 1)[0] if "## 1." in setup else ""
 build = setup.split("## 5.", 1)[1] if "## 5." in setup else ""
+w, c = first(r"whoami", mirror), first(r"create_new_file", mirror)
 check("setup checks the seat with whoami before the mirror file",
-      "whoami" in mirror and first(r"whoami", mirror) < first(r"create_new_file", mirror))
+      None not in (w, c) and w < c, f"whoami at {w}, create_new_file at {c}")
 m_list = without_heading(mirror).split("\n1.", 1)[-1]
 w, g, c = first(r"\bwhoami\b", m_list), first(r"\bthe go\b", m_list), first(r"`create_new_file`", m_list)
 check("mirror step order: whoami, then the go, then create_new_file",

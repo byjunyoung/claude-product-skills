@@ -169,6 +169,8 @@ cfg = yaml.safe_load(out) if rc == 0 else {}
 check("non-ASCII names → the draft still runs and writes no pair patterns",
       rc == 0 and ("pair_" + "patterns") not in out and "pair_" + "patterns" not in str((cfg or {}).get("sync") or {}),
       err[:200])
+bad = unvouched(out) if rc == 0 else [f"no draft — {err[:200]}"]
+check("non-ASCII names → every leaf is still observed or an interview key", not bad, "; ".join(bad))
 
 print()
 if failures:
