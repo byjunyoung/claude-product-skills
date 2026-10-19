@@ -25,19 +25,20 @@ function findKeywords(root, words) {
   return res;
 }
 
-/** Structure comparison (can this be a value edit?). The list is one entry per text, parent name
- *  first. Same length, same order, same parent names on both sides -> only values differ -> a value
- *  edit is safe. */
+/** Structure comparison (can this be a value edit?). structureOf(frame) is one [parentName, text]
+ *  pair per text, in order. Run it in each page's own script (one setCurrentPageAsync per script) and
+ *  compare the two returned lists: same length, same order, same parent names -> only values differ ->
+ *  a value edit is safe. sameStructure(a, b) does that for two frames on the same page. */
 function structureOf(f) {
-  return f.findAll(x => x.type === 'TEXT').map(t => `${t.parent.name}|${t.characters.replace(/\n/g,' ')}`);
+  return f.findAll(x => x.type === 'TEXT').map(t => [t.parent.name, t.characters.replace(/\n/g,' ')]);
 }
 function sameStructure(a, b) {
-  const sa = structureOf(a).map(s => s.split('|')[0]), sb = structureOf(b).map(s => s.split('|')[0]);
-  return sa.length === sb.length && sa.every((p, i) => p === sb[i]);
+  const sa = structureOf(a), sb = structureOf(b);
+  return sa.length === sb.length && sa.every((p, i) => p[0] === sb[i][0]);
 }
 
-/** Value edit (guard plus font loading). editValues aborts before touching anything when the number
- *  of edits is not the one the audit settled on. */
+/** Value edit (guard plus font loading). editValues checks the number of edits against the one the
+ *  audit settled on before anything is written, then calls editValue for each. */
 async function editValue(t, v) {
   const fonts = new Set();
   for (const s of t.getStyledTextSegments(['fontName'])) fonts.add(JSON.stringify(s.fontName));
@@ -47,11 +48,9 @@ async function editValue(t, v) {
 }
 async function editValues(edits, EXPECTED) {   // edits: [textNode, newValue] pairs
   if (edits.length !== EXPECTED) throw new Error(`aborted: expected ${EXPECTED}, got ${edits.length}`);
-  const fonts = new Set();
-  for (const [t] of edits) for (const s of t.getStyledTextSegments(['fontName'])) fonts.add(JSON.stringify(s.fontName));
-  for (const fs of fonts) await figma.loadFontAsync(JSON.parse(fs));
-  for (const [t, v] of edits) t.characters = v;
-  return { mutatedNodeIds: edits.map(([t]) => t.id) };
+  const ids = [];
+  for (const [t, v] of edits) ids.push(await editValue(t, v));
+  return { mutatedNodeIds: ids };
 }
 
 /** Four-edge intersection check before stretching a section. w and h are the post-stretch values;

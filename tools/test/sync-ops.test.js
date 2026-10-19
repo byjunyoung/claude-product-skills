@@ -37,7 +37,7 @@ const section = (name, children) => ({ type: "SECTION", id: `s${++seq}`, name, c
 
 const ops = (figma = {}) => {
   assert.ok(SRC, "_common/scripts/sync-ops.js was not found");
-  return new Function("figma", SRC + "\nreturn { findKeywords, sameStructure, editValue, editValues, fourEdgeClear };")(figma);
+  return new Function("figma", SRC + "\nreturn { findKeywords, structureOf, sameStructure, editValue, editValues, fourEdgeClear };")(figma);
 };
 
 test("findKeywords lists, per keyword, the frames whose text holds it; absent stays empty", () => {
@@ -99,4 +99,31 @@ test("fourEdgeClear tests the post-stretch box against the other sections on all
   assert.strictEqual(wide.clear, false);
   assert.deepStrictEqual(wide.hits.map((h) => h.name), ["right"]);
   assert.deepStrictEqual(fourEdgeClear(target, 100, 200).hits.map((h) => h.name), ["below"]);
+});
+
+test("structureOf returns [parentName, text] pairs, so two pages' lists can be compared as they are", () => {
+  const { structureOf } = ops();
+  const a = frame("A", [text("Hello\nthere", "Row"), text("World", "Card")]);
+  assert.deepStrictEqual(structureOf(a), [["Row", "Hello there"], ["Card", "World"]]);
+});
+
+test("a | inside a parent name or a text cannot make two different structures look the same", () => {
+  const { structureOf, sameStructure } = ops();
+  const a = frame("A", [text("x", "a|b")]);
+  const b = frame("B", [text("b|x", "a")]);
+  assert.notDeepStrictEqual(structureOf(a), structureOf(b));
+  assert.strictEqual(sameStructure(a, b), false);
+});
+
+test("fourEdgeClear also catches a section to the left of and above the target", () => {
+  const box = (id, x, y, w, h) => ({ type: "SECTION", id, name: id, absoluteBoundingBox: { x, y, width: w, height: h } });
+  const target = box("T", 200, 200, 100, 100);
+  const left = box("left", 0, 200, 150, 100), above = box("above", 200, 0, 100, 150);
+  const { fourEdgeClear } = ops({ currentPage: { children: [target, left, above] } });
+  assert.strictEqual(fourEdgeClear(target, 100, 100).clear, true);
+  // the stretch is anchored at the section's x/y, so a box that starts inside another is a hit on its left/top side
+  const overlapLeft = box("T2", 100, 200, 100, 100);   // starts inside "left" (0..150)
+  assert.deepStrictEqual(fourEdgeClear(overlapLeft, 100, 100).hits.map((h) => h.name), ["left"]);
+  const overlapTop = box("T3", 200, 100, 100, 100);    // starts inside "above" (0..150)
+  assert.deepStrictEqual(fourEdgeClear(overlapTop, 100, 100).hits.map((h) => h.name), ["above"]);
 });

@@ -201,8 +201,8 @@ Both live under `${CLAUDE_PLUGIN_ROOT}/_common/scripts` and are handed to `use_f
 
 **Apply-step helpers** — `sync-ops.js`, a preamble in the way `prep-ops.js` is: concatenate the config line, the whole file and your own calls. It only declares functions:
 
-- `findKeywords(root, words)` — which canonical frames hold each keyword (the strings from the comparison). An empty array means that keyword is absent from canonical.
-- `sameStructure(a, b)` — can this be a value edit? True when both frames have the same text count, in the same order, under the same parent names. Run the page switch for each side in its own script and compare the two results.
+- `findKeywords(root, words)` — which canonical frames hold each keyword (the strings from the comparison). `root` is the canonical page: prepend the config line and `sync-ops.js`, then `await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("<CANON_PAGE_ID>")); return findKeywords(figma.currentPage, ["…", "…"]);`. An empty array means that keyword is absent from canonical.
+- `structureOf(frame)` — can this be a value edit? One `[parentName, text]` pair per text, in order. Each page needs its own script (one page switch per script): config line, `sync-ops.js`, then `await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("<that side's page id>")); return structureOf(await figma.getNodeByIdAsync("<FRAME_ID>"));`. Compare the two returned lists: equal length, same order and same parent names on both sides mean only the values differ, so a value edit is safe. `sameStructure(a, b)` makes that comparison for two frames on the same page and returns true or false.
 - `editValue(textNode, value)` — loads every font the text uses, then writes the value. `editValues(edits, expected)` takes `[textNode, newValue]` pairs and aborts before touching anything when their count is not the one the audit settled on.
 - `fourEdgeClear(section, w, h)` — the post-stretch box against every other section on all four edges. `clear` must be true to be safe; `hits` names the sections in the way.
 
