@@ -227,7 +227,7 @@ handoff:
 task_tracker:
   type: null                                  # null | markdown | notion | github | none
   ref: null                                   # database id, repo name, and so on
-  ui_section_heading: null                    # heading in the doc where changes are written up. null writes under "Design changes"
+  ui_section_heading: null                    # heading in the Notion or GitHub doc where changes are written up. null writes under "Design changes". In pm's markdown records pm's task.design_heading decides instead. For records in Notion or GitHub, keep it equal to pm's task.design_heading, or /pm:task publish falls back to reading by role on every run
   annotation_category: "Changed"              # a shared category to reuse. never create new ones
   scope_tags: []                              # classification tags prefixed to labels
 

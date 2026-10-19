@@ -1,7 +1,7 @@
 ---
 name: setup
-description: Sets up pm-conventions.yaml. It starts local — tasks, specs and a daily log as markdown files, no other tool needed — and attaches a tracker after, reading its schema rather than guessing and querying ids nobody finds by hand (board fields, option ids, issue types). It asks what publishing and syncing need, and leaves null what nobody can answer. Run it first on a new workspace. Triggers - "/pm:setup", "set up the pm config", "read my tracker schema", "pm 설정 만들어줘", "트래커 스키마 읽어줘", "일감 설정 초안".
-allowed-tools: AskUserQuestion, Read, Write, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__get_me, mcp__plugin_github_github__list_repository_collaborators
+description: Drafts pm-conventions.yaml, starting local with markdown files and attaching a tracker later by reading its schema. Triggers - "/pm:setup", "set up the pm config", "read my tracker schema", "pm 설정 만들어줘", "트래커 스키마 읽어줘", "일감 설정 초안".
+allowed-tools: AskUserQuestion, Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__get_me, mcp__plugin_github_github__list_repository_collaborators
 ---
 
 # pm:setup — read the schemas, draft the config
@@ -18,12 +18,12 @@ The `pm` skills read every value from `pm-conventions.yaml`. This is where that 
 
 - Opening these skills on a new workspace, a new company, or a new tracker
 - The tracker was restructured — fields renamed, a board rebuilt, options changed
-- `/pm:task-publish` stopped with "this project is not mapped"
+- `/pm:task publish` stopped with "this project is not mapped"
 - You need the board ids for `mirror_extras` and do not want to write GraphQL by hand
 
 ## When NOT to invoke
 
-- Drafting a task's context table → `/pm:task-draft`
+- Drafting a task's context table → `/pm:task draft`
 - Design file conventions → `/fig:setup`. Separate file, separate config
 
 ## Inputs
@@ -53,10 +53,10 @@ start, and at every transition say which step is beginning and whether it reads 
 ```
 
 **Open with what this produces, before asking anything.** One paragraph: after this, a
-request pasted from chat becomes a task with your own rows (`/pm:task-draft`), kept as a
+request pasted from chat becomes a task with your own rows (`/pm:task draft`), kept as a
 markdown file beside your specs and a daily log — nothing has to be installed or connected
 first. A tracker attaches whenever there is one, and from then on a task becomes a ticket where
-engineering looks (`/pm:task-publish`) and the two stay reconciled (`/pm:task-sync`). A couple
+engineering looks (`/pm:task publish`) and the two stay reconciled (`/pm:task sync`). A couple
 of minutes for the local start, five to ten with a tracker to read. Nothing is written into
 your tools; what is written is local — a few folders, a README and one settings file — and each
 is shown first.
@@ -80,7 +80,7 @@ The file speaks in keys. The questions do not.
 | `task.field_owner` | When the two sides disagree on a title or an assignee, which one is right? | leave it blank — it is reported and left alone |
 | `task.hierarchy.parent_kind` | Are tasks grouped under something bigger — an epic, a project? | none — a flat list |
 | `task.context_rows` | The rows your team asks about a task — these defaults, or your own words | the defaults |
-| `task.contract.level` | Which ticket carries the done conditions and the QA list — each task, or the parent it hangs under? | none — no contract, a summary and links only · leave it blank — kept out of the file, so `/pm:task-publish` stops and names the key before it files anything — answer it by running `/pm:setup` again. `/pm:task-sync` stops the same way |
+| `task.contract.level` | Which ticket carries the done conditions and the QA list — each task, or the parent it hangs under? | none — no contract, a summary and links only · leave it blank — kept out of the file, so `/pm:task publish` stops and names the key before it files anything — answer it by running `/pm:setup` again. `/pm:task sync` stops the same way where the record names a progress property (`task.properties.progress`) |
 | `task.progress_source` | Should a task's progress be counted from the ticked boxes of its done conditions and QA list? | leave it blank — the progress and schedule checks stay off |
 | `log.enabled` | Keep a daily log — what moved, what was on the calendar, what was decided? It is written only when you run `/pm:log` | no — `/pm:log` says it is off when called · leave it blank — not written, so the bundled default applies and the log is on |
 | `log.me.tracker_user_id` | Which of the tracker's users are you? — the user list the schema read | leave it blank — the log keeps every row under yours and says so |
@@ -130,7 +130,7 @@ Read the person the verdict and the fix lines in their words — the table under
 
 Ask once, grouped, in the words of the table above — five questions: where specs live, where a task is first written down, where engineering watches progress, which chat tool requests arrive in, and which calendar the log reads. One question call takes at most four, so the round is two calls back to back — specs, tasks and engineering in the first, chat and the calendar in the second. **Options, not a blank line** — people recognise their tool from a list and cannot name its "type". Local files are the recommended answer for specs and tasks, and "nowhere yet" for engineering: that start needs nothing installed, and a tool attaches later without moving anything. For chat and the calendar, recommend what ① found connected, and `none` where nothing was.
 
-**"They are the same place" is a real answer.** Then `mirror.type` is `none`, `/pm:task-sync` has nothing to reconcile, and half the config below does not apply. Do not talk anyone into a second tracker.
+**"They are the same place" is a real answer.** Then `mirror.type` is `none`, `/pm:task sync` has nothing to reconcile, and half the config below does not apply. Do not talk anyone into a second tracker.
 
 **"Nothing yet" is a real answer too** — it is the local start, and ③ lays it out. And **a tool this plugin has never seen is not a wrong answer** — write its type as the team calls it, and 4c drafts the adapter.
 
@@ -210,7 +210,7 @@ Exit 3 means no adapter exists for that type, exit 4 that the one there answers 
 | Select options on project | `task.properties.projects` |
 | The user list | `task.assignee_map` left-hand side |
 
-**`link_property` is the one that matters most and the one a schema cannot decide.** List every url-typed property as candidates and ask. Where none exists, say so plainly: this property has to be created before `/pm:task-publish` can work, because it is the only thing matching runs on. For a markdown record, recommend `ticket` — the key the record skeleton already carries.
+**`link_property` is the one that matters most and the one a schema cannot decide.** List every url-typed property as candidates and ask. Where none exists, say so plainly: this property has to be created before `/pm:task publish` can work, because it is the only thing matching runs on. For a markdown record, recommend `ticket` — the key the record skeleton already carries.
 
 **Where the schema read itself fails** — a database the connected account cannot see, a tracker type with no adapter — stop this side: write its keys as `null` with the comment `# unreachable from this machine`, carry on with the other, and say in the report which machine or account can finish it.
 
@@ -248,18 +248,18 @@ Exit 3 from `adapter.py` on either side means the type names a tool this plugin 
 1. **Find the connector** in the preflight table — the row named by the type. Absent means stop: an adapter cannot be drafted for a tool this machine cannot reach
 2. **List the tools it exposes** and read their descriptions. The names are what the adapter will carry, exactly as this machine has them. Put the connector's name on a `connector:` line near the top, and the sides the file answers for on a `roles:` line — preflight reads the first to know which connector this type requires, `adapter.py` the second to refuse the file for a side it does not serve
 3. **Probe the read-only ones against the real workspace** — the schema, the list, one record — and keep the call that returned, pasted as run. Whether the list is exhaustive or a search is answered by what the call actually does, not by what its name suggests
-4. **Answer the write questions with the tool that would do it, marked `(unverified)`.** The first `/pm:task-publish` run verifies them and removes the mark
+4. **Answer the write questions with the tool that would do it, marked `(unverified)`.** The first run in any `/pm:task` mode that uses a marked call clears its mark once the call succeeds. A call that fails keeps its mark; a failed write also stops that run, while a failed read goes the way that mode handles a read it cannot make — `/pm:task` says how
 5. **"Things that bite" starts with one line — `nothing recovered yet`.** It is filled by what bites
 6. **Preview, then write** to the last dir in `adapters.dirs` — `{dir}/trackers/<type>.md` or `{dir}/sources/<type>.md` — never inside the plugin, which an update overwrites. Then go back to the step that stopped
 
-The report lists every answer marked unverified. A config whose adapter is half verified is usable; one whose adapter was guessed is not, and the mark is what tells them apart.
+The report lists every answer marked unverified. A config whose adapter is half verified is usable; one whose adapter was guessed is not, and the mark is what tells them apart. A mark on a source call that only `/pm:log` runs — a calendar read, say — stays until somebody removes it by hand, since nothing that clears marks runs that call; the report says so beside it.
 
 #### 4d. Pair the two sides
 
 `label_map`, `assignee_map` and `status_map` join names across systems, and neither system knows about the other.
 
 - **Propose pairs by name similarity, then confirm them.** A record project called `Store App` and a label called `project: Store` are almost certainly the same thing — almost. Show the proposed pairing and let it be corrected in one pass
-- **A record value with no counterpart stays unmapped**, and unmapped means "not mirrored". That is a legitimate state, and it is what makes `/pm:task-publish` stop cleanly rather than invent a label
+- **A record value with no counterpart stays unmapped**, and unmapped means "not mirrored". That is a legitimate state, and it is what makes `/pm:task publish` stop cleanly rather than invent a label
 - **Never invent a label to complete a pair.** A missing ticket is easy to spot later; a ticket under a wrong label is not
 - **`status_map` will not fall out of name similarity — ask it.** A record's statuses describe how far the planning side has got; a board's columns describe whose turn it is. `Not started` and `Backlog` may line up, but the two in the middle rarely do, and a wrong guess seats finished specs in the backlog column where the engineering side reads them as untouched. Show the two lists side by side and ask which column each status should file into, saying that a status left unpaired keeps the board's own default — and that no answer at all is also an answer: an empty `status_map` seats nothing, and the file carries the question for whoever runs the board
 
@@ -269,12 +269,12 @@ One at a time, most consequential first, each with a recommendation grounded in 
 
 **Every question here has a "do not know" answer, and it is `null`.** Say so before asking. Someone new to a team cannot say which column a finished spec should sit in or which side owns the assignee field — that is knowledge about how the team works, not about the tools, and the person who has it runs the board. A `null` is written with the question beside it as a comment, so whoever can answer finds it in the file rather than in a chat history. Never fill it with the recommendation just because a recommendation was offered.
 
-**One exception: `task.contract.level`.** The skills check whether anybody wrote it, and a written `null` would pass that check with no level behind it. Its blank keeps the key out of the file — the question stays, as a comment — so `/pm:task-publish` stops and names the key rather than filing on a level nobody chose — answer it by running `/pm:setup` again. `/pm:task-sync` stops the same way.
+**One exception: `task.contract.level`.** The skills check whether anybody wrote it, and a written `null` would pass that check with no level behind it. Its blank keeps the key out of the file — the question stays, as a comment — so `/pm:task publish` stops and names the key rather than filing on a level nobody chose — answer it by running `/pm:setup` again. `/pm:task sync` stops the same way where the record names a progress property (`task.properties.progress`).
 
 Where a mirror is attached:
 
-- `task.contract.level` — "Which ticket carries the done conditions and the QA list — each task, or the parent it hangs under?" `/pm:task-publish` and `/pm:task-sync` will not run on a level the plugin supplied, so a config that never answers this stops the next command. Recommend from where review happens on the tickets 4b read; `none` turns the contract off
-- `task.progress_source` — is a task's progress counted from the ticked fraction of its done conditions and QA list (`contract`), or not at all (`null`)? `/pm:task-sync` needs it answered wherever the record names a progress property
+- `task.contract.level` — "Which ticket carries the done conditions and the QA list — each task, or the parent it hangs under?" `/pm:task publish` will not run on a level the plugin supplied, and neither will `/pm:task sync` where the record names a progress property (`task.properties.progress`), so a config that never answers this stops the next such command. Recommend from where review happens on the tickets 4b read; `none` turns the contract off
+- `task.progress_source` — is a task's progress counted from the ticked fraction of its done conditions and QA list (`contract`), or not at all (`null`)? `/pm:task sync` needs it answered wherever the record names a progress property
 - `hierarchy.parent_kind` — do tasks hang under something, and what is it called. Existing ticket titles usually give this away
 - `hierarchy.milestone_on` — which level carries a version, if any
 - `hierarchy.milestone_projects` — which projects use them. Often only one does
@@ -361,7 +361,7 @@ With one side unreachable the pair cannot be checked. Say `not checked` in the r
 ### 8. First result — one message, one table, nothing written
 
 **Do not end on a file.** Ask for one request the person has to hand — a chat message, a
-sentence someone said in a meeting, pasted or linked — and run `/pm:task-draft`'s reading and
+sentence someone said in a meeting, pasted or linked — and run `/pm:task draft`'s reading and
 sorting on it, stopping at the preview: the context table in `task.context_rows`, a row filled
 for each thing the source actually said and `TBD` where it did not. Nothing is written, which
 is what makes it safe to run before the config has been used once.
@@ -373,15 +373,15 @@ skills will use.
 
 Then close with the commands that apply, in the order they are used. With `mirror.type: none`:
 
-    /pm:task-draft <message or link>     a request → a task file with this table
+    /pm:task draft <message or link>     a request → a task file with this table
     /pm:prd                              a spec, written where prd.target points
     /pm:log                              today's log — runs only when called by name
 
 Say that publishing and syncing arrive with a tracker, and that `task.mirror` is the key that attaches one — through ④, whenever there is one. With a mirror attached:
 
-    /pm:task-draft <message or link>     a request → a task with this table
-    /pm:task-publish <task url or file>  a task → a ticket where engineering looks
-    /pm:task-sync                        both sides reconciled — any time
+    /pm:task draft <message or link>     a request → a task with this table
+    /pm:task publish <task url or file>  a task → a ticket where engineering looks
+    /pm:task sync                        both sides reconciled — any time
 
 Where the config went into `<repo>`, say that these run in Claude Code opened in `<repo>`: the settings there are read only by a session started in it.
 
@@ -431,7 +431,7 @@ Lead with three lines a person can act on — what you have now, what stayed bla
 fill it, what to run next. The lists below are the detail.
 
 - Which keys came from a schema, and which were interviewed
-- Which were left `null`, and what each one blocks — and a `task.contract.level` left blank, which is kept out of the file: `/pm:task-publish` and `/pm:task-sync` stop on it until `/pm:setup` answers it, so say so beside the commands ⑧ names
+- Which were left `null`, and what each one blocks — and a `task.contract.level` left blank, which is kept out of the file: `/pm:task publish` stops on it until `/pm:setup` answers it, and so does `/pm:task sync` where the record names a progress property (`task.properties.progress`), so say so beside the commands ⑧ names
 - Which were left out because nobody was asked — they follow the plugin's defaults, later changes included
 - Unmapped projects and users, listed by name — these are the ones that will be skipped
 - ⑦'s checks — the file `--where` named, whether the pairs were written, and the folder read for a markdown record — then the pairing check where a mirror is attached: passed against which task, or `not checked`, and why

@@ -1,14 +1,14 @@
----
-name: task-publish
-description: Files one task record as a ticket in the engineering tracker, or updates the one already there. The ticket carries a summary, links, done conditions and a QA checklist. One grouped interview fills gaps, the parent is resolved first, and the link written into the record is what matching uses. With no tracker attached it says tasks are records only and stops. Many at once is /pm:task-sync. Triggers - "/pm:task-publish", "file this task as a ticket", "깃헙에 일감 등록해줘", "이 일감 티켓 만들어줘", "티켓 갱신해줘".
-allowed-tools: AskUserQuestion, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_design_context, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__add_issue_comment, mcp__plugin_github_github__sub_issue_write, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues
----
-
-# task-publish — one task record into one tracker ticket
-
-**Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install pm@byjunyoung`), rather than improvising what the scripts do.
+# publish — one task record into one tracker ticket
 
 Files a single task record as a ticket in the engineering tracker, or updates the one already there.
+
+**Contents**
+
+- *What decides where things go* · *Inputs* · *When NOT to invoke*
+- *Procedure* — 0 take the record · 1 read it and its materials · 2 draft the two binding sections · 3 interview, once · 4 resolve the parent · 5 assemble the body · 6 preview → "go" · 7 create · 8 attach · 9 write back · 10 report
+- *Bringing a ticket back to the template* — the `--template` pass
+- *The update path* — where the link property is already filled
+- *Constraints*
 
 **The ticket carries a summary and links, not a copy of the body.** Detail — the spec, the design, the description of what changed — stays in the record, and the ticket points at it. Two copies means one gets edited and they drift; there is also no reliable way to carry embedded images across, so a copied body arrives broken.
 
@@ -18,52 +18,20 @@ Files a single task record as a ticket in the engineering tracker, or updates th
 
 ## What decides where things go
 
-Config is read in two stages, because a team with no tracker attached is not missing a setting — it has nothing to file into, and the answer to that is not "a property is unset".
-
-**Stage 1 — is there a tracker at all?**
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
-  --authored task.record.type,task.record.ref
-```
-
-Where `task.mirror.type` is `none`, stop with this, and nothing else:
-
-> These tasks are kept as records only — nothing is set up to file them into. `task.mirror` is the setting that attaches a tracker; `/pm:setup` reads its schema and fills it in.
-
-**Stage 2 — a tracker is attached, so the rest must be named.**
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
-  --need task.record.ref,task.link_property,task.mirror.ref \
-  --authored task.record.type,task.record.ref,task.link_property,task.contract.level
-```
-
-A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than interviewing for the value here.
-
-**`--authored` is the other half, and `--need` cannot see what it sees.** A key no config of theirs mentions still resolves — to the bundled floor — so it reads as answered. `task.contract.level` is the one that decides which ticket carries the binding sections, and the floor says `task`: a team whose tracker reviews at the parent, running on a config that never named it, gets a contract filed onto the wrong ticket and no sign that anything was assumed. Where the stop fires, the message names the key and says where the copy came from — a config that has fallen behind a shared one is the usual cause, and the lines underneath say by how much. Do not interview for the value and do not proceed on the default: neither answers who chose it.
-
-`task.record` is where the task lives, `task.mirror` is the tracker it is filed into. **With `mirror.type: none` this skill has nothing to do** — stage 1 above says so and stops, rather than inventing a destination.
-
-**Matching runs on `task.link_property` alone** — the property on the record that holds the ticket's url. A back-link written in the ticket body is for a human to click, never for matching: it can point at a source that was already discarded, which is how duplicates and resurrected tickets happen.
-
-**Where `task.policy.doc` names a rule document, read it before the first write of the session.** It holds the tracker's own conventions — what may carry a version, who may close what, how a ticket with no parent is treated — and where it disagrees with a default in the config or in this file, **it wins**. Read it once and work from it for the rest of the session; read it again only where a write is refused, or where a ticket comes back changed by whatever enforces those rules. The mirror's adapter says how to fetch it. With the key null there is no such document and the config alone decides.
-
-**Where `task.template` names a ticket template, read it before assembling a body — `template.task` for a task, `template.parent` for whatever `hierarchy.parent_kind` calls its level.** It is the skeleton everyone filing by hand already gets, so it decides **which sections exist and in what order**; `task.ticket.sections` and `task.contract.sections` decide only which slot each of those headings is. Read it once per session, the same as the rule document. Fetch it the way the mirror's adapter says. Where the template is a form rather than a document, its field labels are its headings, in the order the form declares them.
-
-**Where a configured section name is not in the template, stop and name both.** One of the two has gone stale, and the run cannot tell which — the config may be behind a template somebody renamed, or the template may be a draft nobody adopted. What it must not do is write its own heading next to the template's: two sections then hold the same thing, the tracker's gates read one of them, and nothing about the ticket looks wrong. Where the template cannot be fetched at all, say so and fall back to the configured names — a ticket still has to get filed, and a fetch that failed is not a reason to hold up the work. With the key null the tracker publishes no template and the configured names decide alone.
+Config, the adapters, the rules every mode follows — matching, titles, mappings, preview → go — and the tracker's own rules — the rule document and the template — are in `SKILL.md`, read before this file. What follows is publish's own.
 
 ## Inputs
 
 - `record` (required): the task record's url
-- `mode` (optional): `task` files or updates the task's ticket — the default. `contract` writes only the contract's own sections — the two binding ones, plus the requirements section where `contract.sections.requirements` is set — to whichever level `task.contract.level` names. Omitted with `level: parent`, a run that files a task says at the end whether its parent already has a contract, and offers to write it as a separate run
+- `--contract` (optional): writes only the contract's own sections — the two binding ones, plus the requirements section where `contract.sections.requirements` is set — to whichever level `task.contract.level` names. Without it the run files or updates the task's ticket. Omitted with `level: parent`, a run that files a task says at the end whether its parent already has a contract, and offers to write it as a separate run
+- `--template` (optional): reads both adapters as *Adapters* in `SKILL.md` says, then runs *Bringing a ticket back to the template* below on the ticket the record links to, and nothing else. A record with no link yet has no ticket to bring back, and with `task.template` null there is no template to bring it to — either way, say so and stop
 
 **Why the contract is its own run at `level: parent`.** One parent holds many tasks. Rewriting its contract every time a sibling is filed puts a large diff behind a preview nobody reads closely, and the moment the contract is actually written is a different moment — it is what lets the parent leave the planning column. Keeping it separate makes that moment visible.
 
 ## When NOT to invoke
 
-- Filling the record's context table → `/pm:task-draft`
-- Reconciling many tasks across both sides → `/pm:task-sync`
+- Filling the record's context table → `/pm:task draft`
+- Reconciling many tasks across both sides → `/pm:task sync`
 - Writing the requirements → `/pm:prd`
 
 ## Procedure
@@ -73,6 +41,8 @@ A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` 
 Take the record's URL from the argument, or ask for it.
 
 ### 1. Read the record and its materials (zero writes)
+
+Read both adapters first — *Adapters* in `SKILL.md`. Every call to either side from here on, the parent search and the duplicate check included, is the one they give.
 
 Read the record's properties — title, project, group, priority, assignee, status, schedule, the link property, and any link to a published spec.
 
@@ -85,7 +55,7 @@ Then read the two things step 2 is drafted from:
 
 **Read the design for what exists, not for how it looks.** Colour, spacing and size never become conditions — step 2 says why. Copy is taken from the spec first: a design still carrying placeholder text would otherwise freeze a wrong string into the contract, and reading a screen in full costs far more than reading its structure. Go deeper on one screen only where the spec left its copy blank.
 
-Where the record's design section carries a handover line — the links, the date, and the version the handover was pinned to — **that line is what the referenced-version row is built from, verbatim.** Do not restate it in your own words and do not substitute today's date: the point of the pin is that it names a moment somebody else can go back to.
+The design section is the one headed `task.design_heading`. Where no section carries that heading, publish falls back to the section that plays that role in the record — the one holding the design link and handover line — and the report says which heading it read. Where the record's design section carries a handover line — the links, the date, and the version the handover was pinned to — **that line is what the referenced-version row is built from, verbatim.** Do not restate it in your own words and do not substitute today's date: the point of the pin is that it names a moment somebody else can go back to.
 
 Then branch:
 
@@ -225,24 +195,7 @@ Project, group, priority and dates come from the record and are not asked. Where
 
 ### 4. Resolve the parent
 
-Only where `task.hierarchy.parent_kind` is set. With it `null`, tasks are a flat list — skip to step 5.
-
-Search the mirror for open parents **of this task's project**, and read their titles to find
-the one this task belongs under.
-
-Do not filter the candidates by group. The group is a hint, not a key: a team that adopted a
-`[{parent_kind}] [{group}] ...` title convention partway through has older parents without the
-bracket, and those are exactly the long-running ones a new task most often belongs to. Filtering
-on the group hides them, and the run then concludes there is no parent and offers to create a
-duplicate of one that already exists.
-
-- **One obvious match** → use it, and say which, so a wrong read is visible
-- **None** → ask: create one / name an existing one / leave it without one, where `task.hierarchy.parent_required` is `false` / stop. Creating one is its own preview → go
-- **Several plausible** → let the user pick. Do not break the tie yourself
-
-**A task with no parent is a real answer where the config allows it.** A one-off fix, a chore, a ticket somebody's merge opened by itself — none of those has a feature to hang under, and inventing a parent for them is what produces the empty umbrella ticket everything unrelated then collects under. Say what it costs at the same time: with `milestone_on: parent` a task with no parent cannot carry a version, so it is invisible to anything reading the milestone. Where the work does belong to a feature, the parent is still the right answer. With `parent_required` `true` the option is not offered — the tracker requires one.
-
-A newly created parent is titled by `task.hierarchy.parent_title`, is built on `task.template.parent` where one is named, and carries whatever `task.mirror_extras` specifies for its type and board placement. Its assignees and every other setting are filled the way step 3 fills a task's — from this project's existing parents first, then by asking — and its title follows the wording those parents already use. **`task.ticket.default_labels` is the task level's and does not follow it up** — a parent carries the mapped project label and the labels the rule document requires of its kind, and nothing else; where there is no rule document the project label is all it carries. The project label is not optional: the adapter finds candidate parents by searching on it, so a parent filed without one is invisible to the next run and gets filed again. A parent filed with a label nobody's rules asked for is worse than one filed bare: the label is what other people's filters and boards are built on. Where the project uses milestones, the milestone is set **on the parent** — see step 8.
+Follow `filing.md`, *Resolve the parent*. Only where `task.hierarchy.parent_kind` is set; with it `null`, tasks are a flat list — skip to step 5.
 
 ### 5. Assemble the ticket body
 
@@ -277,33 +230,7 @@ With the key null there is no template, and headings come from `task.ticket.sect
 
 **No pointer to the parent is written either.** Where the tracker links a task to its parent, the parent is already on the screen, and a line naming it only adds a second thing to keep correct. It is also where an in-house word for the two binding sections tends to get invented — the ticket is read by people who were not in the conversation that coined it. Link rows come from `task.ticket.link_rows`, and a row whose value is missing is dropped rather than written as an empty bullet.
 
-#### Written for the people who will act on it
-
-A ticket is read by whoever picks the work up, and by everyone downstream who has to know what it
-covers — the person drawing the screens, the one deciding what is in scope this release, the one
-answering for it once it ships. Most of them do not read the system it is built on. So the title and
-the sentences under it say **what somebody will see or do**, not what the machine does underneath.
-
-- **The title names the work, as a noun phrase.** A word only the internals use — a layer, a gate, a
-  flag, a surface — reads as precise to whoever coined it and as nothing at all to everybody else.
-  Where the plain name is longer, it is still the shorter path to somebody knowing what the ticket is
-- **Plain wording is not licence to write a sentence.** *The setting nobody can reach* states a
-  symptom; it is what a defect is called, and a task named that way stops reading as something
-  somebody is doing. The work is named, and what it is being done to — the grammar the list already
-  uses for that is right there in the neighbours
-- **Read the sibling titles before writing one.** A list that has been kept by hand has a shape —
-  most often `<what> <verb-as-noun>`, and a dash before the part that narrows it. Matching that shape
-  is what makes a new row look like it belongs; a title in a grammar of its own reads as an import
-  even when every word in it is plain
-- **The record's title is the default, not a verdict.** Where it was written in that vocabulary, say
-  so in the preview and offer a plainer one beside it. Never change it quietly: the title is the
-  record's under `task.field_owner`, and a rename nobody saw is how the two sides start disagreeing
-  about what a ticket is called
-- **The grounds go under the notes heading.** A clause number, a spec path, a decision id — these say
-  why a condition is what it is, and whoever chases the reasoning looks for them there. Inside a done
-  condition they crowd out the thing being confirmed
-- **Plain is not simplified.** The reader knows the product better than anyone, just not its
-  internals, so nothing is rounded off to make a sentence read easily
+**The title and the sentences under it follow the title rules in `SKILL.md`** — what somebody will see or do, not what the machine does underneath.
 
 #### The summary is a scope boundary, not a restated title
 
@@ -417,6 +344,8 @@ Contract     : {level} → #{n} {title}   (or "this ticket", or "off")
 Template     : {task.template.task or .parent}   (or "none published")
                left for a person: {section} — the template's own placeholder kept
 Drafted from : {spec entry} · {design, or "no design"}
+Design section : {heading}
+               (task.design_heading "{x}" not found — read by role)   ← only where step 1 fell back
 Coverage     : behaviour {n}/{n} · states {n}/{n} · rules {n}/{n} · round trip {n}
                covered elsewhere: {row} — {which line}
 Materials    : {entry name} ({entry kind})
@@ -427,6 +356,7 @@ Sections     : {n} done ({n} specific · {n} from defaults) · {n} QA
                comparison: {n} screens (or "no design handed over")
 Groups       : {group} ({n} done · {n} QA) · {group} (…) · …
                {split offered — past contract.split_offer_at, or "parent already has children"}
+Adapter marks : {call} ({file}) — comes off if it succeeds   ← only where a call this run makes is marked (unverified)
 
 --- body ---
 {step 5 in full}
@@ -453,7 +383,7 @@ Where the tracker already gates on the sections existing — a column a ticket c
 
 `contract.allow_tbd: true` takes the first without asking. It is not permission to file a bare ticket: the note and the seating happen either way, and the only difference is whether the fork is put to a person.
 
-**A placeholder is never filed silently.** The report says what it is, and the run says plainly that `/pm:task-publish` has to be run again before work starts.
+**A placeholder is never filed silently.** The report says what it is, and the run says plainly that `/pm:task publish` has to be run again before work starts.
 
 **Three lighter forks sit alongside it.** None of them blocks — each offers the cheaper fix while the ticket is still cheap to change:
 
@@ -468,54 +398,21 @@ Where the tracker already gates on the sections existing — a column a ticket c
 
 ### 7. Create the ticket
 
-**Before anything is created, look for the ticket already there.** List the mirror's newest issues and match the exact title about to be sent — the adapter says how. A match stops the run and offers to link that ticket instead; filing past it is how a run that died after the write, or a second run of the same task, makes a duplicate.
-
-Create it with the assembled title, body, labels and assignee. **Right after the create returns, write the link property into the record** — still inside the same "go", and before step 8 attaches anything. Attaching is the part that can fail halfway, and a ticket that exists with no link in the record is one the next run cannot match and files again.
-
-**Labels have two sources and the preview names which.** `task.ticket.default_labels` plus the mapped project and priority are the config's. **A label the rule document requires is the other** — a kind of ticket that has to carry one, a level that does. Those are read off the document rather than listed here, because a list here is a copy of a rule that changes at a meeting the config was not in, and a copy that falls behind is invisible: the ticket comes out looking finished and drops out of the filter the rule exists to feed. **A required label the tracker does not have is reported, never created** — a label is somebody's filter and somebody's board column, and creating one from inside a ticket run is how a near-duplicate of an existing label starts collecting tickets.
+Follow `filing.md`, *Labels* and *Create*: look for the ticket already there, create it, and write the link property into the record right after — all inside the same "go".
 
 **At `contract.level: parent` the contract is a body edit on a ticket that already exists**, never a creation. Read the parent's current body, replace only the sections `contract.sections` names — the two binding ones, the requirements section where it is set, and the shared links section where `contract.sections.links` is set — and leave every other section of it byte for byte — a parent carries scenario, scope and links somebody else wrote, and this skill has no business rewriting them. Where the parent has no such sections yet, insert them **where `task.template.parent` puts them**, and where no template is named, where `contract.sections` orders them relative to what is already there, rather than appending to the end.
 
 **The rest of the ticket is not this edit's to change, but it is not out of reach either.** A parent filed before any of this — headings somebody invented, a label the rules now require — keeps them through a contract write. Where `task.template` is set and the body does not match it, say so and offer the pass below. Never fold it into the contract write silently: they are two different changes, and one "go" should not cover both.
 
-**A milestone is not set on the task** where `task.hierarchy.milestone_on` is `parent` — that level owns it.
+The milestone rules are *Milestone* in `filing.md`.
 
 ### 8. Attach it
 
-- Link it under the parent, where the tracker has a parent-child relation
-- Add it to the board named in `task.mirror_extras`, capturing the returned item id
-- Set the board's custom fields from `task.mirror_extras` — project field, dates
-- Dates go **on the task only**. A parent's schedule is managed separately and is never touched here
-- **Copy the version back to the record**, where `task.properties.version` is named — the milestone now in effect for this task, which under `milestone_on: parent` is the parent's, or `task.properties.version_unset` where there is none. Where this run set or moved a parent's milestone, every other record whose ticket sits under that parent now shows the old one: they are listed in the preview and move in the same "go". A version left behind on one sibling is the drift `/pm:task-sync` would otherwise have to find
-- **Seat it in the right column.** Where `task.status_map` has an entry for the record's current
-  status, set the board's status field to it. Without an entry, leave the board's own default
-  alone rather than guessing a column. **A placeholder ticket overrides this and goes to the
-  backlog**, whatever the record's status maps to — the seating is what stops it being picked up
-
-Seating is not ownership. `task.field_owner.status` still says which side wins afterwards — with
-it `mirror`, this is the only time this skill touches the status, and every later move belongs to
-whoever runs the board. The reason to seat it at all is that a task whose spec is already written
-lands in the backlog column otherwise, and the mirror's readers act on that.
-
-Anything under `task.mirror_extras` is read verbatim. This skill does not interpret it, which is what lets a tracker it has never seen still work.
-
-**The calls themselves live per tracker**, not in this document. Two copies of a command means one gets fixed. Read the mirror's adapter before this step and the record's before step 9:
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.mirror.type} --role mirror
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.record.type} --role record
-```
-
-It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; `/pm:setup` 4c drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
+Follow `filing.md`, *Attach to the board* — and *Milestone*, whose version copy-back lands in the record in this same "go".
 
 ### 9. Write back into the record
 
-The link property is not here: step 7 wrote it the moment the ticket existed.
-
-- **The spec link** — only where the interview produced a new one
-- **The change summary** — only where the interview produced a new one. Where the record already had it, leave it alone. Append rather than replace, so the history survives: one dated line under what is already there
-
-**The done conditions and the QA checklist are not written back.** They live in the ticket, where they are ticked. Copying them into the record is the second source this design exists to avoid.
+Follow `filing.md`, *Write the link back*.
 
 ### 10. Report
 
@@ -526,6 +423,8 @@ Parent        : #{n}
 Contract      : {n} conditions · {n} steps · {n} rows skipped → #{n} {level}
                 (or "placeholder — run again before work starts", or "off")
 Link property : written at create
+Design section : {heading}
+                (task.design_heading "{x}" not found — read by role)   ← only where step 1 fell back
 {spec link stored, where applicable}
 {change summary written, where applicable}
 ```
@@ -534,7 +433,7 @@ Link property : written at create
 
 ## Bringing a ticket back to the template
 
-Offered wherever `task.template` names one and the ticket's body does not match it. **It is one ticket, one person, one preview and one "go"** — that is the whole reason it is allowed here and refused in `/pm:task-sync`, where the same edit across a list would rewrite a hundred tickets somebody else wrote on a single approval.
+Offered wherever `task.template` names one and the ticket's body does not match it, and run on its own with `--template` — the way out `/pm:task sync` names for a ticket it finds off template. **It is one ticket, one person, one preview and one "go"** — that is the whole reason it is allowed here and refused in `/pm:task sync`, where the same edit across a list would rewrite a hundred tickets somebody else wrote on a single approval.
 
 **The case this exists for is a ticket this workflow itself produced.** A ticket filed before the template was named, or by a config that had fallen behind it, carries sections these skills invented — not somebody else's prose, this workflow's own output under the wrong headings. Refusing to touch it on the grounds that the contract writer never touches what it does not own is the right rule applied to the wrong ticket.
 
@@ -565,7 +464,7 @@ Template : {task.template.parent or .task}
   {template's, missing}        → added empty
   {template's, missing, gated} → NOT added — the rules gate {column} on it, and an
                                  empty one passes that gate. Fill it with
-                                 /pm:task-publish --mode contract instead
+                                 /pm:task publish <record> --contract instead
   {current, has content}       → asked below
 
 Labels   : + {label} (required by {the rule})
@@ -589,7 +488,7 @@ Taken when the link property was already filled.
 3. **A placeholder being filled is the ordinary second pass.** The note comes out, the two sections go in, `contract.incomplete_label` comes off, and the board seating is handed back to `task.status_map`. Say in the report that the ticket now has a contract, because that is the moment it becomes startable
 4. **A ticket already in progress is the delicate case.** Re-draft the two binding sections from the current materials, then reconcile rather than overwrite: a line that survives unchanged keeps its tick, a line the spec dropped is removed and said so in the preview, and a new line arrives unticked. Silently resetting a checklist somebody has been working down destroys the only record of what was verified
 5. Preview → go → edit the ticket, keeping the record link row intact
-6. **Move the record and the board together, in the same "go".** An update that changes what is ticked has changed how far along the task is, and the two sides read that from different fields. Where `task.properties` names them, set the record's progress from the checklist as counted in this run, its start date where work has begun and the field is empty, and its end date where every condition is now ticked; seat the board column by `task.status_map` and set the board's own date fields to the same days. Put the line in the preview beside the body change rather than making it a second approval — **a separate gate is one that gets skipped**, and a ticket whose body moved while its board did not is precisely the drift `/pm:task-sync` then has to go and find. Dates are the days things happened, not the day this ran
+6. **Move the record and the board together, in the same "go".** An update that changes what is ticked has changed how far along the task is, and the two sides read that from different fields. Where `task.properties` names them, set the record's progress from the checklist as counted in this run, its start date where work has begun and the field is empty, and its end date where every condition is now ticked; seat the board column by `task.status_map` and set the board's own date fields to the same days. Put the line in the preview beside the body change rather than making it a second approval — **a separate gate is one that gets skipped**, and a ticket whose body moved while its board did not is precisely the drift `/pm:task sync` then has to go and find. Dates are the days things happened, not the day this ran
 7. **Where the body still does not match `task.template`, offer the template pass above** — its own preview, its own "go", after this edit has landed. Two changes, two approvals, and the second one starts from what the first actually wrote
 8. Write back into the record — the spec link only where newly given; the link property is already there; the version where it no longer matches the milestone the ticket sits under. Append the new change summary under the existing one
 
@@ -597,7 +496,8 @@ Taken when the link property was already filled.
 
 ## Constraints
 
-- **Never invent a mapping.** A project, priority or assignee with no entry in the config stops the run with a message. A wrong label is harder to find later than a missing ticket
+On top of *Rules every mode follows* and *The tracker's own rules — `publish` and `sync`* in `SKILL.md`, and the filing rules in `filing.md`:
+
 - **Never overrule the tracker's own rule document.** Where `task.policy.doc` disagrees with a default here, the document wins, and a write it forbids is reported rather than attempted
 - **Never name a milestone for a project whose naming somebody else owns.** No `milestone_format` entry means offering what is already open, and nothing more
 - **Never write the contract at two levels.** `task.contract.level` names one. A copy on the other side is the drift the whole design avoids
@@ -615,7 +515,6 @@ Taken when the link property was already filled.
 - **Never file a task whose done conditions are defaults only.** A list that would fit any sibling says nothing about this one
 - **Read the tracker's current schema before writing** rather than trusting ids pinned in the config — options get renamed
 - **Never edit a checklist and leave the progress and the dates behind.** The tick is what a progress figure is counted from, so an edit that moves one without the other puts the record and the ticket in disagreement the moment it lands. They move in the same approval
-- **Every external write waits for "go"**, including the write-back into the record
 - **Never decide a version on the record side.** It is copied from the milestone the ticket sits under, and a different version is set there, on the tracker
 - **Never copy the body across.** The record stays the single source, and the ticket links to it — apart from the two binding sections, which have no copy on the other side
 - Verify after writing, and report what was actually written rather than what was intended

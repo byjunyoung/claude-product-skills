@@ -32,7 +32,7 @@ priority: medium             # a value from task.properties.priority
 assignee: jane               # whatever string your team uses. task.assignee_map's left side is this string
 start: 2026-08-01
 end: 2026-08-14
-ticket:                      # the key task.link_property names. empty until /pm:task-publish files it
+ticket:                      # the key task.link_property names. empty until /pm:task publish files it
 ---
 
 ## Context

@@ -52,26 +52,26 @@ headings are yours; the questions are not. A question the tool cannot answer is 
 | Question | Who asks | What the answer carries |
 |---|---|---|
 | **The schema** — property names and types, the options of every select, the user list | `/pm:setup` | The call, and which property could hold the mirror's url |
-| **The list** — every record with title, project, group, priority, status, assignee, and the link property | `/pm:task-sync`, `/pm:log` | The call, and whether it is **exhaustive**. Where it is a search, say so and say what a search misses |
-| **One record** — its properties and its body | `/pm:task-draft`, `/pm:task-publish` | The call. Which part of the body is the context table |
+| **The list** — every record with title, project, group, priority, status, assignee, and the link property | `/pm:task sync`, `/pm:log` | The call, and whether it is **exhaustive**. Where it is a search, say so and say what a search misses |
+| **One record** — its properties and its body | `/pm:task draft`, `/pm:task publish` | The call. Which part of the body is the context table |
 | **What moved on a day** — rows last edited on a date, split by assignee | `/pm:log` | Filter on last-edited, never created. How the day filter is applied, and whether it is exact |
-| **A new record** — with the properties the interview settled and the context table as its body | `/pm:task-draft` | The call. Whether a database template is applied on create — usually not, which is what `task.notion.body_template` and its equivalents are for |
-| **Writing the link property** | `/pm:task-publish` | The call. This is the one property matching runs on, so say how to verify it landed |
-| **Appending a change summary** — one dated line after what is already there | `/pm:task-publish` | Append, never replace. How to catch the end of the existing text |
-| **Appending a line under a heading** | `/pm:task-publish`, `/fig:handoff` | Append after what is already in that section; add the heading when it is missing; never a second heading |
+| **A new record** — with the properties the interview settled and the context table as its body | `/pm:task draft` | The call. Whether a database template is applied on create — usually not, which is what `task.notion.body_template` and its equivalents are for |
+| **Writing the link property** | `/pm:task publish`, `/pm:task sync` | The call. This is the one property matching runs on, so say how to verify it landed |
+| **Appending a change summary** — one dated line after what is already there | `/pm:task publish` | Append, never replace. How to catch the end of the existing text |
+| **Appending a line under a heading** — the change summary, and `/fig:handoff`'s line under `task.design_heading` | `/pm:task publish`, `/fig:handoff` | Append after what is already in that section; add the heading when it is missing; never a second heading |
 | **A user directory** — id to display name | `/pm:log` | The call, so a name is looked up rather than guessed |
 
 ### As the mirror — `task.mirror.type`
 
 | Question | Who asks | What the answer carries |
 |---|---|---|
-| **Every ticket** — title, state, labels, parent, milestone, url, **open or closed** | `/pm:task-sync` | The exhaustive read, and where a listing truncates silently. Closed tickets are where every `duplicate` and `resurrected` verdict lives, so a limit that drops the oldest drops the diagnosis |
+| **Every ticket** — title, state, labels, parent, milestone, url, **open or closed** | `/pm:task sync` | The exhaustive read, and where a listing truncates silently. Closed tickets are where every `duplicate` and `resurrected` verdict lives, so a limit that drops the oldest drops the diagnosis |
 | **Labels, board fields and their option ids, issue types, collaborators, milestones** | `/pm:setup` | The queries. These are the ids no screen shows, and the reason setup exists |
-| **Creating a ticket** — title, body, labels, assignee | `/pm:task-publish` | The call. What a network error after the write looks like, and how to confirm by exact title before retrying |
-| **Creating a parent** and attaching a ticket under it | `/pm:task-publish` | The calls, where the tracker has a hierarchy. Where it does not, say so and `task.hierarchy.parent_kind` stays `null` |
-| **Seating on a board** — the project field, the status column, the dates | `/pm:task-publish` | Which id each write takes; they are rarely the same id |
-| **Milestones** — list open ones, create one, set it on the parent | `/pm:task-publish` | Only where `task.hierarchy.milestone_projects` names a project |
-| **Updating a ticket's body** | `/pm:task-publish` | Read before overwrite. Keep the row that links back to the record |
+| **Creating a ticket** — title, body, labels, assignee | `/pm:task publish`, `/pm:task sync` | The call. What a network error after the write looks like, and how to confirm by exact title before retrying |
+| **Creating a parent** and attaching a ticket under it | `/pm:task publish`, `/pm:task sync` | The calls, where the tracker has a hierarchy. Where it does not, say so and `task.hierarchy.parent_kind` stays `null` |
+| **Seating on a board** — the project field, the status column, the dates | `/pm:task publish`, `/pm:task sync` | Which id each write takes; they are rarely the same id |
+| **Milestones** — list open ones, create one, set it on the parent | `/pm:task publish`, `/pm:task sync` | Only where `task.hierarchy.milestone_projects` names a project |
+| **Updating a ticket's body** | `/pm:task publish` | Read before overwrite. Keep the row that links back to the record |
 
 `/fig:handoff` writes its one line into a markdown record through `append-under`. `/fig:diff` writes into a task doc too, with notion and github calls of its own; it does not read these files.
 
@@ -87,8 +87,9 @@ Given a type with no file, setup does not ask you to write it. It reads `claude 
 the connector, lists the tools that connector exposes, reads their descriptions, and probes
 the read-only ones — schema, list, one record — against the real workspace. Each question above
 is answered with the call that actually returned, pasted as it was run. Questions that need a
-write are answered with the tool that would do it, marked *unverified* until the first publish
-runs. The draft is previewed, then written to the last dir in `adapters.dirs` as
-`trackers/<type>.md`, and the report says which answers are verified and which are not.
+write are answered with the tool that would do it, marked *unverified* until a run in any
+`/pm:task` mode uses the call and it succeeds, which takes the mark off. The draft is previewed,
+then written to the last dir in `adapters.dirs` as `trackers/<type>.md`, and the report says
+which answers are verified and which are not.
 
 Start from [`_template.md`](_template.md) when writing one by hand.

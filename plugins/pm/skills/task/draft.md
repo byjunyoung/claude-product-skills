@@ -1,14 +1,6 @@
----
-name: task-draft
-description: Turns a request source — a chat thread, a page, a spoken agreement — into a task record's context table, with fact, inference and undecided labelled apart. Creates a record where none exists, or fills only the empty cells of one that does. Filing it in the tracker is /pm:task-publish. Triggers - "/pm:task-draft", "draft a task from this thread", "fill in the context table", "일감 초안 잡아줘", "맥락표 채워줘", "이 스레드로 일감 만들어줘".
-allowed-tools: AskUserQuestion, Read, Write, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write
----
+# draft — a request source into a task's context table
 
-# task-draft — a request source into a task's context table
-
-**Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install pm@byjunyoung`), rather than improvising what the scripts do.
-
-Takes a **request source** — a chat thread, a document, a conversation someone relayed — and fills the context table of a task record. It sorts what was said into the rows your team uses, and keeps **fact, inference, and undecided** visibly apart. With no existing record it creates one; with one that exists it fills only what is empty. Filing the task in an engineering tracker is out of scope — that is `/pm:task-publish`.
+Takes a **request source** — a chat thread, a document, a conversation someone relayed — and fills the context table of a task record. It sorts what was said into the rows your team uses, and keeps **fact, inference, and undecided** visibly apart. With no existing record it creates one; with one that exists it fills only what is empty. Filing the task in an engineering tracker is out of scope — that is `/pm:task publish`.
 
 ## Principles
 
@@ -17,15 +9,10 @@ Takes a **request source** — a chat thread, a document, a conversation someone
 - **Product language.** No engineering vocabulary. Write as far as *what* is being asked for; *how* is undecided or delegated.
 - **Cells are short.** A context table is a list of items, not a description. The sentence rules are in section 2.
 - **Provisional stays provisional.** If whether to build the thing at all is still open, the scope rows are provisional and the preview says so.
-- **Every external write goes through preview → "go".** Creating and filling alike. Read back afterwards to verify.
 
 ## Configuration
 
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml --need task.record.ref --authored task.record.type,task.record.ref
-```
-
-A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than interviewing for the value here.
+Resolved as *Config* in `SKILL.md` says — `draft` needs `task.record.ref`, and no tracker.
 
 `task.record.type` decides where the record lives, `task.context_rows` names the rows, and `task.properties` lists the values a record can take. Nothing is written into this document. A `null` means that lookup is skipped — say so in the result rather than stopping.
 
@@ -43,7 +30,7 @@ Fill and revise can happen in one run — empty cells get filled, and only the f
 
 Branch on the kind of link and read it. Do this first, without asking.
 
-- **A chat thread** — read the whole thread, parent and replies, so the shape of the discussion is visible, not just the last message. For a threaded platform, resolve the thread root before reading. Attached images and video count only as filenames and context. The calls for the tool the link belongs to are in its source adapter — `adapter.py --kind sources --type slack --role chat` for a Slack permalink, the type from the link's domain or `sources.chat_type`. Exit 3 means no adapter for that tool: stop and say so rather than improvising the read. Where the adapter's read is not available in this session — the connector is absent, or its call fails on access — say so in one line, ask for the thread pasted as text, and go on from the paste. The Request source row keeps the link.
+- **A chat thread** — read the whole thread, parent and replies, so the shape of the discussion is visible, not just the last message. For a threaded platform, resolve the thread root before reading. Attached images and video count only as filenames and context. The calls for the tool the link belongs to are in its source adapter — `adapter.py --kind sources --type slack --role chat` for a Slack permalink, the type from the link's domain or `sources.chat_type`. Exit 3 means no adapter for that tool: stop and say so rather than improvising the read. Where the adapter's read is not available in this session — the connector is absent, or its call fails on access — say so in one line, ask for the thread pasted as text, and go on from the paste. The same holds where that read is still marked `(unverified)`: a failed marked read keeps its mark and falls back to the paste rather than stopping the run (*`(unverified)` marks* in `SKILL.md`). The Request source row keeps the link.
 - **A document page** — fetch the body.
 - **Anything else** (a design link, pasted text) — take what you were given as the evidence.
 
@@ -112,14 +99,14 @@ Create the record in `task.record`, writing properties and body in a single writ
 
 | Property | Value |
 |---|---|
-| Title | A noun phrase naming the work, in the grammar the list's other records already use — read a few before writing one. Never a sentence stating the symptom: that is what a defect is called. Short, confirmed with the user |
+| Title | A noun phrase naming the work, by the title rules in `SKILL.md` — in the grammar the list's other records already use, read before writing one. Short, confirmed with the user |
 | Project | One of `task.properties.projects`, recommended from context. Empty list means ask |
 | Group | The feature grouping. Interview when unsure |
 | Assignee | `task.properties.default_assignee`, or ask |
 | Priority | One of `task.properties.priority` |
 | Status | `task.properties.status_initial` |
 | Version | `task.properties.version_unset`, where `task.properties.version` is named. A new record has no ticket and so no milestone to copy — not asked |
-| Link to mirror | Left empty — `/pm:task-publish` fills it |
+| Link to mirror | Left empty — `/pm:task publish` fills it |
 
 **Markdown records** (`task.record.type` is `markdown`) are one call, with each property as `--set` under the lower-case key the record shape in `trackers/markdown.md` uses, and each context row as `--row`, in `task.context_rows` order. Report the printed path.
 
@@ -131,13 +118,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py new --dir 
   --row "Request source={source}" --row "Initial request={text}"
 ```
 
-Every other type: the calls are in the adapter for `task.record.type`:
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.record.type} --role record
-```
-
-It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; `/pm:setup` 4c drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
+Every other type: the calls are in the record's adapter — *Adapters* in `SKILL.md` says how to find it, and what to do when there is none.
 
 **Read the tracker's own schema immediately before writing** and match the option names it currently has. Never trust option values pinned in this document or in the config — they drift.
 
@@ -149,7 +130,7 @@ Read the record back — for a markdown record, `markdown-tracker.py list --dir 
 
 ## When NOT to invoke
 
-- Filing the task in an engineering tracker → `/pm:task-publish`
-- Reconciling many tasks across two trackers → `/pm:task-sync`
+- Filing the task in an engineering tracker → `/pm:task publish`
+- Reconciling many tasks across two trackers → `/pm:task sync`
 - Writing the requirements themselves → `/pm:prd`
 - Auditing a design file → `/fig:lint`

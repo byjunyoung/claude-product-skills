@@ -129,7 +129,7 @@ sources:
   chat:   true                   # chat history
   # Which tool each of these is. The calls live in sources/<type>.md — slack and
   # google ship; any other name needs an adapter you draft (see adapters below).
-  chat_type:     slack           # the chat tool /pm:task-draft and /pm:log read. none skips chat
+  chat_type:     slack           # the chat tool /pm:task draft and /pm:log read. none skips chat
   calendar_type: google          # the calendar /pm:log reads. none skips it
 
 # --- Adapters ------------------------------------------------------------------
@@ -141,7 +141,7 @@ sources:
 adapters:
   dirs: ["~/.claude/pm-adapters", "./pm-adapters"]
 
-# --- Tasks (/pm:task-draft, /pm:task-publish, /pm:task-sync) --------------------
+# --- Tasks (/pm:task draft, /pm:task publish, /pm:task sync) --------------------
 # A task can live in one place or two. Teams that plan in one tool and build in
 # another keep both; a single-tracker team sets `mirror.type: none` and the sync
 # skill has nothing to reconcile, which is the correct answer rather than an error.
@@ -165,6 +165,16 @@ task:
   # the record skeleton that holds the mirror url. A config that names another record type
   # must name its own, because the two are checked as a pair with task.record.type.
   link_property: ticket
+
+  # The heading of the record's section that holds the handover line. /fig:handoff writes the
+  # line under this heading in pm's markdown records, and /pm:task publish reads the pinned
+  # design version from under it. It is matched as written and does not depend on the language
+  # of the conversation, so a team that writes its records in another language writes the
+  # heading in that language here. With the floor it is "Design changes". It is never null:
+  # a record needs some heading for the line to live under. For records in Notion or GitHub,
+  # where /fig:handoff writes under fig's task_tracker.ui_section_heading instead, keep the two
+  # equal, or /pm:task publish falls back to reading the design section by its role on every run.
+  design_heading: "Design changes"
 
   # --- The rule document the tracker is governed by ------------------------------
   # Some trackers are run by written conventions of their own — what may carry a
@@ -244,7 +254,7 @@ task:
   # status names, plus `always` for every status. Values name fields by the keys under
   # properties (start, end, progress, version) or by the record's project, group,
   # priority and assignee; `progress_done` asks for progress at 100%.
-  # /pm:task-sync reports a record missing one. A blank the evidence can fill — a
+  # /pm:task sync reports a record missing one. A blank the evidence can fill — a
   # schedule date, the ticked fraction, the mirror's milestone — goes to the diagnosis
   # that already fills it; the rest is reported only, since a missing priority or
   # assignee is somebody's decision. Empty, the default, turns the check off.
@@ -253,7 +263,7 @@ task:
 
   # Record status -> the mirror column a task is seated in when it is first filed.
   # Only the statuses a task can be filed *in* need an entry; a status with none leaves
-  # the mirror's own default alone. This also tells /pm:task-sync which column counts as
+  # the mirror's own default alone. This also tells /pm:task sync which column counts as
   # the backlog. Seating is not ownership — field_owner.status still decides who wins later.
   status_map: {}
 
@@ -344,7 +354,7 @@ task:
   contract:
     # Marked: a skill will not write a contract on this key inherited. Which ticket
     # carries the binding sections changes what lands in your tracker, and a default
-    # nobody chose is not an answer to that — /pm:task-publish stops and names it.
+    # nobody chose is not an answer to that — /pm:task publish stops and names it.
     level: task                # task | parent | none — none turns the contract off
 
     # Headings for the sections, written in the order this map is written — a tracker

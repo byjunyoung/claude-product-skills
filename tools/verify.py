@@ -376,6 +376,9 @@ def check_plugin(name, root, yaml):
 # or a path (`example.com/a/pm:b`) from reading as a command. CHANGELOGs are never scanned — they
 # name skills that no longer exist, on purpose.
 SKILL_REF = re.compile(r"(?<![\w/.-])/(fig|pm):([a-z][a-z-]*)")
+# A rename map — `/pm:old-name → /pm:new-name` — is how a README tells a reader what an old command is
+# called now. The old side is a name that no longer exists on purpose; the new side is still checked.
+RENAME_FROM = re.compile(r"(?<![\w/.-])/(?:fig|pm):[a-z][a-z-]*(?= → /(?:fig|pm):[a-z])")
 
 
 def check_references(plugins: dict[str, set[str]]) -> None:
@@ -396,7 +399,7 @@ def check_references(plugins: dict[str, set[str]]) -> None:
     for f, tag in targets:
         if not f.is_file():
             continue
-        text = f.read_text(errors="ignore")
+        text = RENAME_FROM.sub("", f.read_text(errors="ignore"))
         for plug, ref in sorted(set(SKILL_REF.findall(text))):
             if ref not in plugins.get(plug, set()):
                 fails.append(f"[{tag}] {f.relative_to(REPO)} → /{plug}:{ref} does not exist")

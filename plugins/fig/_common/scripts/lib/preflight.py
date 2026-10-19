@@ -71,7 +71,7 @@ CONNECTORS = {
     "pm": [
         ("Notion", False, "where prd.target or the tracker is notion"),
         ("GitHub", False, "where task.mirror.type is github"),
-        ("Slack", False, "where /pm:task-draft drafts from a thread"),
+        ("Slack", False, "where /pm:task draft drafts from a thread"),
     ],
 }
 

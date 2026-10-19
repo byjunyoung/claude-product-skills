@@ -434,7 +434,14 @@ def decide_task(cfg, pm, cwd):
         out["note"] = ("pm's markdown tracker cannot be used here — "
                        + (lines[0] if lines else f"{script} is missing") + " — so the line is printed instead.")
         return out
-    out.update(action="write", dir=folder, script=script, adapter=adapter)
+    theirs = text(dig(pcfg, "task.design_heading")) or HEADING
+    mine = text(tt.get("ui_section_heading"))
+    out.update(action="write", dir=folder, script=script, adapter=adapter, heading=theirs)
+    if mine and mine != theirs:
+        out["note"] = (f"The line goes under pm's heading \"{theirs}\" (task.design_heading, or \"{HEADING}\" "
+                       f"where pm sets none), not under "
+                       f"task_tracker.ui_section_heading \"{mine}\" — fig's heading applies to Notion "
+                       f"and GitHub only.")
     return out
 
 

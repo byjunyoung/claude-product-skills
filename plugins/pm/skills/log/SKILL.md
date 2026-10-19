@@ -1,8 +1,8 @@
 ---
 name: log
-description: Writes one day's work log as a file from what moved in the tracker, the calendar and chat, with decisions, quotes about your work and evidence links, never asking and never inventing, and fills the days an earlier run missed. Triggers - "/pm:log", "write the log for today", "fill in the days that were missed", "일지 써줘", "업무 일지 작성", "빠진 날 채워줘".
+description: Writes one day's work log as a file from the tracker, calendar and chat, and fills the days an earlier run missed. Triggers - "/pm:log", "write the log for today", "fill in the days that were missed", "일지 써줘", "업무 일지 작성", "빠진 날 채워줘".
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Google_Calendar__list_events, mcp__plugin_github_github__issue_read, mcp__claude_ai_Slack__slack_read_user_profile
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Google_Calendar__list_events, mcp__claude_ai_Slack__slack_read_user_profile
 ---
 
 # log — one day, one file
@@ -135,7 +135,7 @@ Close with a few lines: the file path, the counts that went in, what the gap che
 ## When NOT to invoke
 
 - Turning these files into accomplishment statements → `/pm:log-review`
-- Writing a task record's context table → `/pm:task-draft`
-- Filing a task in an engineering tracker → `/pm:task-publish`
-- Reconciling two trackers → `/pm:task-sync`
+- Writing a task record's context table → `/pm:task draft`
+- Filing a task in an engineering tracker → `/pm:task publish`
+- Reconciling two trackers → `/pm:task sync`
 - Writing requirements → `/pm:prd`

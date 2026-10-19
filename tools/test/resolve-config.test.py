@@ -57,6 +57,8 @@ with tempfile.TemporaryDirectory() as tmp:
           and cfg.get("task", {}).get("link_property") == "ticket"
           and cfg.get("log", {}).get("enabled") is True
           and cfg.get("task", {}).get("mirror", {}).get("type") == "none", r.stderr)
+    check("pm floor: design heading", cfg.get("task", {}).get("design_heading") == "Design changes",
+          str(cfg.get("task", {}).get("design_heading")))
 
     # 2. --need on task.mirror.ref, which the floor leaves null: exit 2, the key named on
     #    stderr, nothing on stdout
