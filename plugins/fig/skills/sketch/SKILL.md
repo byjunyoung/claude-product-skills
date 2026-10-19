@@ -72,7 +72,7 @@ The sketch is a means of agreeing, not a deliverable. Every part of it has a can
 decision table      ->  the spec entry                 /pm:prd
 each state          ->  a frame on the page            /fig:prep stubs it, /fig:draw draws it
 transition tree     ->  the flow arrows                /fig:arrows
-what differs        ->  the AS-IS section, the diff    /fig:diff
+what differs        ->  Dev Mode's Compare changes     (in Figma)
 ```
 
 So this skill writes no file and no Figma node, and the report says where each settled item goes next rather than storing it. Where somebody needs the sketch outside this conversation, it is the conversation's own text — copy it from there.

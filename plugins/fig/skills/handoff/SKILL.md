@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Hands finished sections to engineering. Runs /fig:lint as the gate, lets the person pick which passing sections go, pins the named version handed over, hands over the section links, and writes one line into the task file (or page, or issue) where a tracker is set, or prints it where none is. It never sets a Dev Mode status. Nothing else is touched. Triggers - "/fig:handoff", "hand this off", "send this to engineering", "개발 넘겨줘", "핸드오프 해줘", "이 섹션 개발팀에 넘겨".
-allowed-tools: AskUserQuestion, Bash, Read, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__add_issue_comment, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__select_browser, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find
+allowed-tools: AskUserQuestion, Bash, Read, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__add_issue_comment, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__select_browser, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find
 ---
 
 # fig:handoff — hand finished sections to engineering
@@ -32,7 +32,7 @@ preview → go.
 
 - Laying the skeleton and stubbing missing states → `/fig:prep`
 - Checking rules only → `/fig:lint`
-- Marking what changed and writing it up → `/fig:diff`
+- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma
 - Filing the task as a ticket → `/pm:task publish`
 - After release, bringing canonical current → `/fig:sync`
 
@@ -62,7 +62,8 @@ It prints `{"action", "dir", "heading", "script", "adapter", "note"}`, and `acti
 |---|---|
 | `write` | Write the line into a markdown task file (below). `{script}` is pm's `markdown-tracker.py`, `{dir}` the task folder, `{heading}` the heading. Show `note` beside the written line where there is one |
 | `print` | Put the line in the response, with `note` beside it where there is one. Nothing is written |
-| `notion`, `github` | Unchanged — the method `/fig:diff` uses for that tracker |
+| `notion` | Insert the line into the task page, directly after the `{heading}` heading (below) |
+| `github` | Insert the line under that section of the issue body; where the body has no such section, add it as a comment (below) |
 
 - **Exit 3** — fig's own config has a `task_tracker.ref` without its `task_tracker.type`. Stop, and name the setting the message names
 - **Exit 1** — say what it printed and stop. Do not fall back to `print`
@@ -126,7 +127,7 @@ One preview with everything this run will do:
 - the sections going over
 - the section links: `https://figma.com/design/{fileKey}/?node-id={section id with : replaced by -}` — the same links `/fig:prep` hands over, because engineering opens sections, not frames
 - where a version was pinned: the label, its date, and the `&version-id=` every link now carries
-- where `action` is not `print`: the one line that goes into the task doc — the links, "handed over {date}, {n} sections", and the pinned version written as `handoff.version.ref` — under `{heading}`, appended after what is already there. For `write` the preview names the file and shows the line under the heading; for `notion` and `github` it is the method `/fig:diff` uses for that tracker. **That line is what `/pm:task publish` reads to fill a ticket's referenced-version row**, so the label and the date go in as they came back from the file, not as they were typed
+- where `action` is not `print`: the one line that goes into the task doc — the links, "handed over {date}, {n} sections", and the pinned version written as `handoff.version.ref` — under `{heading}`, appended after what is already there. For `write` the preview names the file and shows the line under the heading; for `notion` it names the page and the heading the line goes after, and for `github` the issue and whether it is the body or a comment. **That line is what `/pm:task publish` reads to fill a ticket's referenced-version row**, so the label and the date go in as they came back from the file, not as they were typed
 
 Then the go.
 
@@ -139,6 +140,17 @@ python3 {script} append-under --path {file} --heading '{heading}' --line '{line}
 ```
 
 It adds the heading when it is missing, and a second run gives one heading. Exit 4 means the file named in the preview is missing — stop and say so. Under `print` the line goes in the response instead.
+
+For `notion` and `github` the heading is `task_tracker.ui_section_heading`, or the default `borrow-pm.py task` returned, and the `task` input names the page or issue:
+
+| action | Target | Method |
+|---|---|---|
+| `notion` | the `ui_section_heading` section of the task page (usually behind an empty callout) | `notion-update-page` with `update_content`, catching the heading (and the callout under it) as `old_str` and **inserting the line after them**. Never replace the whole body |
+| `github` | the task issue | If the body has that section, insert the line beneath it with `issue_write` (send the whole edited body back, changing nothing else). If it does not, add the line as a comment with `add_issue_comment` |
+
+- **Search for the target section first.** Where the heading is missing or named differently, confirm where the line should go. Where there is already content under it, do not overwrite — append after it
+- **Never replace the whole body** of a page or an issue, and never touch a section other than that one
+- If no task was found, say so and print the line instead
 
 ### 6. Read back
 

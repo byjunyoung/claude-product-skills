@@ -143,8 +143,8 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 | 스킬 | 추가로 필요한 것 |
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — 실제 브라우저를 띄웁니다 |
-| `/fig:prep` `/fig:draw` `/fig:lint` `/fig:sync` `/fig:diff` `/fig:qa` | **Notion** — 설정이 Notion 페이지를 가리킬 때만 |
-| `/fig:diff` `/pm:setup` `/pm:task` | **GitHub** — `task_tracker.type` / `task.mirror.type`이 `github`일 때만. 로그인이 둘입니다 — Claude의 연결 하나, 트래커를 읽는 `gh` 명령 하나. `/pm:task`는 `gh`만 씁니다. 점검이 둘 다 보고 `gh`가 어느 계정인지 알려줍니다 |
+| `/fig:prep` `/fig:draw` `/fig:lint` `/fig:sync` `/fig:handoff` `/fig:qa` | **Notion** — 설정이 Notion 페이지를 가리킬 때만 |
+| `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — `task_tracker.type` / `task.mirror.type`이 `github`일 때만. 로그인이 둘입니다 — Claude의 연결 하나, 트래커를 읽는 `gh` 명령 하나. `/pm:task`는 `gh`만 씁니다. 점검이 둘 다 보고 `gh`가 어느 계정인지 알려줍니다 |
 | `/fig:qa` `/pm:task draft` | **채팅 도구** — 요청 출처가 스레드일 때만. `pm`은 `sources.chat_type`이 지목하고, `/fig:qa`는 링크에서 도구를 압니다. Slack이 딸려 옵니다 |
 | `/pm:log` | **캘린더와 채팅 도구** — 둘 다 선택. `sources.calendar_type`·`sources.chat_type`이 지목하고, Google Calendar·Slack이 딸려 옵니다. `none`이면 건너뛰고 일지가 그렇게 말합니다. 무인으로 돌리려면 내 컴퓨터의 스케줄러 |
 | `/pm:prd` | **Notion** — `prd.target`이 `notion`일 때만. **웹 검색** — `prd.precedent.enabled`가 true일 때만(기본값), 그것도 기능 항목을 처음 쓸 때만. **화면 레퍼런스 연결** — 선택, `prd.precedent.reference_sources`가 지목한 서비스만. **Slack과 Figma** — 선택, 넘긴 재료 가운데 스레드나 시안 파일을 읽을 때만 |
@@ -270,7 +270,6 @@ claude plugin update fig        # pm 도 깔았으면 함께. 적용은 재시�
 /fig:arrows   전환 화살표와 상태 묶음을 연결한다
 /fig:lint     구조 · 흐름 · 컴포넌트를 한 번에 검사한다
 /fig:handoff  통과한 섹션 중에서 고르고 링크를 넘기고, 일감에 한 줄 남긴다
-/fig:diff     기존 화면을 고친 일감이면 변경점에 주석 핀을 박는다
 ```
 
 `prep`이 먼저 오는 이유는 그릴 목록을 만들기 위해서입니다. 목록 화면을 그리면 결과 없을 때 화면이 필요하고, 폼을 그리면 검증 실패 화면이 필요합니다. 이것을 점선 껍데기로 먼저 세워두면 빠진 화면이 눈에 보입니다. 개발이 물어보기 전에 드러나는 것이 핵심입니다.
@@ -340,7 +339,6 @@ flowchart TD
     lint{"fig:lint<br/>검증 게이트 · 쓰기 0"}
     proto["fig:proto<br/>동작 프로토타입"]
     handoff["개발 전달"]
-    diff["fig:diff<br/>변경점 주석"]
     code["fig:code<br/>프론트 코드 반영"]
     sync["fig:sync<br/>릴리스 후 정본 반영"]
     qa["fig:qa<br/>올라온 화면 기준 대조"]
@@ -349,7 +347,6 @@ flowchart TD
     lint -- 위반 --> prep
     lint -- 통과 --> proto
     lint -- 통과 --> handoff
-    handoff --> diff
     handoff --> code
     handoff --> qa
     handoff -. 릴리스 후 .-> sync
@@ -370,12 +367,13 @@ flowchart TD
 | `/fig:handoff` | 검사 통과한 섹션에서 고르기 · 넘기는 버전 못박기 · 넘길 링크 정리 · 일감에 한 줄 — `pm`의 마크다운 일감 파일, 노션 페이지, GitHub 이슈 — 남길 곳이 없으면 출력 |
 | `/fig:tokens` | 색상의 디자인시스템 토큰 바인딩 검수 |
 | `/fig:sync` | 정본 반영 전수 감사 → 반영 → 이관 |
-| `/fig:diff` | 변경점 주석 표기 · 일감 문서 정리 |
 | `/fig:proto` | 동작하는 단일 HTML 프로토타입 |
 | `/fig:code` | 프론트엔드 레포 코드 반영 |
 | `/fig:qa` | 올라온 화면을 기획서(마크다운 파일, 노션 페이지, `pm`의 기획서)와 시안에 대조해 결함마다 캡처를 붙여 리포트 |
 | `/fig:deck-setup` | 팀 발표 템플릿을 실측해 덱 자산 생성 |
 | `/fig:deck` | 소스를 발표 덱(Figma Slides)으로 |
+
+`/fig:diff` → (삭제 — 무엇이 바뀌었는지는 Dev Mode의 *Compare changes*로 보고, AS-IS/TO-BE 기록은 쓰지 않는다)
 
 ### `/fig:lint`가 보는 것
 
@@ -529,13 +527,13 @@ plugin's own defaults, which nobody on your team chose. …
 | 요구사항 문서 | `qa.baseline.prd` | `prd.target`과 `prd.notion` 절 |
 | 일감 레코드 | `task_tracker.ref` | `task.record.ref` |
 
-**비워 두면 `fig`가 빌려 씁니다 — 단, `pm`이 로컬 파일로 둔 것만.** 기획서는 한 순서로 찾습니다. 실행할 때 넘긴 문서, 그다음 `qa.baseline.prd`, 그다음 — `pm` 0.38.0 이상이 깔려 있으면 — `pm`의 기획서 폴더(`prd.markdown.dir`, `prd.target`이 `markdown`이나 `git`일 때), 그래도 없으면 없음. `/fig:handoff`는 `pm`이 일감을 마크다운으로 둘 때만 — 로컬 시작이 그렇게 둡니다 — `pm`의 일감 파일에 한 줄을 씁니다. 그 줄은 `pm`의 `task.design_heading`이 정한 제목 — 따로 정하지 않으면 "Design changes" — 아래에 들어갑니다. `/pm:task publish`가 거기서 찾기 때문입니다. `fig`의 `task_tracker.ui_section_heading`은 Notion 페이지와 GitHub 이슈에만 쓰입니다. `pm`이 둘 중 하나를 노션에 두고 있으면 `fig`는 거기까지 따라가지 않습니다. 기획서는 `qa.baseline.prd`에 지목해야 하고, 넘긴 기록은 출력만 합니다. 아무도 가리키지 않은 페이지에 `fig`가 쓰기 시작하는 일은 없습니다. `pm`이 없으면 — 안 깔렸거나, 꺼져 있거나, 0.38.0보다 낮으면 — 그걸 거쳐 쓰는 건 없습니다. 기획서는 따로 지목한 것만 읽고, 넘긴 기록은 이유를 적은 메모와 함께 출력됩니다. `/fig:diff`는 빌려 쓰지 않습니다. `task_tracker`가 노션이나 GitHub을 지목할 때만 씁니다.
+**비워 두면 `fig`가 빌려 씁니다 — 단, `pm`이 로컬 파일로 둔 것만.** 기획서는 한 순서로 찾습니다. 실행할 때 넘긴 문서, 그다음 `qa.baseline.prd`, 그다음 — `pm` 0.38.0 이상이 깔려 있으면 — `pm`의 기획서 폴더(`prd.markdown.dir`, `prd.target`이 `markdown`이나 `git`일 때), 그래도 없으면 없음. `/fig:handoff`는 `pm`이 일감을 마크다운으로 둘 때만 — 로컬 시작이 그렇게 둡니다 — `pm`의 일감 파일에 한 줄을 씁니다. 그 줄은 `pm`의 `task.design_heading`이 정한 제목 — 따로 정하지 않으면 "Design changes" — 아래에 들어갑니다. `/pm:task publish`가 거기서 찾기 때문입니다. `fig`의 `task_tracker.ui_section_heading`은 Notion 페이지와 GitHub 이슈에만 쓰입니다. `pm`이 둘 중 하나를 노션에 두고 있으면 `fig`는 거기까지 따라가지 않습니다. 기획서는 `qa.baseline.prd`에 지목해야 하고, 넘긴 기록은 출력만 합니다. 아무도 가리키지 않은 페이지에 `fig`가 쓰기 시작하는 일은 없습니다. `pm`이 없으면 — 안 깔렸거나, 꺼져 있거나, 0.38.0보다 낮으면 — 그걸 거쳐 쓰는 건 없습니다. 기획서는 따로 지목한 것만 읽고, 넘긴 기록은 이유를 적은 메모와 함께 출력됩니다. `task_tracker`가 노션이나 GitHub을 지목하면 `/fig:handoff`가 그 페이지나 이슈에 직접 쓰고, 아무것도 빌리지 않습니다.
 
-두 대상 모두 나누는 이유가 있습니다. 기획서는 같은 기능의 양쪽 끝에서 두 번 읽힙니다. `/fig:draw`는 화면을 그리는 동안 읽습니다 — 파일에 들어가는 문구가 라벨을 채우려고 지은 그럴듯한 말이 아니라 문서가 정한 말이 되도록. `/fig:qa`는 그 뒤에 읽습니다 — 결함 보고가 「Y 문서의 X 규칙을 어겼다」로 읽힐 때만 넘길 값이 있기 때문입니다. 그 Y 문서를 쓴 게 `/pm:prd`입니다. `/fig:handoff`와 `/fig:diff`에 일감이 필요한 건 무엇을 넘겼는지 적은 줄과 AS-IS/TO-BE 표가 그걸 부른 요청 옆에 있어야 하기 때문입니다 — 그 레코드를 연 게 `/pm:task draft`입니다.
+두 대상 모두 나누는 이유가 있습니다. 기획서는 같은 기능의 양쪽 끝에서 두 번 읽힙니다. `/fig:draw`는 화면을 그리는 동안 읽습니다 — 파일에 들어가는 문구가 라벨을 채우려고 지은 그럴듯한 말이 아니라 문서가 정한 말이 되도록. `/fig:qa`는 그 뒤에 읽습니다 — 결함 보고가 「Y 문서의 X 규칙을 어겼다」로 읽힐 때만 넘길 값이 있기 때문입니다. 그 Y 문서를 쓴 게 `/pm:prd`입니다. `/fig:handoff`에 일감이 필요한 건 무엇을 넘겼는지 적은 줄이 그걸 부른 요청 옆에 있어야 하기 때문입니다 — 그 레코드를 연 게 `/pm:task draft`입니다.
 
 앞쪽 한 번이 생각보다 중요합니다. 티켓의 완료 조건은 시안의 구조와 문구에서 나옵니다. 그리다가 지어낸 라벨 하나가 개발이 그걸 보고 만들고 체크하는 한 줄이 된다는 뜻입니다. 그리는 동안 기획서를 읽는 게 추측이 요구사항으로 굳는 걸 막는 장치입니다.
 
-둘 다 필수는 아닙니다. `qa.baseline.prd`를 **비워서 적으면**(`null` — 이 설정에서 「일부러 비워 둠」을 뜻합니다. 비운 항목은 검사를 실패시키지 않고 건너뜁니다) `pm`의 기획서도 찾지 않고, `/fig:qa`는 전부 결함이 아니라 확인 필요로 올리고, `/fig:draw`는 원천을 가정하지 않고 어디서 가져올지 묻습니다. `task_tracker.type`을 `none`으로 적으면 `/fig:diff`는 표를 마크다운으로 뱉고, `/fig:handoff`는 그 한 줄을 출력합니다. 잃는 건 연결이지 기능이 아닙니다.
+둘 다 필수는 아닙니다. `qa.baseline.prd`를 **비워서 적으면**(`null` — 이 설정에서 「일부러 비워 둠」을 뜻합니다. 비운 항목은 검사를 실패시키지 않고 건너뜁니다) `pm`의 기획서도 찾지 않고, `/fig:qa`는 전부 결함이 아니라 확인 필요로 올리고, `/fig:draw`는 원천을 가정하지 않고 어디서 가져올지 묻습니다. `task_tracker.type`을 `none`으로 적으면 `/fig:handoff`는 그 한 줄을 출력합니다. 잃는 건 연결이지 기능이 아닙니다.
 
 **하나가 더 건너갑니다. 이건 설정이 아니라 데이터로 흐릅니다.** `handoff.version`을 켜두면 `/fig:handoff`가 넘기는 순간을 Figma 네임드 버전으로 못박고, 그 이름과 날짜를 일감 문서에 적습니다. `/pm:task publish`는 그 줄을 `task.design_heading` 아래에서 읽어 티켓의 참조 버전 행을 채웁니다(그 제목이 없는 레코드에선 같은 역할을 하는 절에서 읽고, 어느 제목을 읽었는지 밝힙니다). `contract.design_match_line`이 설정돼 있으면 완료 조건이 「빌드가 {버전} 시안과 일치한다」로 적힙니다. 못박지 않으면 그 조건은 누가 파일을 다시 여는 순간 움직이는 과녁을 가리킵니다.
 
@@ -767,7 +765,7 @@ plugins/
     README.md
     skills/
       setup   read  prep   arrows  lint
-      handoff sync  diff   tokens
+      handoff sync  tokens
       proto   code  qa     deck    deck-setup     각 SKILL.md
     _common/
       conventions.example.yaml           설정 스키마 + 내장 기본값

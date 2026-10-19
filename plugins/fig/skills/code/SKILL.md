@@ -27,7 +27,7 @@ Cross that line and something breaks. Tearing up the repo's conventions to match
 - A build-less single-HTML behavioural prototype → `/fig:proto`
 - Just listing frames or reading structure → `/fig:read`
 - Auditing the design's own structure, flow, and naming → `/fig:lint`
-- Marking AS-IS/TO-BE changes on the design and writing them up → `/fig:diff`
+- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma
 - Applying into the canonical Figma page rather than into code → `/fig:sync`
 - The reverse direction, a screen up into Figma → `/fig:draw`, which places it against this file's own canonical page and patterns before handing the assembly to `figma:figma-generate-design`
 

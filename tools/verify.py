@@ -378,7 +378,9 @@ def check_plugin(name, root, yaml):
 SKILL_REF = re.compile(r"(?<![\w/.-])/(fig|pm):([a-z][a-z-]*)")
 # A rename map — `/pm:old-name → /pm:new-name` — is how a README tells a reader what an old command is
 # called now. The old side is a name that no longer exists on purpose; the new side is still checked.
-RENAME_FROM = re.compile(r"(?<![\w/.-])/(?:fig|pm):[a-z][a-z-]*(?= → /(?:fig|pm):[a-z])")
+# A removal note — `/fig:old-name` → (removed — …) / (삭제 — …) — is the same map for a skill with no
+# successor: only the old name is skipped, and the same name written bare elsewhere still fails.
+RENAME_FROM = re.compile(r"(?<![\w/.-])/(?:fig|pm):[a-z][a-z-]*(?=`? → (?:/(?:fig|pm):[a-z]|\(removed|\(삭제))")
 
 
 def check_references(plugins: dict[str, set[str]]) -> None:

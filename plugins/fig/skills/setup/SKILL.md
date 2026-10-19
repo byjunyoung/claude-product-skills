@@ -79,8 +79,8 @@ Report the table as it returns, then judge it:
 - **unknown** on Claude in Chrome — it is a browser extension rather than an MCP server, so
   the shell cannot see it. It matters only for `/fig:proto`, `/fig:code` and `/fig:qa`
 - **The seat is not visible from the shell either.** This skill only reads, so a View seat is
-  fine here. The skills that write — `/fig:prep`, `/fig:arrows`, `/fig:diff`, `/fig:sync`,
-  `/fig:tokens`, `/fig:deck` — check it themselves with `whoami` before their first write
+  fine here. The skills that write — `/fig:prep`, `/fig:draw`, `/fig:arrows`, `/fig:handoff`,
+  `/fig:sync`, `/fig:tokens`, `/fig:deck` — check it themselves with `whoami` before their first write
 - **Only `plugin:figma` can be required on a file with no config.** Once the config names a
   tracker in `task_tracker.type`, that connector is required on later runs and a run that
   cannot reach it stops on its name. Until then the other connectors read as optional, and

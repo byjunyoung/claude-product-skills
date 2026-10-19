@@ -73,7 +73,7 @@ headings are yours; the questions are not. A question the tool cannot answer is 
 | **Milestones** — list open ones, create one, set it on the parent | `/pm:task publish`, `/pm:task sync` | Only where `task.hierarchy.milestone_projects` names a project |
 | **Updating a ticket's body** | `/pm:task publish` | Read before overwrite. Keep the row that links back to the record |
 
-`/fig:handoff` writes its one line into a markdown record through `append-under`. `/fig:diff` writes into a task doc too, with notion and github calls of its own; it does not read these files.
+`/fig:handoff` writes its one line into a markdown record through `append-under`. Where `task_tracker` names Notion or GitHub it makes those calls itself, and does not read these files.
 
 ### Always
 

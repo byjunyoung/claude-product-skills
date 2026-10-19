@@ -213,23 +213,22 @@ handoff:
     ref:   "{label} · {date}"                 # how it is written into the task doc and the ticket
 
 # --- Task tracker --------------------------------------------------------------
-# Where the task doc lives — /fig:handoff writes its one line there, and /fig:diff its
-# comparison table. type decides which of these happens:
+# Where the task doc lives — /fig:handoff writes its one line there. type decides how:
 #   null      unset: /fig:handoff borrows pm's task record, but only where pm is installed and
-#             keeps its records as markdown. Anywhere else, and for /fig:diff, this behaves like none
+#             keeps its records as markdown. Anywhere else, this behaves like none
 #   markdown  /fig:handoff writes through pm into its markdown task folder (ref, where written,
-#             names the folder). /fig:diff treats it as none
-#   none      write nothing; /fig:handoff prints its line, /fig:diff stops at the Figma
-#             annotations and prints the table
-#   notion | github   the tracker named, with ref pointing at it (database id, repo name)
+#             names the folder)
+#   none      write nothing; /fig:handoff prints its line
+#   notion | github   the tracker named, with ref pointing at it (database id, repo name).
+#             /fig:handoff inserts the line under ui_section_heading — after that heading in a
+#             Notion page, in that section of a GitHub issue body (or as a comment where the
+#             body has no such section)
 # A ref written without a type is stopped by --authored: it no longer says which kind of
 # tracker it points at.
 task_tracker:
   type: null                                  # null | markdown | notion | github | none
   ref: null                                   # database id, repo name, and so on
-  ui_section_heading: null                    # heading in the Notion or GitHub doc where changes are written up. null writes under "Design changes". In pm's markdown records pm's task.design_heading decides instead. For records in Notion or GitHub, keep it equal to pm's task.design_heading, or /pm:task publish falls back to reading by role on every run
-  annotation_category: "Changed"              # a shared category to reuse. never create new ones
-  scope_tags: []                              # classification tags prefixed to labels
+  ui_section_heading: null                    # heading in the Notion or GitHub doc that /fig:handoff writes its line under. null writes under "Design changes". In pm's markdown records pm's task.design_heading decides instead. For records in Notion or GitHub, keep it equal to pm's task.design_heading, or /pm:task publish falls back to reading by role on every run
 
 # --- Presentation decks (/fig:deck · /fig:deck-setup) ---------------------------
 # Template values — colors, type, coordinates, archetypes — do not belong here.

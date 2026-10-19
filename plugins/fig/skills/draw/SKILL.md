@@ -28,7 +28,7 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 - Checking for violations only, zero writes → `/fig:lint`
 - Auditing token bindings → `/fig:tokens`
 - Applying finished work into the canonical page → `/fig:sync`
-- Marking what changed between two designs → `/fig:diff`
+- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma
 - Turning a finished design into a working prototype → `/fig:proto`
 - Applying a finished design to front-end code → `/fig:code`
 
@@ -115,7 +115,7 @@ So draw the real screen. Where one fact is genuinely unsettled, leave a plausibl
 TBD (needs confirmation): <the question, specifically>
 ```
 
-That is `/fig:prep`'s own wording, reused verbatim and deliberately: one search then finds every open question in the file, whether it sits on a stub prep left or on a screen this skill finished. **The annotation carries no category** — `task_tracker.annotation_category` belongs to `/fig:diff`, and an open question filed as a change is read as a change.
+That is `/fig:prep`'s own wording, reused verbatim and deliberately: one search then finds every open question in the file, whether it sits on a stub prep left or on a screen this skill finished. **The annotation carries no category**, so an open question is never filed as a change.
 
 A target that really carries nothing decidable — a state nobody has spec'd at all, on a screen with no precedent to read — is the one case where handing it back as a stub is still correct. That is the boundary: **stub what nothing yet answers, draw what something does.**
 
@@ -277,7 +277,7 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 - Never invent a fact a source could have settled, and never leave an unsourced value unmarked
 - Never change anything on the cloned screen the target did not call for
 - Never draw a new visual language for a state the design system already answers
-- Never create an annotation category, and never file an open question under the one `/fig:diff` uses
+- Annotations carry no category: never create one, and never file an open question as a change
 - Never leave a cloned frame carrying its source's annotations, and never pin anything but an open question
 
 ## Notes
