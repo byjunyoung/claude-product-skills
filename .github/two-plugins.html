@@ -22,8 +22,8 @@
  th:nth-child(1){width:23%} th:nth-child(2){width:22%} th:nth-child(3){width:22%} th:nth-child(4){width:33%}
 </style>
 <div class="wrap">
-<h1>The two plugins never call each other</h1>
-<div class="sub">They share two objects, each named twice. Install both and you point each pair at the same place — that is the whole of the configuration. One more thing crosses as data: the version a handover is pinned to, which the ticket then cites.</div>
+<h1>Each works on its own</h1>
+<div class="sub">Installed together, fig reads the PRD where pm writes it and writes into task records through pm's adapters. They still share two objects, each named twice — and one more thing crosses as data: the version a handover is pinned to, which the ticket then cites.</div>
 
 <div class="loop">
   <div class="step pm"><div class="who">pm</div><div class="cmd">task-draft</div>
@@ -44,7 +44,7 @@
 
 <div class="shared">
   <h2>Two objects, two names each</h2>
-  <div class="h2s">Leave either unset and the skill still runs — you lose the linkage, not the skill.</div>
+  <div class="h2s">Set either to none and the skill still runs — you lose the linkage, not the skill.</div>
   <table>
     <tr><th>the object</th><th>fig calls it</th><th>pm calls it</th><th>what you lose</th></tr>
     <tr><td class="obj">the requirements doc</td><td class="c">qa.baseline.prd</td><td class="c">prd.target</td>

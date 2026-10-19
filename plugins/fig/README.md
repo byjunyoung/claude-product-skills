@@ -13,18 +13,19 @@ claude plugin install fig@byjunyoung
 
 ```
 /fig:setup    ──▶  your file's conventions, written down      once per file
-     │
+     │             + where the PRD and the task files live
 /fig:prep     ──▶  sections + a dashed placeholder per missing screen
      │             = your to-draw list
 /fig:sketch   ──▶  the direction, agreed in text            writes nothing
      │             (only when a screen looks or behaves differently)
 /fig:draw     ──▶  each placeholder becomes a real screen
-     │
+     │             its copy taken from the PRD
 /fig:arrows   ──▶  transition arrows and state links
      │
 /fig:lint     ──▶  findings, each blocking or a warning       reads only
      │  nothing blocking
 /fig:handoff  ──▶  section links to engineering
+     │             + one line in the task file, or printed
      │  after release
 /fig:sync     ──▶  canonical page current, working copy archived
 ```
@@ -41,21 +42,21 @@ claude plugin install fig@byjunyoung
 
 | Command | What it does |
 |---|---|
-| `/fig:setup` | Reads how your file already names and spaces things, and writes it down as your settings. Run it first on a new file |
+| `/fig:setup` | Reads how your file already names and spaces things, and writes it down as your settings. Asks only what the file cannot show — the screen width, where the PRD is, where the handover line goes. Run it first on a new file |
 | `/fig:read` | Lists every page and screen in the file |
 | `/fig:prep` | Makes names consistent · puts screens in their section · leaves a placeholder for each screen you still owe |
 | `/fig:sketch` | Agrees what a screen will look like before anything is drawn — one decision at a time, then a rough text wireframe of each state. Writes nothing |
-| `/fig:draw` | Draws a screen or fills a placeholder, cloned from the nearest canonical screen |
+| `/fig:draw` | Draws a screen or fills a placeholder, cloned from the nearest canonical screen, with its copy taken from the PRD |
 | `/fig:arrows` | Creates and re-syncs flow arrows |
 | `/fig:lint` | The audit everything else has to pass. Reads and reports, never edits |
-| `/fig:handoff` | Hands the sections that pass lint to engineering, with their links |
+| `/fig:handoff` | Hands the sections that pass lint to engineering, with their links, and writes one line into the task — `pm`'s task file, a Notion page or a GitHub issue — or prints it where there is none |
 | `/fig:sync` | Finds what never made it into the canonical page → applies it → archives the working copy |
 | **Around the cycle** | |
 | `/fig:tokens` | Checks colours are bound to design-system tokens rather than typed in by hand |
 | `/fig:diff` | Annotates what changed · writes up the task doc |
 | `/fig:proto` | A working single-file HTML prototype |
 | `/fig:code` | Applies the design to the front-end code |
-| `/fig:qa` | Compares what actually shipped against the plan, and writes up the defects with a screenshot for each |
+| `/fig:qa` | Compares what actually shipped against the PRD and the design, and writes up the defects with a screenshot for each |
 | `/fig:deck-setup` | Measures a team presentation template into deck assets |
 | `/fig:deck` | Turns a source into a presentation deck (Figma Slides) |
 
@@ -107,9 +108,9 @@ The skills that write to Figma check your seat first and stop on a View seat —
 ## The other half
 
 ```
-pm                              fig
-/pm:prd          ── spec ──▶    qa.baseline.prd    /fig:qa judges against it
-/pm:task-publish ── task ──▶    task_tracker.ref   /fig:diff writes its table there
+pm                            fig
+/pm:prd        ── the PRD ──▶  /fig:draw · /fig:sketch · /fig:qa read it
+/pm:task-draft ── a task  ──▶  /fig:handoff writes its one line into it
 ```
 
-[`pm`](../pm/README.md) writes the spec this file is drawn against and opens the task the changes belong to. Both links are optional — left empty, both skills still run. The full explanation is in the [repository README](https://github.com/byjunyoung/claude-product-skills).
+[`pm`](../pm/README.md) writes the spec this file is drawn against and opens the task the changes belong to. Each works on its own. Installed together (`pm` 0.38.0 or later), `fig` reads `pm`'s PRD and writes into its markdown task files with nothing set — `qa.baseline.prd` and `task_tracker` are only for pointing somewhere else: a markdown file, a Notion page, a GitHub issue, or none. Without `pm`, and with neither set, every skill still runs: there is no PRD to read, and `/fig:handoff` prints its line. The full explanation is in the [repository README](https://github.com/byjunyoung/claude-product-skills).

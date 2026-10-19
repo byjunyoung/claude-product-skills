@@ -11,7 +11,7 @@
     {
       "name": "fig",
       "source": "./plugins/fig",
-      "description": "A bundle for a Figma file several people share. It builds your to-draw list before you start, draws each screen anchored to your file's own conventions, and keeps the canonical page current afterwards.",
+      "description": "Skills for a Figma file several people share: work out its conventions, stub the screens still missing, draw them inside those conventions, wire the flow arrows, audit a page before handoff, hand sections over pinned to a version, QA what shipped, and bring the canonical page current. Installed with pm, it reads pm's PRD and writes into its task files.",
       "category": "design",
       "tags": [
         "figma",
