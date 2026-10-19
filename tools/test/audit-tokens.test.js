@@ -285,8 +285,37 @@ test("collect mode returns the dictionary and graded aggregates", async () => {
       { hex: "#FAFAFA", count: 1, nodes: ["id:Body"], grade: 2, nearest: "#FFFFFF" },
       { hex: "#FF0000", count: 1, nodes: ["id:Alert"], grade: 3, nearest: null },
     ],
+    inInstance: [],
     note: "3 colour variables could not be resolved to a colour and were left out of the dictionary",
   });
+});
+
+test("collect counts the colours held inside instances apart", async () => {
+  const out = await run([section("01. Home", [
+    frame("Home-Default", {}, [
+      node("INSTANCE", "Chip", { fills: [solid("#3366FF")], strokes: [solid("#FF0000")], overrides: [{ id: "id:Chip", overriddenFields: ["strokes"] }] }, [
+        node("TEXT", "Chip label", { fills: [solid("#111111")] }),
+        node("INSTANCE", "Icon", { fills: [solid("#111111")] }, [node("VECTOR", "Glyph", { fills: [solid("#111111")] })]),
+        node("RECTANGLE", "Bound", { fills: [bound("#3366FF", "primary")] }),         // bound: not counted
+        node("RECTANGLE", "Styled", { fills: [solid("#3366FF")], fillStyleId: "S:1" }), // on the system: not counted
+        node("RECTANGLE", "Hidden", { fills: [solid("#3366FF")], visible: false }),    // not seen: not counted
+      ]),
+    ]),
+    node("VECTOR", "Home-Default --> Detail-Default", { strokes: [solid("#3366FF")] }), // scaffolding: not counted
+  ])], LIB, { MODE: "collect" });
+  assert.deepStrictEqual(out.unbound.map((u) => [u.hex, u.nodes]), [["#FF0000", ["id:Chip"]]], "the stroke the instance overrides is its own");
+  assert.deepStrictEqual(out.inInstance, [{ hex: "#111111", count: 3 }, { hex: "#3366FF", count: 1 }],
+    "the instance's own fill it does not override, and every layer inside it");
+  const audit = await run([section("01. Home", [node("INSTANCE", "Chip", { fills: [solid("#3366FF")] })])]);
+  assert.strictEqual(audit.inInstance, undefined, "the audit result carries no inInstance");
+});
+
+test("an opacity one step off a token reads <1%, never 0%", async () => {
+  const out = await run([section("01. Home", [
+    frame("Faint-Default", { effects: [{ type: "DROP_SHADOW", visible: true, color: { ...rgb("#3366FF"), a: 254 / 255 }, offset: { x: 0, y: 2 }, radius: 4, spread: 0 }] }),
+  ])]);
+  assert.strictEqual(out.findings.length, 1, JSON.stringify(out));
+  assert.match(out.findings[0].msg, /effect #3366FFFE — near a token \(#3366FF, 0 off per channel, opacity off by <1%\)/);
 });
 
 test("SECTION applies", async () => {
@@ -320,6 +349,9 @@ test("SECTION applies", async () => {
   assert.match(excluded.note, /excluded by pages\.exclude_sections; nothing audited/);
 
   await assert.rejects(run(page(), lib, { SECTION: "id:nope", MODE: "collect" }), /section id:nope is not on this page/);
+  const exCol = await run(page(), lib, { SECTION: "id:Inside template", MODE: "collect" });
+  assert.deepStrictEqual([exCol.unbound, exCol.inInstance], [[], []]);
+  assert.match(exCol.note, /nothing audited/);
   const scoped = await run(page(), lib, { SECTION: "id:01. Home", MODE: "collect" });
   assert.deepStrictEqual(scoped.unbound, [{ hex: "#3366FF", count: 2, nodes: ["id:Home-Default", "id:Sub-Default"], grade: 1, nearest: "#3366FF" }]);
 });

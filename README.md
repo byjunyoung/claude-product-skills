@@ -304,11 +304,11 @@ When the structure matches, it edits values rather than replacing the whole scre
 ### Any time — a file health check
 
 ```
-/fig:lint     Structure, flow, and component audit (zero writes)
-/fig:tokens   Check that colors are bound to design system tokens
+/fig:lint     Structure, flow, component and colour-token audit (zero writes)
+/fig:tokens   Bind the colours lint flags to design system tokens (after a go)
 ```
 
-Neither touches the file. Run one when you inherit a file someone else has been in, or when you reopen something old, and you'll know where it stands.
+`lint` never touches the file. Run it when you inherit a file someone else has been in, or when you reopen something old, and you'll know where it stands. `tokens` is the repair for the colours it flags: it writes, so it first shows which token each colour maps to and what that changes, and binds only after your go.
 
 ### Two side branches
 
@@ -342,7 +342,7 @@ flowchart TD
     sketch["fig:sketch<br/>text wireframe of each state · writes nothing"]
     draw["fig:draw<br/>pattern → clone canonical → fill each stub"]
     arrows["fig:arrows<br/>flow arrows · state groups"]
-    tokens["fig:tokens<br/>color token audit"]
+    tokens["fig:tokens<br/>bind colours to tokens"]
     lint{"fig:lint<br/>audit gate · zero writes"}
     proto["fig:proto<br/>working prototype"]
     handoff["Handoff"]
@@ -350,8 +350,9 @@ flowchart TD
     sync["fig:sync<br/>canonical page after release"]
     qa["fig:qa<br/>audit what shipped"]
 
-    setup --> prep --> sketch --> draw --> arrows --> tokens --> lint
+    setup --> prep --> sketch --> draw --> arrows --> lint
     lint -- violations --> prep
+    lint -- unbound colours --> tokens --> lint
     lint -- pass --> proto
     lint -- pass --> handoff
     handoff --> code
@@ -372,7 +373,7 @@ flowchart TD
 | `/fig:arrows` | Create and re-sync flow arrows |
 | `/fig:lint` | Read-only audit gate (zero writes) |
 | `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task — `pm`'s markdown task file, a Notion page or a GitHub issue — or printed where there is none |
-| `/fig:tokens` | Audit design system token binding for colors |
+| `/fig:tokens` | Bind the colours `/fig:lint` flags to design system tokens — the mapping shown first, binding after a go |
 | `/fig:sync` | Full canonical-page audit → apply → archive |
 | `/fig:proto` | Working single-file HTML prototype |
 | `/fig:code` | Apply the design to a frontend repo |
@@ -786,9 +787,11 @@ plugins/
         audit-struct.js                  membership, bounds, overlap, naming, ordering
         audit-flow.js                    arrow geometry, entry direction, pass-through, labels, coverage
         audit-component.js               component default residue
+        audit-tokens.js                  colours left off the design system's tokens
         arrow-build.js                   arrow construction helper
         prep-ops.js                      page cleanup helper
         probe-page.js                    convention observation
+        token-bind.js                    binding colours to tokens, for /fig:tokens
         lib/                             config resolution, preflight, draft generation, syntax check
   pm/
     .claude-plugin/plugin.json

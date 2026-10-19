@@ -300,11 +300,11 @@ claude plugin update fig        # pm 도 깔았으면 함께. 적용은 재시�
 ### 수시 — 파일 건강검진
 
 ```
-/fig:lint     구조 · 흐름 · 컴포넌트 검사 (쓰기 0)
-/fig:tokens   색이 디자인시스템 토큰에 묶여 있는지 검수
+/fig:lint     구조 · 흐름 · 컴포넌트 · 색 토큰 검사 (쓰기 0)
+/fig:tokens   lint가 짚은 색을 디자인시스템 토큰에 묶기 (go 뒤에)
 ```
 
-파일을 안 고치니 아무 때나 돌려도 됩니다. 남이 만진 파일을 넘겨받았을 때, 오래된 파일을 다시 열었을 때 먼저 한 번 돌려보면 상태를 알 수 있습니다.
+`lint`는 파일을 안 고치니 아무 때나 돌려도 됩니다. 남이 만진 파일을 넘겨받았을 때, 오래된 파일을 다시 열었을 때 먼저 한 번 돌려보면 상태를 알 수 있습니다. `tokens`는 lint가 짚은 색을 고치는 쪽입니다. 파일에 쓰니까, 색마다 어느 토큰에 묶이고 그러면 무엇이 바뀌는지 먼저 보여 주고 go를 받은 뒤에만 묶습니다.
 
 ### 곁가지 두 개
 
@@ -338,7 +338,7 @@ flowchart TD
     sketch["fig:sketch<br/>상태별 텍스트 와이어프레임 · 쓰기 0"]
     draw["fig:draw<br/>패턴 → 정본 복제 → 껍데기 채우기"]
     arrows["fig:arrows<br/>흐름 화살표 · 상태 묶음"]
-    tokens["fig:tokens<br/>색상 토큰 검수"]
+    tokens["fig:tokens<br/>색을 토큰에 묶기"]
     lint{"fig:lint<br/>검증 게이트 · 쓰기 0"}
     proto["fig:proto<br/>동작 프로토타입"]
     handoff["개발 전달"]
@@ -346,8 +346,9 @@ flowchart TD
     sync["fig:sync<br/>릴리스 후 정본 반영"]
     qa["fig:qa<br/>올라온 화면 기준 대조"]
 
-    setup --> prep --> sketch --> draw --> arrows --> tokens --> lint
+    setup --> prep --> sketch --> draw --> arrows --> lint
     lint -- 위반 --> prep
+    lint -- 토큰에 안 묶인 색 --> tokens --> lint
     lint -- 통과 --> proto
     lint -- 통과 --> handoff
     handoff --> code
@@ -368,7 +369,7 @@ flowchart TD
 | `/fig:arrows` | 흐름 화살표 생성과 재동기화 |
 | `/fig:lint` | 읽기 전용 검증 게이트 (쓰기 0) |
 | `/fig:handoff` | 검사 통과한 섹션에서 고르기 · 넘기는 버전 못박기 · 넘길 링크 정리 · 일감에 한 줄 — `pm`의 마크다운 일감 파일, 노션 페이지, GitHub 이슈 — 남길 곳이 없으면 출력 |
-| `/fig:tokens` | 색상의 디자인시스템 토큰 바인딩 검수 |
+| `/fig:tokens` | `/fig:lint`가 짚은 색을 디자인시스템 토큰에 묶기 — 매핑을 먼저 보여 주고 go 뒤에 묶음 |
 | `/fig:sync` | 정본 반영 전수 감사 → 반영 → 이관 |
 | `/fig:proto` | 동작하는 단일 HTML 프로토타입 |
 | `/fig:code` | 프론트엔드 레포 코드 반영 |
@@ -781,9 +782,11 @@ plugins/
         audit-struct.js                  소속·경계·겹침·네이밍·순번
         audit-flow.js                    화살표 수치·진입방향·관통·라벨·커버리지
         audit-component.js               컴포넌트 기본값 잔재
+        audit-tokens.js                  디자인시스템 토큰에 안 묶인 색
         arrow-build.js                   화살표 생성 헬퍼
         prep-ops.js                      페이지 정리 헬퍼
         probe-page.js                    관례 관측
+        token-bind.js                    색을 토큰에 묶기, /fig:tokens용
         lib/                             설정 해석·사전 점검·초안 생성·문법 검사
   pm/
     .claude-plugin/plugin.json

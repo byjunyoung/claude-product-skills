@@ -44,7 +44,7 @@ FREE_KEY_MAPS = (
 )
 
 # Blocks pasted into more than one script, each between `// <name>` and `// </name>` markers.
-MARKED_BLOCKS = ["sections-deep", "scaffolding", "scope-of"]
+MARKED_BLOCKS = ["sections-deep", "scaffolding", "scope-of", "paint-scope"]
 SHARED = ["_common/scripts/lib/resolve-config.py", "_common/scripts/lib/preflight.py",
           "hooks/shared-config.py", "hooks/hooks.json"]
 

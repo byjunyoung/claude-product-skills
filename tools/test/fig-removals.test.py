@@ -327,6 +327,34 @@ for rel in ("README.md", "README.ko.md"):
 check("README names the Chrome row rather than counting it",
       "The first Chrome row" not in read("README.md") and "첫 Chrome 줄" not in read("README.ko.md"))
 
+# ---- tokens binds; /fig:lint checks colours ---------------------------------------------------------
+tokens = read("plugins/fig/skills/tokens/SKILL.md")
+check('tokens/SKILL.md has no "lint mode" and no js block',
+      "lint mode" not in tokens.lower() and "check-only" not in tokens.lower() and "```js" not in tokens)
+check("tokens scans, binds and verifies through the scripts",
+      all(s in tokens for s in ("audit-tokens.js", "token-bind.js", 'MODE = "collect"', "acceptAlpha", "inInstance")))
+t_head = fm_of_text(tokens)["description"].partition(" Triggers - ")[0]
+check("tokens' description says it binds, not that it audits",
+      "binds" in t_head.lower() and "audit" not in t_head.lower(), t_head)
+# Every trigger tokens answered to before it stopped checking (as of 181711b) still reaches it
+TOKENS_TRIGGERS = ("/fig:tokens", "check the token bindings", "find unbound colors",
+                   "토큰 바인딩 검수", "하드코딩 색상 검사", "디자인시스템 연동 점검")
+t_desc = fm_of_text(tokens)["description"]
+lost = [x for x in TOKENS_TRIGGERS if f'"{x}"' not in t_desc]
+check("tokens' description keeps every trigger it had", not lost, ", ".join(lost))
+
+draw = read("plugins/fig/skills/draw/SKILL.md")
+step9 = section_of(draw, "### 9. Verify", "\n## ")
+check("draw step 9 no longer calls /fig:tokens",
+      bool(step9) and "[unbound]" in step9 and not re.search(r"[Cc]all `/fig:tokens`", step9)
+      and "check-only" not in draw and "/fig:tokens` after every run" not in draw)
+check("draw's report gates on lint alone", "[gates]      lint · tokens" not in draw)
+for rel in ("README.md", "README.ko.md"):
+    t = read(rel)
+    check(f"{rel}: tokens is a repair lint routes to, not a step before it",
+          "arrows --> tokens" not in t and "arrows --> lint" in t and "--> tokens --> lint" in t)
+    check(f"{rel}: the tree lists both colour scripts", "audit-tokens.js" in t and "token-bind.js" in t)
+
 # ---- descriptions in one shape ---------------------------------------------------------------------
 import glob
 for f in sorted(glob.glob(str(REPO / "plugins/fig/skills/*/SKILL.md"))):

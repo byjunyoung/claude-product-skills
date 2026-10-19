@@ -36,15 +36,21 @@
  * everything under them, non-SOLID paints (gradient, image, video), text with several fills
  * (figma.mixed), paints and effects switched off, paints already bound to a variable, and a property
  * applied through a style (its fillStyleId / strokeStyleId / effectStyleId is a non-empty string).
+ * Which paints those rules leave is the <paint-scope> block, shared byte for byte with token-bind.js,
+ * so the bind touches exactly the paints this file reports.
  *
  * Returns
  *   audit    { pass, findings, note? } — one [unbound] finding per node and colour, the section named in
  *            msg. A dictionary left empty → { pass: true, findings: [], note }: the check is skipped,
  *            never run against nothing. The note says whether no colour variable was found at all or
  *            some were found and none resolved.
- *   collect  { dictionary: { [hex]: variableKey[] }, unbound: [{ hex, count, nodes, grade, nearest }], note? }
+ *   collect  { dictionary: { [hex]: variableKey[] }, unbound: [{ hex, count, nodes, grade, nearest }],
+ *              inInstance: [{ hex, count }], note? }
  *            count is paints, nodes the distinct node ids; nearest is the matching entry (grade 1), the
- *            closest one within the threshold (grade 2), or null (grade 3). Sorted by count, then hex.
+ *            closest one within the threshold (grade 2), or null (grade 3). inInstance counts the colours
+ *            an instance holds and does not override — every layer inside one, and its own paint on a
+ *            property it does not override — which are fixed at the component source and never bound
+ *            here. Both lists are sorted by count, then hex.
  *   SECTION not on the page → audit: one blocking [section] finding; collect: throws.
  *   SECTION inside an excluded section → a `note` saying nothing was audited, and no findings.
  * ========================================================================== */
@@ -58,7 +64,7 @@ const COLLECT = MODE_ === "collect";
 const anyOf = a => (a && a.length ? new RegExp(a.join("|")) : null);
 const SEC_EXCLUDE = anyOf(P.exclude_sections);
 const skipSection = s => !!(SEC_EXCLUDE && SEC_EXCLUDE.test(s.name));
-// Left out → the bundled default; null → exact matches only, so grade 2 never fires.
+// Left out → the bundled default; null → 0, so only the same colour at another opacity grades 2.
 const TH = DS.match_threshold_channel === undefined ? 8 : Number(DS.match_threshold_channel) || 0;
 
 // <sections-deep>
@@ -110,6 +116,89 @@ const scaffoldRoot = (n, S) => {
 const ownPaintsExempt = n => n.type === "SECTION" || n.type === "COMPONENT_SET";
 // </scaffolding>
 
+// <paint-scope>
+// Which colours are the design's own: the ones the audit reports and the bind may touch. Read by every
+// script that reads or binds colours, the same way, so the bind never touches a paint the audit leaves
+// alone — binding a paint applied through a style would detach it from the style. Uses <scaffolding>.
+//   colourKey(c, alpha)   "#RRGGBB" where alpha is 1, "#RRGGBBAA" otherwise
+//   coloursOf(n)          n's SOLID fills and strokes and its effect colours, as { prop, i, kind, key, on,
+//                         varId, styled }. prop and i place it in n[prop]; key is the colour with its alpha
+//                         (a paint's opacity, an effect colour's a); on is false for one switched off; varId
+//                         is the variable it is bound to, or null; styled is true where the property comes
+//                         from a style, its style id a non-empty string (figma.mixed is not one). A text
+//                         node's figma.mixed fills, gradients, images and videos are not returned.
+//   walkColours(n, S, take, pass?)
+//                         top down from n, S = scaffoldingCfg(CFG). A hidden node is left with everything
+//                         under it, a section is left to rootsOf, and a section's or component set's own
+//                         paint is never read. take(node, colour) gets each colour switched on, unbound and
+//                         the node's own: not through a style, not in scaffolding, nothing inside an
+//                         instance, and an instance's own paint only on a property its overrides entry for
+//                         itself lists. pass(node, colour, why), where given, gets the other colours switched
+//                         on and unbound, why being "style", "instance" or "scaffolding"; without it, an
+//                         instance's insides and scaffolding are not read at all.
+//   rootsOf(page, all, ids)
+//                         what to walk, as { n, where }: the children of every section neither excluded nor
+//                         hidden nor nested in a hidden one (all = sectionsDeep's output), only those in ids
+//                         where SECTION narrowed it, and the nodes loose on the page where it did not.
+const colourKey = (c, alpha) => {
+  const a = Math.round((alpha == null ? 1 : alpha) * 255);
+  return hexOf(c) + (a === 255 ? "" : a.toString(16).padStart(2, "0").toUpperCase());
+};
+const styledBy = id => typeof id === "string" && id !== "";
+const coloursOf = n => {
+  const out = [];
+  for (const prop of ["fills", "strokes"]) {
+    const arr = n[prop];
+    if (!Array.isArray(arr)) continue;
+    const styled = styledBy(n[prop === "fills" ? "fillStyleId" : "strokeStyleId"]);
+    arr.forEach((p, i) => {
+      if (p && p.type === "SOLID" && p.color)
+        out.push({ prop, i, kind: prop === "strokes" ? "stroke" : n.type === "TEXT" ? "text" : "fill", key: colourKey(p.color, p.opacity),
+                   on: p.visible !== false, styled, varId: p.boundVariables && p.boundVariables.color ? p.boundVariables.color.id : null });
+    });
+  }
+  if (Array.isArray(n.effects)) {
+    const styled = styledBy(n.effectStyleId);
+    n.effects.forEach((e, i) => {
+      if (e && e.color)
+        out.push({ prop: "effects", i, kind: "effect", key: colourKey(e.color, e.color.a), on: e.visible !== false, styled,
+                   varId: e.boundVariables && e.boundVariables.color ? e.boundVariables.color.id : null });
+    });
+  }
+  return out;
+};
+const overridden = n => {
+  const o = Array.isArray(n.overrides) ? n.overrides.find(x => x && x.id === n.id) : null;
+  return new Set(o && Array.isArray(o.overriddenFields) ? o.overriddenFields : []);
+};
+const walkColours = (n, S, take, pass, ctx = null) => {
+  if (n.visible === false || n.type === "SECTION") return;
+  if (!ctx && scaffoldRoot(n, S)) ctx = "scaffolding";
+  if (ctx && !pass) return;
+  if (!ownPaintsExempt(n)) {
+    const mine = !ctx && n.type === "INSTANCE" ? overridden(n) : null;
+    for (const c of coloursOf(n)) {
+      if (!c.on || c.varId) continue;
+      const why = c.styled ? "style" : ctx || (mine && !mine.has(c.prop) ? "instance" : null);
+      if (!why) take(n, c);
+      else if (pass) pass(n, c, why);
+    }
+  }
+  const inner = ctx || (n.type === "INSTANCE" ? "instance" : null);
+  if (!n.children || (inner && !pass)) return;
+  for (const ch of n.children) walkColours(ch, S, take, pass, inner);
+};
+const rootsOf = (page, all, ids) => {
+  const hidden = new Set(), hide = s => { hidden.add(s.id); for (const c of s.children) if (c.type === "SECTION") hide(c); };
+  for (const { s } of all) if (s.visible === false) hide(s);
+  const out = [];
+  for (const { s, skipped } of all)
+    if (!skipped && !hidden.has(s.id) && (!ids || ids.has(s.id))) for (const n of s.children) out.push({ n, where: s.name });
+  if (!ids) for (const n of page.children) out.push({ n, where: null });
+  return out;
+};
+// </paint-scope>
+
 const issues = [];
 const add = (tag, grade, node, msg) => issues.push({ tag, grade, node: node == null ? null : node, msg });
 // <scope-of>
@@ -135,39 +224,6 @@ if (scope && scope.missing) {
   add("[section]", "blocking", null, `section ${SEC} is not on this page`);
   return { pass: false, findings: issues };
 }
-
-// Every SOLID paint and every effect colour a node carries, as { prop, kind, key, on, varId, styled }.
-// `key` is the colour with its alpha (colourKey): a paint's alpha is its opacity, an effect's is its
-// colour's `a`. `on` is false for one switched off. `varId` is the variable it is bound to, or null.
-// `styled` is true where the property comes from a style — a style id that is a non-empty string; a text
-// node in several styles reports figma.mixed there, which is not one. A text node with several fills
-// reports figma.mixed rather than an array, and gradients, images and videos are not SOLID — none of
-// those is returned.
-const styledBy = id => typeof id === "string" && id !== "";
-const colourKey = (c, alpha) => {
-  const a = Math.round((alpha == null ? 1 : alpha) * 255);
-  return hexOf(c) + (a === 255 ? "" : a.toString(16).padStart(2, "0").toUpperCase());
-};
-const coloursOf = n => {
-  const out = [];
-  for (const prop of ["fills", "strokes"]) {
-    const arr = n[prop];
-    if (!Array.isArray(arr)) continue;
-    const styled = styledBy(n[prop === "fills" ? "fillStyleId" : "strokeStyleId"]);
-    for (const p of arr)
-      if (p && p.type === "SOLID" && p.color)
-        out.push({ prop, kind: prop === "strokes" ? "stroke" : n.type === "TEXT" ? "text" : "fill", key: colourKey(p.color, p.opacity),
-                   on: p.visible !== false, styled, varId: p.boundVariables && p.boundVariables.color ? p.boundVariables.color.id : null });
-  }
-  if (Array.isArray(n.effects)) {
-    const styled = styledBy(n.effectStyleId);
-    for (const e of n.effects)
-      if (e && e.color)
-        out.push({ prop: "effects", kind: "effect", key: colourKey(e.color, e.color.a), on: e.visible !== false, styled,
-                   varId: e.boundVariables && e.boundVariables.color ? e.boundVariables.color.id : null });
-  }
-  return out;
-};
 
 // ── The dictionary: colour key → the keys of the colour variables that resolve to it ──
 // `seenAs` keeps, per bound variable, the colours its paints show. That is the evidence that stands in
@@ -230,7 +286,7 @@ const withNote = (o, extra) => {
 
 if (scope && scope.excluded) {
   const why = `section ${SEC} is excluded by pages.exclude_sections; nothing audited`;
-  return COLLECT ? withNote({ dictionary, unbound: [] }, why) : withNote({ pass: true, findings: [] }, why);
+  return COLLECT ? withNote({ dictionary, unbound: [], inInstance: [] }, why) : withNote({ pass: true, findings: [] }, why);
 }
 if (!dictKeys.length && !COLLECT)
   return { pass: true, findings: [], note: found
@@ -251,35 +307,17 @@ const gradeOf = k => {
   return best !== null && bd <= TH ? { grade: 2, nearest: best, d: bd, da: bda } : { grade: 3, nearest: null, d: bd };
 };
 
-// ── Scan the editable nodes in scope ──
-// Sections come from the walk above, every depth; a section's own paints are never read (the
-// scaffolding block). A hidden node is skipped with everything under it, and a hidden section with the
-// sections nested in it. An instance's insides are never read, and its own paint only where the
-// instance overrides that property — anything else on it is the component's, reported on the component.
+// ── Scan the editable nodes in scope — the <paint-scope> walk ──
+// Sections come from the walk above, every depth. Collect also counts what an instance holds and does
+// not override, so /fig:tokens can report it apart.
 const S = scaffoldingCfg(C);
-const overridden = n => {
-  const o = Array.isArray(n.overrides) ? n.overrides.find(x => x && x.id === n.id) : null;
-  return new Set(o && Array.isArray(o.overriddenFields) ? o.overriddenFields : []);
-};
-const hits = [];   // { n, where, kind, key }
-const scan = (n, where) => {
-  if (n.visible === false || n.type === "SECTION" || scaffoldRoot(n, S)) return;
-  if (!ownPaintsExempt(n)) {
-    const mine = n.type === "INSTANCE" ? overridden(n) : null;
-    for (const c of coloursOf(n))
-      if (c.on && !c.varId && !c.styled && (!mine || mine.has(c.prop))) hits.push({ n, where, kind: c.kind, key: c.key });
-  }
-  if (n.type === "INSTANCE" || !n.children) return;
-  for (const ch of n.children) scan(ch, where);
-};
-const hidden = new Set();
-const hide = s => { hidden.add(s.id); for (const c of s.children) if (c.type === "SECTION") hide(c); };
-for (const { s } of allSecs) if (s.visible === false) hide(s);
-for (const { s, skipped } of allSecs)
-  if (!skipped && !hidden.has(s.id) && (!SEC || scope.ids.has(s.id))) for (const ch of s.children) scan(ch, s.name);
-if (!SEC) for (const n of page.children) scan(n, null);   // loose on the page, in no section
+const hits = [], inInst = new Map();   // hits: { n, where, kind, key }
+const held = COLLECT ? (n, c, why) => { if (why === "instance") inInst.set(c.key, (inInst.get(c.key) || 0) + 1); } : null;
+for (const { n, where } of rootsOf(page, allSecs, scope ? scope.ids : null))
+  walkColours(n, S, (m, c) => hits.push({ n: m, where, kind: c.kind, key: c.key }), held);
 
 if (COLLECT) {
+  const byCount = (x, y) => y.count - x.count || (x.hex < y.hex ? -1 : x.hex > y.hex ? 1 : 0);
   const agg = new Map();
   for (const h of hits) {
     if (!agg.has(h.key)) agg.set(h.key, { count: 0, nodes: new Set() });
@@ -289,8 +327,9 @@ if (COLLECT) {
   const unbound = [...agg].map(([hex, a]) => {
     const g = gradeOf(hex);
     return { hex, count: a.count, nodes: [...a.nodes], grade: g.grade, nearest: g.nearest };
-  }).sort((x, y) => y.count - x.count || (x.hex < y.hex ? -1 : x.hex > y.hex ? 1 : 0));
-  return withNote({ dictionary, unbound }, dictKeys.length || found ? null : "no colour tokens found in this file");
+  }).sort(byCount);
+  const inInstance = [...inInst].map(([hex, count]) => ({ hex, count })).sort(byCount);
+  return withNote({ dictionary, unbound, inInstance }, dictKeys.length || found ? null : "no colour tokens found in this file");
 }
 
 // One finding per node and colour: the kinds it is used for on that node are named together.
@@ -303,7 +342,7 @@ for (const h of hits) {
 }
 for (const g of groups.values()) {
   const r = gradeOf(g.key), loc = g.where ? `${g.where} / ${g.n.name}` : g.n.name, what = `${g.kinds.join(", ")} ${g.key}`;
-  const alpha = r.da ? `, opacity off by ${Math.round(r.da / 255 * 100)}%` : "";
+  const pct = Math.round(r.da / 255 * 100), alpha = r.da ? `, opacity off by ${pct ? pct + "%" : "<1%"}` : "";
   if (r.grade === 1) add("[unbound]", "blocking", g.n.id, `${loc}: ${what} — an exact token for this colour exists and was not used`);
   else add("[unbound]", "warning", g.n.id, r.grade === 2
     ? `${loc}: ${what} — near a token (${r.nearest}, ${r.d} off per channel${alpha}); a designer decides whether to snap it`

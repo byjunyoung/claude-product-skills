@@ -52,7 +52,7 @@ claude plugin install fig@byjunyoung
 | `/fig:handoff` | Hands the sections that pass lint to engineering, with their links, and writes one line into the task — `pm`'s task file, a Notion page or a GitHub issue — or prints it where there is none |
 | `/fig:sync` | Finds what never made it into the canonical page → applies it → archives the working copy |
 | **Around the cycle** | |
-| `/fig:tokens` | Checks colours are bound to design-system tokens rather than typed in by hand |
+| `/fig:tokens` | Binds hand-typed colours — the ones `/fig:lint` flags — to the design system's tokens, after showing which token each one maps to and what binding changes |
 | `/fig:proto` | A working single-file HTML prototype |
 | `/fig:code` | Applies the design to the front-end code |
 | `/fig:qa` | Compares what actually shipped against the PRD and the design, and writes up the defects with a screenshot for each |
@@ -67,7 +67,7 @@ claude plugin install fig@byjunyoung
                          → neither: stop and ask, rather than invent one
 3  Clone and change      the nearest canonical screen, changing only what differs
                          an undecided fact is pinned on its node, not left as a blank frame
-4  Check                 lint + tokens on every drawn frame,
+4  Check                 lint on every drawn frame, colours included,
                          then all of them in one image — a dark screen among light
                          ones looks fine on its own
 ```
@@ -80,6 +80,7 @@ Structure    screens outside a section · overlaps · names · a colour mode nob
 Flow         arrows through unrelated screens · arrowheads into empty space
              · screens on no flow
 Components   variants stacked on each other · settings a duplicate carried along
+Colours      a colour typed by hand where the design system has a token for it
 ```
 
 ```

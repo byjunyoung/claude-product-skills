@@ -1,12 +1,12 @@
 ---
 name: tokens
-description: Audits whether the colors on a Figma frame or page are bound to design system tokens and binds the hardcoded ones it can map safely from bindings already in the file, after a screen is drawn or whenever a color may have been typed in by hand. Triggers - "/fig:tokens", "check the token bindings", "find unbound colors", "토큰 바인딩 검수", "하드코딩 색상 검사", "디자인시스템 연동 점검".
+description: Binds the hand-typed colours on a Figma page or section to the design system's tokens, after showing which token each colour maps to and what binding changes, once /fig:lint has flagged unbound colours or whenever a colour may have been typed in by hand. Triggers - "/fig:tokens", "bind these colors to tokens", "check the token bindings", "find unbound colors", "토큰 바인딩 검수", "하드코딩 색상 검사", "디자인시스템 연동 점검", "토큰으로 묶어줘".
 allowed-tools: AskUserQuestion, Bash, Read, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__search_design_system, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__whoami
 ---
 
-# fig:tokens — audit and repair design system token bindings
+# fig:tokens — bind hand-typed colours to design system tokens
 
-Checks whether the colors inside a frame are actually bound to design system variables, and connects unbound hardcoded colors to a token through **a mapping that has evidence behind it**. Theming, rebranding, and consistency only hold if every color goes through a token, so this runs as the last check before handoff.
+Connects colours typed in by hand to the design system's variables, through **a mapping that has evidence behind it**. Theming, rebranding, and consistency only hold if every color goes through a token. Finding those colours is `/fig:lint`'s job — its `[unbound]` check, which holds a section back from handoff where a colour matches a token exactly. This skill binds them, after the person has seen what each colour maps to and what binding it changes.
 
 **Prerequisites**: always load the `figma:figma-use` skill before calling `use_figma`.
 
@@ -14,12 +14,13 @@ Checks whether the colors inside a frame are actually bound to design system var
 
 ## When to invoke
 
-- "check whether this frame's colors are all bound", "find colors that aren't on a variable"
-- "convert the hardcoded hex values to tokens"
-- The token check right before handoff, once the design is done
+- `/fig:lint` reported `[unbound]` colours and they should go onto tokens
+- "convert the hardcoded hex values to tokens", "bind these colours to tokens"
+- A section held back from handoff by an exact-token colour
 
 ## When NOT to invoke
 
+- Only finding the unbound colours → `/fig:lint` (its colour-token check reads and never writes)
 - Frame naming and section tidying → `/fig:prep`
 - Structure and flow rule violations → `/fig:lint`
 - Flow arrows → `/fig:arrows`
@@ -28,204 +29,101 @@ Checks whether the colors inside a frame are actually bound to design system var
 
 ## Inputs
 
-- `figma_url` (required): the page or frame to audit
-- `mode` (optional): lint mode (check only) / bind. Omitted, it checks and proposes a mapping table
+- `figma_url` (required): the page to bind
+- `section` (optional): a section link or a section name, read the way `/fig:lint` reads it — that section and the sections nested in it. Omitted, the whole page. The scripts scope by page or section, so a link to a frame narrows to the section that holds it, and the preview says so
 
-The rules come from `figma-conventions.yaml` — read the `design_system` section (library, token groups, thresholds) with `resolve-config.py --js <fileKey>`.
+The rules come from `figma-conventions.yaml` — read the `design_system` section (library, token groups, threshold), the scaffolding names in `naming` and `pages.exclude_sections` with `resolve-config.py --js <fileKey>`.
 
-## Why this needs its own skill — tool constraints
+## Why the work is in scripts
 
-- **`get_metadata` cannot see colors.** Metadata carries node id, type, coordinates, and size, with no fill, stroke, or effect color. On a large frame it also blows the token limit and fails wholesale. So **all color inspection and binding walks nodes directly through a `use_figma` script.**
-- **`search_design_system` does not return a token's hex.** It returns the name, key, scope, and owning library. The actual color has to be worked out separately (see below).
+- **`get_metadata` cannot see colors.** Metadata carries node id, type, coordinates, and size, with no fill, stroke, or effect color. On a large frame it also blows the token limit and fails wholesale. So **all color reading and binding walks nodes directly through a `use_figma` script.**
+- **`search_design_system` does not return a token's hex.** It returns the name, key, scope, and owning library. The colour comes from the scan (below).
+- **The scan and the bind agree on which colours are the design's own.** Both scripts carry the same `<paint-scope>` block, so the bind never touches a paint the scan left alone — one inside an instance, or one applied through a style, which binding would detach from its style.
 
-## Where token values come from — auto-detection plus reverse-derivation (the core)
+## Where token values come from — the scan's dictionary
 
-A mapping is only as trustworthy as your knowledge of "what color is this token, really". Two routes run together.
+A mapping is only as trustworthy as your knowledge of "what color is this token, really". The scan builds that dictionary from the file itself.
 
-1. **Detect the connected library**: query the token groups in `design_system.token_prefixes` with `search_design_system` to get names and keys. `design_system.library` decides the target, and on `auto` it detects the library the file is connected to. **Never hardcode a library name in this document** — it differs per file. When `token_prefixes` is empty, use whatever prefixes appear in the reverse-derived map (route 2) as candidates.
-2. **Reverse-derive token-to-hex from existing bindings (the most reliable)**: walk the colors in the same file that are *already bound to a variable* and build a `{token name → actual hex}` map. A bound paint carries both the token id in `boundVariables.color` and the last resolved color in `paint.color`. That shows exactly what color this file actually renders that token as, which makes it the primary evidence for any mapping.
+1. **Every colour variable already bound on the page, plus the file's own local colour variables**, each read in its collection's default mode, aliases followed. That shows exactly what colour this file renders each token as, which makes it the primary evidence for any mapping.
+2. **Where a library token's own value cannot be read** (a collection the script is not given), the colour its bound paints show stands in.
+3. **A library token nobody in this file has bound yet cannot be seen from a script.** `search_design_system` over the groups in `design_system.token_prefixes` finds it by name and key (`design_system.library` picks the library; on `auto`, the one the file is connected to) — never by colour, so a mapping to such a token has no colour evidence, and the preview says so. **Never hardcode a library name in this document** — it differs per file.
+
+The dictionary holds variable keys. Names for the preview come from `search_design_system` by key; a key it does not return is shown as the key.
 
 > **Caution — a token's real value may differ from the hex you were given.** "Change this grey to `fill/primary`" can still mean `fill/primary` is slightly different from that grey (which is fine if tokenizing is the goal). Whenever the color changes, **the preview must say "this token is #AAA, so the screen becomes #BBB".**
 
-## Properties checked
+## Properties
 
-fill · stroke · text color (a TEXT node's fills) · effect color (an effect's color) are all checked. Different properties match different token scopes — a background fill against `FRAME_FILL`/`SHAPE_FILL`, a border against `STROKE`, text against `TEXT_FILL`. **Only map a property to a token whose scope fits it** — never bind a text color to a border token.
+fill · stroke · text color (a TEXT node's fills) · effect color (an effect's color) are all read and bound. Different properties take different token scopes — a background fill `FRAME_FILL`/`SHAPE_FILL`, a border `STROKE_COLOR`, text `TEXT_FILL`, an effect `EFFECT_COLOR`. **The bind script binds a colour only to a token whose scopes include its property** — never a text color to a border token — and returns the rest in `skipped`. One colour that needs a fill token on fills and a text token on text takes two mapping entries for the same hex; each paint takes the first that fits.
 
-## Excluded (untouched in both audit and binding)
+## Left alone (read for the report, never bound)
 
 | Target | Why |
 |---|---|
-| Colors **inside a component instance** | They are instance overrides, fragile, and really a separate issue to be tokenized on the source component in the library. The instance node's *own* color (an override) is in scope; its *children* are not |
-| Working scaffolding | Nodes matching the scaffolding name conventions in `naming` (`arrow_delimiter`, `label_prefix`, `state_chain_prefix`) and anything painted with `section_style` or `placeholder_style` — those are `/fig:arrows` and `/fig:prep` output, not design to tokenize |
-| User-designated protected areas | Archives, templates, and the like |
+| Colours **inside a component instance**, and an instance's own paint on a property it does not override | They belong to the component — tokenize them on its source in the library. The instance's *own* override is in scope; its *children* are not |
+| Paints applied through a style | Already on the design system; binding one would detach it from its style |
+| Working scaffolding | Arrows, labels and state chains by the names in `naming` (`arrow_delimiter`, `label_prefix`, `state_chain_prefix`), placeholders by their `placeholder_style` paint, and a section's or component set's own paint — `/fig:arrows` and `/fig:prep` output, not design to tokenize |
+| Sections in `pages.exclude_sections`, and hidden layers | Archives, templates, and the like; what nobody sees |
 
-Excluded items that turn up are **reported, never fixed** — colors inside instances in particular get grouped separately as "a component repair issue".
+Excluded items that turn up are **reported, never fixed** — colours inside instances in particular are grouped separately as "a component repair issue".
 
 ## Grading — only auto-propose what is safe
 
-Each unbound color is compared against the nearest token of the same property and graded.
+The scan grades each unbound colour against the dictionary, colour and opacity together — the same grades `/fig:lint` reports.
 
 | Grade | Basis | Handling |
 |---|---|---|
-| 1 — exact or near match | Identical to the token's hex, or within `design_system.match_threshold_channel` per channel | Binding effectively does not change the color → **auto-propose the mapping** |
-| 2 — color shifts | Visibly different from the nearest token (off-palette) | Snapping changes the color → **report only; the user decides** |
-| 3 — no matching token | Far from every token, or a brand or special color | Binding not advised, report only |
+| 1 — exact | Colour and opacity both equal a token's | Binding changes nothing you can see → **auto-propose the mapping** |
+| 2 — near | Every colour channel within `design_system.match_threshold_channel` of the nearest token, opacity aside — so the same colour at another opacity is near, never exact | Binding changes the colour or the opacity → **show the change; the person decides** |
+| 3 — none | Further from every token, or a brand or special colour | Binding not advised, report only |
 
-The threshold is a baseline, not a verdict — for borderline colors, show the delta so the user can judge.
-
-## Lint mode — check only (no writes)
-
-For "just check" requests, or the survey step before repair. Read-only, report only:
-
-- Unbound colors in scope **aggregated by hex** (property, count, representative locations), classified as inside-instance / scaffolding / directly editable
-- Directly editable colors get the grade table plus a recommended token and delta
-- Nothing is changed; proceeding requires a separate go into the procedure below
+The threshold is a baseline, not a verdict — for borderline colors, show the delta so the user can judge. `null` makes it 0, so only the same colour at another opacity is near.
 
 ## Procedure
 
-### 1. Build the token dictionary
+Every step runs a script under `${CLAUDE_PLUGIN_ROOT}/_common/scripts/`, called the way `/fig:lint` calls its audits: the single `const CFG = {...};` line from `resolve-config.py --js <fileKey>`, the input lines below, then the whole file, handed to `use_figma` — with one `setCurrentPageAsync` line first where the page is not the first. The code is not copied into this document.
 
-- Get names and keys for the configured token groups via `search_design_system`
-- Walk the target frames and build the **existing binding → {token name, actual hex}** reverse map
-- Merge both into a `{token name, key, scope, hex}` dictionary — the evidence table behind every mapping
+### 1. Scan (read-only)
 
-### 2. Scan for unbound colors (read-only)
+Run `audit-tokens.js` with `const MODE = "collect";`, and `const SECTION = "<section id>";` where a section was given. It returns:
 
-- Walk the target frames and aggregate **SOLID and unbound** colors from fills, strokes, text, and effects, by hex
-- Classify each node as inside-instance / scaffolding / directly editable (see the snippet below)
-- For the directly editable ones, compare against the dictionary to derive grade, recommended token, and delta → the mapping table
+- `dictionary` — `{ hex: [variableKey, …] }`, each colour the file's tokens render and the tokens that render it
+- `unbound` — `[{ hex, count, nodes, grade, nearest }]`, the directly editable colours on no token, one row per colour; `count` is paints, `nodes` the node ids, `nearest` the dictionary entry it was graded against
+- `inInstance` — `[{ hex, count }]`, colours held inside instances, for the "component repair issue" line
+- `note` — a dictionary left empty, or colour variables that could not be read; print it
 
-### 3. Settle the mapping (user's choice)
+A colour at full opacity is written `#RRGGBB` and any other `#RRGGBBAA`, in every field. A section that is not on the page makes the scan throw; ask which one was meant.
 
-- Present grade 1 as a table. **When one hex matches two tokens with different meanings equally** (white matching both a static white and a background token, say), do not pick — present the difference in meaning and let the user choose
-- Grades 2 and 3 are reported only; the user decides whether to proceed
-- Any mapping that changes the color says so explicitly
+### 2. Settle the mapping (user's choice)
 
-### 4. Bind (preview → go, split into steps)
+- Present grade 1 as a table: hex → token (name and key), count, a few nodes. **When one colour matches two tokens with different meanings equally** (white matching both a static white and a background token, say), do not pick — present the difference in meaning and let the user choose
+- Show grade 2 with what binding changes. **A row that differs only in opacity is an opacity change** — "the 20% shadow becomes opaque", in the two values it has — and is asked about on its own. Only a row the person accepts goes into the mapping with `acceptAlpha: true`
+- Grade 3 is reported only; the user decides whether to proceed
+- The settled mapping is `MAPPING = [{ hex, variableKey, acceptAlpha? }]`, with each hex written as the scan wrote it
 
-- Show the settled mapping as a **preview** (targets, hex → token, counts, exclusions) and get a **go**
-- With a lot to do, **split by frame or by color** — never write it all at once
-- Import tokens with `importVariableByKeyAsync`, and bind only unbound paints whose hex matches exactly
+### 3. Bind (preview → go, split into steps)
 
-### 5. Verify (required)
+- Show the settled mapping as a **preview** — the page or section, each hex → token with its count, every change in colour or opacity, and what stays as it is (colours inside instances, grade 2 and 3 rows not chosen) — and get a **go**
+- With a lot to do, **split by section (`SECTION`) or by colour (part of `MAPPING`)** — never write it all at once
+- Run `token-bind.js` with `const MAPPING = [...];`, and `SECTION` where the preview named one. It binds the colours the scan reported whose colour and opacity equal a mapped hex, and returns `{ bound, skipped }`: `bound` in paints, and `skipped` as `[{ node, reason }]` — inside an instance, scaffolding, applied through a style, an opacity the token does not share without `acceptAlpha`, a token not scoped for that property, a token that could not be imported. A section that is not on the page throws before anything is written
 
-- **Re-scan after binding** and confirm "unbound remainder among the targeted, directly editable colors = 0"
-- The count from the aggregation step and the number actually bound may differ — the traversal boundary for nodes inside instances can shift between calls, changing the classification (inferred). **Prove nothing was missed by the re-scan reaching zero**, and report the discrepancy honestly
-- Report remaining inside-instance colors and grades 2–3 separately, as out of scope for this pass
+### 4. Verify (required)
 
-## Implementation snippets
-
-Color to hex, and the inside-instance test:
-
-```js
-function hex(c){const f=x=>Math.round(x*255).toString(16).padStart(2,"0").toUpperCase();return "#"+f(c.r)+f(c.g)+f(c.b);}
-function insideInstance(n){let p=n.parent;while(p){if(p.type==="INSTANCE")return true;p=p.parent;}return false;}
-```
-
-Reverse-deriving token to hex from existing bindings:
-
-```js
-const map={}; // varId -> {name, hexes:{}, count}
-for(const id of ROOT_IDS){
-  const root=await figma.getNodeByIdAsync(id);
-  for(const n of [root,...root.findAll(()=>true)]){
-    for(const key of ["fills","strokes"]){
-      const arr=n[key]; if(!Array.isArray(arr)) continue;
-      for(const p of arr){
-        if(p.type==="SOLID"&&p.visible!==false&&p.boundVariables&&p.boundVariables.color){
-          const vid=p.boundVariables.color.id;
-          if(!map[vid]){const v=await figma.variables.getVariableByIdAsync(vid);map[vid]={name:v?v.name:"?",hexes:{},count:0};}
-          map[vid].count++; const h=hex(p.color); map[vid].hexes[h]=(map[vid].hexes[h]||0)+1;
-        }
-      }
-    }
-  }
-}
-return Object.values(map).map(e=>({name:e.name,count:e.count,hex:Object.keys(e.hexes).join(",")}));
-```
-
-Aggregating unbound colors (editable versus inside-instance):
-
-```js
-const agg={};
-for(const id of ROOT_IDS){
-  const root=await figma.getNodeByIdAsync(id);
-  for(const n of [root,...root.findAll(()=>true)]){
-    const ii=insideInstance(n);
-    for(const key of ["fills","strokes"]){
-      const arr=n[key]; if(!Array.isArray(arr)) continue;
-      for(const p of arr){
-        if(p.type!=="SOLID"||p.visible===false) continue;
-        if(p.boundVariables&&p.boundVariables.color) continue;
-        const k=key+"|"+hex(p.color);
-        if(!agg[k]) agg[k]={prop:key,hex:hex(p.color),editable:0,inInstance:0,examples:[]};
-        agg[k][ii?"inInstance":"editable"]++;
-        if(agg[k].examples.length<4) agg[k].examples.push((ii?"⟨inst⟩":"")+n.name+" ["+n.type+"]");
-      }
-    }
-  }
-}
-return Object.values(agg).sort((a,b)=>b.editable-a.editable);
-```
-
-> Text colors arrive in `fills` above, on TEXT nodes. Effect colors are checked the same way through `n.effects[].color`, and bound through the effect-specific API (check the `setBoundVariableForEffect` family in the d.ts).
-
-Binding (exact hex match only, reassigning a new paint array):
-
-```js
-const V={ tokenA: await figma.variables.importVariableByKeyAsync("KEY_A"), /* ... */ };
-const fillMap={"#FFFFFF":V.tokenA, /* hex: variable */ };
-const strokeMap={/* ... */};
-const counts={};
-const root=await figma.getNodeByIdAsync(FRAME_ID);
-for(const n of [root,...root.findAll(()=>true)]){
-  if(insideInstance(n)) continue;                 // skip inside instances
-  for(const [key,mapObj] of [["fills",fillMap],["strokes",strokeMap]]){
-    const arr=n[key]; if(!Array.isArray(arr)||!arr.length) continue;
-    let changed=false;
-    const next=arr.map(p=>{
-      if(p.type==="SOLID"&&p.visible!==false&&!(p.boundVariables&&p.boundVariables.color)){
-        const v=mapObj[hex(p.color)];
-        if(v){changed=true;counts[v.name]=(counts[v.name]||0)+1;return figma.variables.setBoundVariableForPaint(p,"color",v);}
-      }
-      return p;                                    // fills is read-only — build a new array with map
-    });
-    if(changed) n[key]=next;
-  }
-}
-return {frame:FRAME_ID, counts};
-```
-
-Verification (confirm zero remaining):
-
-```js
-let editableLeft=0;
-for(const id of ROOT_IDS){
-  const root=await figma.getNodeByIdAsync(id);
-  for(const n of [root,...root.findAll(()=>true)]){
-    if(insideInstance(n)) continue;
-    for(const key of ["fills","strokes"]){
-      const arr=n[key]; if(!Array.isArray(arr)) continue;
-      for(const p of arr){
-        if(p.type==="SOLID"&&p.visible!==false&&!(p.boundVariables&&p.boundVariables.color)&&TARGET_HEXES.includes(hex(p.color))) editableLeft++;
-      }
-    }
-  }
-}
-return {editableLeft};   // must be 0 to be done
-```
+- **Run `audit-tokens.js` again in its default mode** on the same scope and confirm no mapped colour is left as `[unbound]`, except on the nodes `skipped` named
+- Where `skipped` names no token problem (opacity, scope, import), `bound` equals the sum of the mapped rows' `count` from the scan — both scripts walk the same paints, so a gap is a fault to report, not a rounding to explain
+- Report `skipped` by reason, `inInstance`, and the grade 2 and 3 rows not chosen, as out of scope for this pass
 
 ## Constraints
 
-- **Preview → go before writing.** Settling the mapping and running the binding are separate; binding is split by frame or by color
-- **Never touch colors inside instances or scaffolding** — report only
-- Only map where the property and the token scope agree (text color to a text token, and so on)
-- Any mapping that changes the color says so in the preview — never assume the color is unchanged from the token's name
-- Keep each call small, verifying between steps with a re-scan or a screenshot
-- Never write "done" without verification — prove zero remaining with a re-scan
+- **Preview → go before writing.** Settling the mapping and running the binding are separate; binding is split by section or by colour
+- **Never touch colors inside instances or scaffolding, or a paint applied through a style** — report only
+- Only bind where the property and the token's scope agree — the bind script holds to it and returns the rest in `skipped`
+- Any mapping that changes the colour or the opacity says so in the preview — never assume the color is unchanged from the token's name
+- Keep each call small, verifying between steps with the audit or a screenshot
+- Never write "done" without verification — prove zero remaining with the audit
 
 ## Notes
 
-- The primary evidence for a mapping is always **what value this file actually renders that token as** (the reverse-derived map). Never infer from how a token's name sounds
+- The primary evidence for a mapping is always **what value this file actually renders that token as** (the scan's dictionary). Never infer from how a token's name sounds
 - "Lots of unbound colors" does not automatically mean somebody forgot — off-palette colors may simply have found their way in, so grades 2 and 3 go back to design judgement
 - A mass of hardcoded colors inside instances is not this skill's scope; raise it separately as **a component library repair task**

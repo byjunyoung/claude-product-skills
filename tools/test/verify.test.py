@@ -182,6 +182,17 @@ def plant_lone_scaffolding(r):
 
 case("a marked block carried by one file only passes", plant_lone_scaffolding, 0)
 
+def plant_paint_scope_drift(r):
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "token-bind.js"
+    t = f.read_text(encoding="utf-8")
+    start = t.index("// <paint-scope>")
+    f.write_text(t[:start] + t[start:].replace('id !== ""', 'id !== "-"', 1), encoding="utf-8")
+
+
+case("a drifted paint-scope copy fails, so the bind cannot read a style the audit does not",
+     plant_paint_scope_drift,
+     1, "[fig] paint-scope copy in token-bind.js differs from audit-tokens.js")
+
 case("unknown config key in a _common document",
      lambda r: write(r, "plugins/pm/_common/trackers/README.md", "\n`task.nonexistent_key`\n", append=True),
      1, "[pm] plugins/pm/_common/trackers/README.md: `task.nonexistent_key` is not in the schema")
