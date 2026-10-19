@@ -43,8 +43,9 @@ recognises the entry by that exact title.
    the call, so a 401 never means "no token":
 
    ```bash
-   TOKEN_VAR="${tools_figma_token_env:-FIGMA_TOKEN}"   # the value of tools.figma_token_env
-   [ -n "${!TOKEN_VAR}" ] || echo "no token in $TOKEN_VAR"   # stop here: nothing is sent
+   TOKEN_VAR=$(python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py {fileKey} \
+     | python3 -c 'import json,sys; print(json.load(sys.stdin)["tools"].get("figma_token_env") or "FIGMA_TOKEN")')
+   if [ -z "${!TOKEN_VAR}" ]; then echo "no token in $TOKEN_VAR"; exit 1; fi   # nothing is sent
    curl -s -H "X-Figma-Token: ${!TOKEN_VAR}" \
      "https://api.figma.com/v1/files/{fileKey}/versions?page_size=10"
    ```
