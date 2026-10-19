@@ -124,6 +124,21 @@ check("unverified marks are cleared by a run",
 n = len(ROUTER.splitlines())
 check("the router stays short", n < 200, f"{n} lines")
 
+# filing rules live once, in filing.md; publish and sync both read it, and sync never reads publish
+FILING_HEADINGS = ("Resolve the parent", "Labels", "Create", "Milestone", "Attach to the board", "Write the link back")
+filing_path = TASK / "filing.md"
+filing = filing_path.read_text(encoding="utf-8") if filing_path.exists() else ""
+absent = [h for h in FILING_HEADINGS if not re.search(rf"^## {re.escape(h)}\s*$", filing, re.M)]
+holders = [f.name for f in sorted(TASK.glob("*.md")) if "Labels have two sources" in f.read_text(encoding="utf-8")]
+check("filing holds the filing rules", filing_path.exists() and not absent and holders == ["filing.md"],
+      f"exists {filing_path.exists()}; missing headings {absent}; 'Labels have two sources' in {holders}")
+
+sync_text = read("plugins/pm/skills/task/sync.md")
+check("sync reads filing, never publish", "filing.md" in sync_text and "publish.md" not in sync_text,
+      f"filing.md named: {'filing.md' in sync_text}; publish.md named: {'publish.md' in sync_text}")
+
+check("publish reads filing", "filing.md" in read("plugins/pm/skills/task/publish.md"))
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)

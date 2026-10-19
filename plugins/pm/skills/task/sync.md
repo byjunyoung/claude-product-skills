@@ -95,7 +95,7 @@ Only what was approved goes to step 5.
 
 Run the approved changes and nothing else. A call that fails is counted under `errors` in the result and the rest go on — except a call still marked `(unverified)` in the adapter, which stops the run: report what was already applied, then name the call (*`(unverified)` marks* in `SKILL.md`).
 
-**Creating follows the same rules as `/pm:task publish`** — the parent is resolved and confirmed rather than assumed, the ticket carries the configured title and labels, read once for whether the people who will act on it can read it too, the milestone lands on the level `task.hierarchy.milestone_on` names, and the link property is written back afterwards. A project with no entry in `task.label_map.project` is skipped, not guessed at.
+**Creating follows `filing.md`** — the parent is resolved and confirmed rather than assumed, the ticket carries the configured title and labels, the milestone lands on the level `task.hierarchy.milestone_on` names, and the link property is written back afterwards — and its title follows the title rules in `SKILL.md`. A project with no entry in `task.label_map.project` is skipped, not guessed at.
 
 This skill writes only a minimal ticket body and **does not add a link back to the record** — that is `/pm:task publish`'s job, done with a person in the loop. Where such a link is already in the body, leave it: it is not used for matching and it is not removed either.
 

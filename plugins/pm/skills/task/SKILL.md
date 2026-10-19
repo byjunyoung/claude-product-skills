@@ -136,3 +136,4 @@ These are the title rules. A task is read by whoever picks the work up, and by e
 | `draft` | `draft.md` | Turn a request source into a task record's context table |
 | `publish` | `publish.md` | File one task record as a ticket in the engineering tracker, or update the one already there |
 | `sync` | `sync.md` | Reconcile the planning-side task list against the tracker it mirrors |
+| — | `filing.md` | The rules for putting a ticket in the tracker: parent, labels, create, milestone, board, link. `publish` and `sync` both read it where they create |
