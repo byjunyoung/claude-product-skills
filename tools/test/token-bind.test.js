@@ -34,9 +34,16 @@ const alias = (id) => ({ type: "VARIABLE_ALIAS", id });
 const solid = (h, more = {}) => ({ type: "SOLID", color: rgb(h), opacity: 1, visible: true, ...more });
 const shadow = (h, a = 1, more = {}) => ({ type: "DROP_SHADOW", visible: true, color: { ...rgb(h), a }, offset: { x: 0, y: 2 }, radius: 4, spread: 0, ...more });
 
-// ── Nodes (ids are "id:" + name) ──
-const node = (type, name, props = {}, children = []) =>
-  ({ type, id: "id:" + name, name, fills: [], strokes: [], effects: [], ...props, children });
+// ── Nodes (ids are "id:" + name). Paint arrays and the paints in them are frozen ──
+const deepFreeze = (x) => {
+  if (x && typeof x === "object" && !Object.isFrozen(x)) { Object.freeze(x); for (const v of Object.values(x)) deepFreeze(v); }
+  return x;
+};
+const node = (type, name, props = {}, children = []) => {
+  const n = { type, id: "id:" + name, name, fills: [], strokes: [], effects: [], ...props, children };
+  for (const k of ["fills", "strokes", "effects"]) if (Array.isArray(n[k])) deepFreeze(n[k]);
+  return n;
+};
 const frame = (name, props, children) => node("FRAME", name, props, children);
 const section = (name, children, props = {}) => node("SECTION", name, { x: 0, y: 0, width: 4000, height: 4000, ...props }, children);
 const find = (nodes, name) => {
@@ -54,18 +61,20 @@ const C1 = { id: "c1", defaultModeId: "m1" };
 const colorVar = (id, valuesByMode, more = {}) =>
   ({ id, key: "key:" + id, name: id, resolvedType: "COLOR", variableCollectionId: "c1", valuesByMode, ...more });
 
-// A fake figma whose variables resolve on a node through resolveForConsumer (default mode, aliases
-// followed), and whose binding helpers record what they were asked to bind.
+// A fake figma whose variables resolve on a node through resolveForConsumer — in the mode the node's
+// resolvedVariableModes names for that collection, else the default, aliases followed — and whose
+// binding helpers return a new paint or effect bound to the variable.
 const fakeFigma = (pageChildren, { vars = [], local = [], published = [], collections = [C1] } = {}) => {
   const byId = (id) => vars.find((v) => v.id === id) || null;
-  const resolve = (v, seen = new Set()) => {
+  const resolve = (v, consumer, seen = new Set()) => {
     if (!v || seen.has(v.id)) return null;
     seen.add(v.id);
     const col = collections.find((c) => c.id === v.variableCollectionId);
-    const val = col ? v.valuesByMode[col.defaultModeId] : Object.values(v.valuesByMode)[0];
-    return val && val.type === "VARIABLE_ALIAS" ? resolve(byId(val.id), seen) : val;
+    const modes = (consumer && consumer.resolvedVariableModes) || {};
+    const val = col ? v.valuesByMode[modes[col.id] || col.defaultModeId] : Object.values(v.valuesByMode)[0];
+    return val && val.type === "VARIABLE_ALIAS" ? resolve(byId(val.id), consumer, seen) : val;
   };
-  for (const v of vars) v.resolveForConsumer = () => ({ value: resolve(v), resolvedType: "COLOR" });
+  for (const v of vars) v.resolveForConsumer = (n) => ({ value: resolve(v, n), resolvedType: "COLOR" });
   const imports = [];
   return {
     mixed: MIXED,
@@ -87,8 +96,10 @@ const fakeFigma = (pageChildren, { vars = [], local = [], published = [], collec
   };
 };
 
+// Strict mode, with every fixture paint and paint array frozen (see node()): a write into either in
+// place throws instead of passing quietly, so "rebuilt and reassigned, never edited" is asserted directly.
 const bind = (figma, MAPPING, { cfg = baseCfg(), SECTION } = {}) =>
-  new AsyncFunction("CFG", "MAPPING", "SECTION", "figma", BIND)(cfg, MAPPING, SECTION, figma);
+  new AsyncFunction("CFG", "MAPPING", "SECTION", "figma", '"use strict";\n' + BIND)(cfg, MAPPING, SECTION, figma);
 const audit = (figma, { cfg = baseCfg(), SECTION, MODE } = {}) =>
   new AsyncFunction("CFG", "SECTION", "MODE", "figma", AUDIT)(cfg, SECTION, MODE, figma);
 
@@ -182,7 +193,7 @@ test("skips instances and scaffolding and says why", async () => {
   assert.match(why["id:Styled"], /applied through a style/);
 });
 
-test("an opacity the token does not share is skipped unless the entry accepts it", async () => {
+test("a visible change — colour or opacity — is skipped unless the entry accepts it", async () => {
   const lib = {
     vars: [colorVar("primary", { m1: value("#3366FF") }), colorVar("scrim", { m1: value("#000000", 0.5) })],
     local: ["primary", "scrim"],
@@ -191,9 +202,11 @@ test("an opacity the token does not share is skipped unless the entry accepts it
     frame("Soft-Default", { fills: [solid("#3366FF", { opacity: 0.2 })] }),            // #3366FF33 against an opaque token
     frame("Scrim-Default", { fills: [solid("#000000", { opacity: 0.5 })] }),           // RGBA agrees
     frame("Glow-Default", { effects: [shadow("#3366FF", 0.2)] }),
+    frame("Near-Default", { fills: [solid("#3B66FF")] }),                              // grade 2: a colour change
   ])];
   const MAP = (accept) => [
-    { hex: "#3366FF33", variableKey: "key:primary", ...(accept ? { acceptAlpha: true } : {}) },
+    { hex: "#3366FF33", variableKey: "key:primary", ...(accept ? { accept: true } : {}) },
+    { hex: "#3B66FF", variableKey: "key:primary", ...(accept ? { accept: true } : {}) },
     { hex: "#00000080", variableKey: "key:scrim" },
   ];
 
@@ -202,13 +215,16 @@ test("an opacity the token does not share is skipped unless the entry accepts it
   assert.strictEqual(strict.bound, 1, JSON.stringify(strict));
   assert.strictEqual(boundTo(find(p1, "Scrim-Default").fills[0]), "scrim");
   assert.strictEqual(boundTo(find(p1, "Soft-Default").fills[0]), null);
-  assert.deepStrictEqual(strict.skipped.map((s) => s.node), ["id:Soft-Default", "id:Glow-Default"]);
-  for (const s of strict.skipped) assert.match(s.reason, /token primary is 100% opaque and the colour 20% — binding changes the opacity; acceptAlpha/, s.reason);
+  assert.deepStrictEqual(strict.skipped.map((s) => s.node), ["id:Soft-Default", "id:Glow-Default", "id:Near-Default"]);
+  for (const s of strict.skipped.slice(0, 2))
+    assert.match(s.reason, /token primary is 100% opaque here and the colour 20% — binding changes what you see; accept: true binds it anyway/, s.reason);
+  assert.match(strict.skipped[2].reason, /^Near-Default: fill #3B66FF — token primary renders #3366FF here, not #3B66FF — binding changes what you see/);
 
   const p2 = page();
   const loose = await bind(fakeFigma(p2, lib), MAP(true));
-  assert.deepStrictEqual(loose, { bound: 3, skipped: [] });
+  assert.deepStrictEqual(loose, { bound: 4, skipped: [] });
   assert.strictEqual(boundTo(find(p2, "Glow-Default").effects[0]), "primary");
+  assert.strictEqual(boundTo(find(p2, "Near-Default").fills[0]), "primary");
 
   // A token whose value cannot be read on the node counts as differing.
   const p3 = page();
@@ -216,7 +232,47 @@ test("an opacity the token does not share is skipped unless the entry accepts it
   for (const v of lib.vars) v.resolveForConsumer = () => { throw new Error("no access"); };
   const out = await bind(blind, [{ hex: "#00000080", variableKey: "key:scrim" }]);
   assert.strictEqual(out.bound, 0);
-  assert.match(out.skipped[0].reason, /the opacity of token scrim could not be read here/);
+  assert.match(out.skipped[0].reason, /what token scrim renders here could not be read, so the bind could change it; accept: true/);
+});
+
+test("a token that renders another colour in a node's mode is skipped there, and bound elsewhere", async () => {
+  const modal = { id: "c1", defaultModeId: "m1", modes: [{ modeId: "m1", name: "Light" }, { modeId: "dark", name: "Dark" }] };
+  const lib = { vars: [colorVar("surface", { m1: value("#FFFFFF"), dark: value("#1E1E1E") })], local: ["surface"], collections: [modal] };
+  const dark = { resolvedVariableModes: { c1: "dark" } };
+  const page = () => [section("01. Home", [
+    frame("Light-Default", { fills: [solid("#FFFFFF")] }),
+    frame("Dark-Default", { fills: [solid("#FFFFFF")], ...dark }, [node("RECTANGLE", "Card", { fills: [solid("#FFFFFF")], ...dark })]),
+    frame("Default-Mode", { fills: [solid("#FFFFFF")], resolvedVariableModes: { c1: "m1" } }),   // set, and to the default
+  ])];
+
+  const p1 = page();
+  const out = await bind(fakeFigma(p1, lib), [{ hex: "#FFFFFF", variableKey: "key:surface" }]);
+  assert.strictEqual(out.bound, 2, JSON.stringify(out));
+  assert.deepStrictEqual(["Light-Default", "Dark-Default", "Card", "Default-Mode"].map((n) => boundTo(find(p1, n).fills[0])),
+    ["surface", null, null, "surface"]);
+  assert.deepStrictEqual(out.skipped.map((s) => s.node), ["id:Dark-Default", "id:Card"]);
+  for (const s of out.skipped)
+    assert.match(s.reason, /fill #FFFFFF — token surface renders #1E1E1E here \(mode Dark\), not #FFFFFF — binding changes what you see; accept: true binds it anyway/, s.reason);
+
+  const p2 = page();
+  const accepted = await bind(fakeFigma(p2, lib), [{ hex: "#FFFFFF", variableKey: "key:surface", accept: true }]);
+  assert.deepStrictEqual(accepted, { bound: 4, skipped: [] });
+});
+
+test("text with part of it in a style is left alone, and the audit still reports it", async () => {
+  const page = [section("01. Home", [
+    node("TEXT", "Mixed", { fills: [solid("#3366FF")], fillStyleId: MIXED }),
+    node("TEXT", "Plain", { fills: [solid("#3366FF")] }),
+    node("TEXT", "Outlined", { strokes: [solid("#3366FF")], strokeStyleId: MIXED }),
+  ])];
+  const figma = fakeFigma(page, LIB());
+  const out = await bind(figma, [{ hex: "#3366FF", variableKey: "key:primary" }]);
+  assert.strictEqual(out.bound, 1, JSON.stringify(out));
+  assert.strictEqual(boundTo(find(page, "Plain").fills[0]), "primary");
+  assert.deepStrictEqual(out.skipped.map((s) => s.node), ["id:Mixed", "id:Outlined"]);
+  assert.match(out.skipped[0].reason, /^Mixed: text #3366FF — part of this text uses a style/);
+  const after = await audit(figma);
+  assert.deepStrictEqual(after.findings.map((f) => f.node), ["id:Mixed", "id:Outlined"], "the shared paint scope is unchanged");
 });
 
 test("a token is bound only to a property its scopes allow", async () => {
@@ -253,7 +309,7 @@ test("a token is bound only to a property its scopes allow", async () => {
   assert.match(none.skipped[0].reason, /token raw-white is not scoped for fill colours/);
 });
 
-test("a token that cannot be found is skipped before anything is written", async () => {
+test("a token that cannot be imported is skipped, and the rest of the mapping still binds", async () => {
   const page = [section("01. Home", [frame("Home-Default", { fills: [solid("#3366FF")] }), frame("Red-Default", { fills: [solid("#FF0000")] })])];
   const fills = page[0].children.map((f) => f.fills);
   const out = await bind(fakeFigma(page, LIB()), [{ hex: "#3366FF", variableKey: "key:gone" }, { hex: "#FF0000", variableKey: "key:lib-red" }]);

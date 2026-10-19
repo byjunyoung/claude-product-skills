@@ -18,6 +18,8 @@ Connects colours typed in by hand to the design system's variables, through **a 
 - "convert the hardcoded hex values to tokens", "bind these colours to tokens"
 - A section held back from handoff by an exact-token colour
 
+A request that only asks to check — "find unbound colors", "check the token bindings" — runs the scan (step 1), reports it, and stops before binding.
+
 ## When NOT to invoke
 
 - Only finding the unbound colours → `/fig:lint` (its colour-token check reads and never writes)
@@ -30,7 +32,7 @@ Connects colours typed in by hand to the design system's variables, through **a 
 ## Inputs
 
 - `figma_url` (required): the page to bind
-- `section` (optional): a section link or a section name, read the way `/fig:lint` reads it — that section and the sections nested in it. Omitted, the whole page. The scripts scope by page or section, so a link to a frame narrows to the section that holds it, and the preview says so
+- `section` (optional): a section link or a section name, read the way `/fig:lint` reads it — that section and the sections nested in it. Omitted, the whole page. The scripts scope by page or section, so a link to a frame narrows to the section that holds it, and the preview says so. A frame that sits in no section narrows nothing: the preview says that too, and that the run covers the whole page
 
 The rules come from `figma-conventions.yaml` — read the `design_system` section (library, token groups, threshold), the scaffolding names in `naming` and `pages.exclude_sections` with `resolve-config.py --js <fileKey>`.
 
@@ -60,8 +62,8 @@ fill · stroke · text color (a TEXT node's fills) · effect color (an effect's 
 
 | Target | Why |
 |---|---|
-| Colours **inside a component instance**, and an instance's own paint on a property it does not override | They belong to the component — tokenize them on its source in the library. The instance's *own* override is in scope; its *children* are not |
-| Paints applied through a style | Already on the design system; binding one would detach it from its style |
+| Colours **inside a component instance**, including overrides on its layers, and an instance's own paint on a property it does not override | They belong to the component — tokenize them on its source in the library. The instance's *own* override is in scope; its layers are not, overrides on them included |
+| Paints applied through a style, and text with part of it in a style | Already on the design system; binding one would detach it from its style. Text in several styles is left by the bind only — `/fig:lint` still reports its colour |
 | Working scaffolding | Arrows, labels and state chains by the names in `naming` (`arrow_delimiter`, `label_prefix`, `state_chain_prefix`), placeholders by their `placeholder_style` paint, and a section's or component set's own paint — `/fig:arrows` and `/fig:prep` output, not design to tokenize |
 | Sections in `pages.exclude_sections`, and hidden layers | Archives, templates, and the like; what nobody sees |
 
@@ -73,7 +75,7 @@ The scan grades each unbound colour against the dictionary, colour and opacity t
 
 | Grade | Basis | Handling |
 |---|---|---|
-| 1 — exact | Colour and opacity both equal a token's | Binding changes nothing you can see → **auto-propose the mapping** |
+| 1 — exact | Colour and opacity both equal a token's | Binding changes nothing you can see in the token's default mode → **auto-propose the mapping**. A node set to another mode, where the token renders something else, is not bound without asking (step 3) |
 | 2 — near | Every colour channel within `design_system.match_threshold_channel` of the nearest token, opacity aside — so the same colour at another opacity is near, never exact | Binding changes the colour or the opacity → **show the change; the person decides** |
 | 3 — none | Further from every token, or a brand or special colour | Binding not advised, report only |
 
@@ -97,28 +99,29 @@ A colour at full opacity is written `#RRGGBB` and any other `#RRGGBBAA`, in ever
 ### 2. Settle the mapping (user's choice)
 
 - Present grade 1 as a table: hex → token (name and key), count, a few nodes. **When one colour matches two tokens with different meanings equally** (white matching both a static white and a background token, say), do not pick — present the difference in meaning and let the user choose
-- Show grade 2 with what binding changes. **A row that differs only in opacity is an opacity change** — "the 20% shadow becomes opaque", in the two values it has — and is asked about on its own. Only a row the person accepts goes into the mapping with `acceptAlpha: true`
+- Show grade 2 with what binding changes — a near colour, or **the same colour at another opacity, which is an opacity change** ("the 20% shadow becomes opaque", in the two values it has) — and ask about each such row on its own. Only a row the person accepts goes into the mapping, with `accept: true`. **`accept: true` means the person saw that visible change and said go to it**; without it the bind skips any paint whose look would change
 - Grade 3 is reported only; the user decides whether to proceed
-- The settled mapping is `MAPPING = [{ hex, variableKey, acceptAlpha? }]`, with each hex written as the scan wrote it
+- The settled mapping is `MAPPING = [{ hex, variableKey, accept? }]`, with each hex written as the scan wrote it
 
 ### 3. Bind (preview → go, split into steps)
 
-- Show the settled mapping as a **preview** — the page or section, each hex → token with its count, every change in colour or opacity, and what stays as it is (colours inside instances, grade 2 and 3 rows not chosen) — and get a **go**
-- With a lot to do, **split by section (`SECTION`) or by colour (part of `MAPPING`)** — never write it all at once
-- Run `token-bind.js` with `const MAPPING = [...];`, and `SECTION` where the preview named one. It binds the colours the scan reported whose colour and opacity equal a mapped hex, and returns `{ bound, skipped }`: `bound` in paints, and `skipped` as `[{ node, reason }]` — inside an instance, scaffolding, applied through a style, an opacity the token does not share without `acceptAlpha`, a token not scoped for that property, a token that could not be imported. A section that is not on the page throws before anything is written
+- Show the settled mapping as a **preview** — the page or section, each hex → token with its count, every row carrying `accept: true` with the change it accepts, and what stays as it is (colours inside instances, grade 2 and 3 rows not chosen) — and get a **go**
+- With a lot to do, **split by section (`SECTION`) or by colour (part of `MAPPING`)** — never write it all at once. A run binds exactly what its preview showed, so a split run gets **its own preview and go**
+- Run `token-bind.js` with `const MAPPING = [...];`, and `SECTION` where the preview named one. It binds the colours the scan reported whose colour and opacity equal a mapped hex, and returns `{ bound, skipped }`: `bound` in paints, and `skipped` as `[{ node, reason }]` — inside an instance, scaffolding, applied through a style or text with part of it in one, a token that renders something on that node other than the colour it replaces without `accept: true`, a token not scoped for that property, a token that could not be imported. A section that is not on the page throws before anything is written
+- **The bind reads what the token renders on each node, in that node's mode.** A frame set to another mode can render a grade-1 token as another colour — "renders #1E1E1E here (mode Dark), not #FFFFFF" — and that node comes back in `skipped` with what it would show. Show those rows and ask; a yes reruns the bind for that colour with `accept: true`, behind its own preview and go
 
 ### 4. Verify (required)
 
 - **Run `audit-tokens.js` again in its default mode** on the same scope and confirm no mapped colour is left as `[unbound]`, except on the nodes `skipped` named
-- Where `skipped` names no token problem (opacity, scope, import), `bound` equals the sum of the mapped rows' `count` from the scan — both scripts walk the same paints, so a gap is a fault to report, not a rounding to explain
+- Where `skipped` names no token problem (a visible change, scope, import), `bound` equals the sum of the mapped rows' `count` from the scan — both scripts walk the same paints, so a gap is a fault to report, not a rounding to explain
 - Report `skipped` by reason, `inInstance`, and the grade 2 and 3 rows not chosen, as out of scope for this pass
 
 ## Constraints
 
-- **Preview → go before writing.** Settling the mapping and running the binding are separate; binding is split by section or by colour
+- **Preview → go before writing.** Settling the mapping and running the binding are separate; binding is split by section or by colour, each run behind its own preview and go
 - **Never touch colors inside instances or scaffolding, or a paint applied through a style** — report only
 - Only bind where the property and the token's scope agree — the bind script holds to it and returns the rest in `skipped`
-- Any mapping that changes the colour or the opacity says so in the preview — never assume the color is unchanged from the token's name
+- Any mapping that changes the colour or the opacity says so in the preview, and carries `accept: true` only after the person said go to that change — never assume the color is unchanged from the token's name
 - Keep each call small, verifying between steps with the audit or a screenshot
 - Never write "done" without verification — prove zero remaining with the audit
 

@@ -9,10 +9,14 @@
  * Inputs
  *   CFG      naming.arrow_delimiter / label_prefix / state_chain_prefix and placeholder_style (the
  *            <scaffolding> block), pages.exclude_sections
- *   MAPPING  [{ hex, variableKey, acceptAlpha? }] — hex in collect's form ("#RRGGBB" where alpha is 1,
+ *   MAPPING  [{ hex, variableKey, accept? }] — hex in collect's form ("#RRGGBB" where alpha is 1,
  *            "#RRGGBBAA" otherwise), variableKey one of the keys collect's dictionary lists. Several
  *            entries may share a hex: each paint takes the first that can be bound to it, so one colour
  *            can go to a fill token on fills and a text token on text.
+ *            accept: true means the person saw, in the preview, that binding this row changes what the
+ *            screen shows — a near colour (grade 2), another opacity, or a token that renders another
+ *            value in the mode a node is set to — and said go to that change. Without it, any such
+ *            difference is skipped.
  *   SECTION  optional — that section and the sections nested in it; without it, the whole page
  *
  * What it binds: exactly the colours audit-tokens.js reports — the <paint-scope> block, shared with it
@@ -21,13 +25,15 @@
  * and reassigned, every other entry left as it was. The paint's own opacity is left as Figma returns it.
  *
  * What it leaves, and returns in `skipped` with the reason — only for a colour MAPPING names:
- *   - inside an instance, or an instance's own paint on a property it does not override (fixed at the
- *     component source)
+ *   - inside an instance, including overrides on its layers, and an instance's own paint on a property
+ *     it does not override
  *   - working scaffolding (the <scaffolding> block)
- *   - a property applied through a style: binding it would detach the style
- *   - a token whose own alpha, resolved on that node, differs from the colour's — the bind would change
- *     the opacity — unless the entry says acceptAlpha: true. A token whose value cannot be read on the
- *     node counts as differing
+ *   - a property applied through a style: binding it would detach the style. A text node whose style id
+ *     is figma.mixed — part of it in a style — is left too, here only: the audit still reports it
+ *   - a token that renders something else on that node than the colour it replaces — another RGB or
+ *     alpha, read with resolveForConsumer, so in the node's own mode — unless the entry says accept:
+ *     true. The reason names what it would render, and the mode where the node sets one. A token
+ *     whose value cannot be read on the node counts as differing
  *   - a token whose `scopes` do not include the property the colour is on (ALL_SCOPES fits every one,
  *     and a token scoped to nothing — hidden from every picker — fits none)
  *   - a variableKey that is not a local colour variable and cannot be imported
@@ -198,7 +204,7 @@ const scopeOf = all => {
 
 // ── MAPPING: colour key → its entries, in the order given ──
 if (typeof MAPPING === "undefined" || !Array.isArray(MAPPING) || !MAPPING.length)
-  throw new Error("MAPPING is a non-empty array of { hex, variableKey, acceptAlpha? }");
+  throw new Error("MAPPING is a non-empty array of { hex, variableKey, accept? }");
 const keyOf = h => {
   const s = String(h == null ? "" : h).replace(/^#/, "").toUpperCase();
   if (!/^[0-9A-F]{6}([0-9A-F]{2})?$/.test(s)) throw new Error(`MAPPING hex "${h}" is not #RRGGBB or #RRGGBBAA`);
@@ -209,7 +215,7 @@ for (const m of MAPPING) {
   if (!m || !m.variableKey) throw new Error(`MAPPING entry ${JSON.stringify(m)} has no variableKey`);
   const k = keyOf(m.hex);
   if (!wanted.has(k)) wanted.set(k, []);
-  wanted.get(k).push({ variableKey: String(m.variableKey), acceptAlpha: m.acceptAlpha === true });
+  wanted.get(k).push({ variableKey: String(m.variableKey), accept: m.accept === true });
 }
 
 // ── Scope, then the walk (reads only) ──
@@ -226,15 +232,23 @@ const skip = (n, c, why) => {
   if (!skipSeen.has(n.id + "\n" + reason)) { skipSeen.add(n.id + "\n" + reason); skipped.push({ node: n.id, reason }); }
 };
 const LEFT = {
-  instance: "inside an instance, fixed at the component source",
+  instance: "inside an instance, including overrides on its layers",
   scaffolding: "working scaffolding, not design",
   style: "applied through a style; binding it would detach the style",
 };
+// A text node in several styles reports figma.mixed as its style id. The audit counts that as no style
+// (and reports the colour); the bind leaves it, since binding could detach the part that has one. This
+// stays outside <paint-scope> so the audit does not change.
+const STYLE_ID = { fills: "fillStyleId", strokes: "strokeStyleId", effects: "effectStyleId" };
+const partStyled = (n, c) => n.type === "TEXT" && n[STYLE_ID[c.prop]] === figma.mixed;
 const S = scaffoldingCfg(C);
 const targets = [];   // { n, c }
 for (const { n } of rootsOf(page, allSecs, scope ? scope.ids : null))
-  walkColours(n, S, (m, c) => { if (wanted.has(c.key)) targets.push({ n: m, c }); },
-                    (m, c, why) => { if (wanted.has(c.key)) skip(m, c, LEFT[why]); });
+  walkColours(n, S, (m, c) => {
+    if (!wanted.has(c.key)) return;
+    if (partStyled(m, c)) skip(m, c, "part of this text uses a style; binding it could detach that part");
+    else targets.push({ n: m, c });
+  }, (m, c, why) => { if (wanted.has(c.key)) skip(m, c, LEFT[why]); });
 
 // ── Every token the targets name, found before the first write ──
 const local = new Map();
@@ -255,15 +269,38 @@ const FRAMELIKE = new Set(["FRAME", "COMPONENT", "COMPONENT_SET", "INSTANCE"]);
 const scopesFor = (n, kind) => kind === "stroke" ? ["STROKE_COLOR"] : kind === "effect" ? ["EFFECT_COLOR"]
   : kind === "text" ? ["TEXT_FILL", "ALL_FILLS"] : [FRAMELIKE.has(n.type) ? "FRAME_FILL" : "SHAPE_FILL", "ALL_FILLS"];
 const fits = (v, n, kind) => !Array.isArray(v.scopes) || v.scopes.includes("ALL_SCOPES") || scopesFor(n, kind).some(s => v.scopes.includes(s));
-// The token's alpha (0–255) as it resolves on this node — its mode and aliases included — or null.
-const alphaOn = (v, n) => {
+// What the token renders on this node, keyed like a paint — in the node's own mode, aliases followed —
+// or null where it cannot be read. The grade came from the collection's default mode; this is what the
+// screen would show.
+const renderedOn = (v, n) => {
   try {
     const r = v.resolveForConsumer(n), val = r && r.value;
-    return val && typeof val.r === "number" ? Math.round((val.a == null ? 1 : val.a) * 255) : null;
+    return val && typeof val.r === "number" ? colourKey(val, val.a) : null;
   } catch (e) { return null; }
 };
 const alphaOf = k => (k.length === 9 ? parseInt(k.slice(7), 16) : 255);
 const pct = a => Math.round(a / 255 * 100) + "%";
+// The name of the mode the node sets for the token's collection, where it sets one and it can be read.
+const colCache = new Map();
+const modeOn = async (v, n) => {
+  const id = n.resolvedVariableModes ? n.resolvedVariableModes[v.variableCollectionId] : null;
+  if (!id) return null;
+  if (!colCache.has(v.variableCollectionId)) {
+    let col = null;
+    try { col = await figma.variables.getVariableCollectionByIdAsync(v.variableCollectionId); } catch (e) { col = null; }
+    colCache.set(v.variableCollectionId, col);
+  }
+  const col = colCache.get(v.variableCollectionId), m = col && Array.isArray(col.modes) ? col.modes.find(x => x.modeId === id) : null;
+  return m ? m.name : null;
+};
+const ACCEPT = " — binding changes what you see; accept: true binds it anyway";
+const changeOn = async (v, n, rk, ck) => {
+  if (rk === null) return `what token ${v.name} renders here could not be read, so the bind could change it; accept: true binds it anyway`;
+  const mode = await modeOn(v, n), here = mode ? ` here (mode ${mode})` : " here";
+  return (rk.slice(0, 7) === ck.slice(0, 7)
+    ? `token ${v.name} is ${pct(alphaOf(rk))} opaque${here} and the colour ${pct(alphaOf(ck))}`
+    : `token ${v.name} renders ${rk}${here}, not ${ck}`) + ACCEPT;
+};
 
 // ── Choose a token per colour: the first entry that can be bound to it ──
 const plan = new Map();   // node id → { n, props: Map(prop → [{ i, v }]) }
@@ -274,13 +311,8 @@ for (const { n, c } of targets) {
     if (t.error) { why = why || t.error; continue; }
     const v = t.v;
     if (!fits(v, n, c.kind)) { why = why || `token ${v.name} is not scoped for ${c.kind} colours`; continue; }
-    const ta = alphaOn(v, n), ca = alphaOf(c.key);
-    if (ta !== ca && !e.acceptAlpha) {
-      why = why || (ta === null
-        ? `the opacity of token ${v.name} could not be read here, so the bind could change it; acceptAlpha: true binds it anyway`
-        : `token ${v.name} is ${pct(ta)} opaque and the colour ${pct(ca)} — binding changes the opacity; acceptAlpha: true binds it anyway`);
-      continue;
-    }
+    const rk = renderedOn(v, n);
+    if (rk !== c.key && !e.accept) { why = why || await changeOn(v, n, rk, c.key); continue; }
     chosen = v;
     break;
   }

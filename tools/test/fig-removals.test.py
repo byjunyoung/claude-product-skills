@@ -332,7 +332,10 @@ tokens = read("plugins/fig/skills/tokens/SKILL.md")
 check('tokens/SKILL.md has no "lint mode" and no js block',
       "lint mode" not in tokens.lower() and "check-only" not in tokens.lower() and "```js" not in tokens)
 check("tokens scans, binds and verifies through the scripts",
-      all(s in tokens for s in ("audit-tokens.js", "token-bind.js", 'MODE = "collect"', "acceptAlpha", "inInstance")))
+      all(s in tokens for s in ("audit-tokens.js", "token-bind.js", 'MODE = "collect"', "accept: true", "inInstance"))
+      and "acceptAlpha" not in tokens)
+check("a request only to check stops after the scan", "stops before binding" in tokens)
+check("each bind run gets its own preview and go", "its own preview and go" in tokens)
 t_head = fm_of_text(tokens)["description"].partition(" Triggers - ")[0]
 check("tokens' description says it binds, not that it audits",
       "binds" in t_head.lower() and "audit" not in t_head.lower(), t_head)
@@ -354,6 +357,8 @@ for rel in ("README.md", "README.ko.md"):
     check(f"{rel}: tokens is a repair lint routes to, not a step before it",
           "arrows --> tokens" not in t and "arrows --> lint" in t and "--> tokens --> lint" in t)
     check(f"{rel}: the tree lists both colour scripts", "audit-tokens.js" in t and "token-bind.js" in t)
+    writers = {"README.md": "(`prep`, `arrows`, `sync`, `tokens`)", "README.ko.md": "(`prep`·`arrows`·`sync`·`tokens`)"}[rel]
+    check(f"{rel}: tokens is among the skills that write", writers in t)
 
 # ---- descriptions in one shape ---------------------------------------------------------------------
 import glob

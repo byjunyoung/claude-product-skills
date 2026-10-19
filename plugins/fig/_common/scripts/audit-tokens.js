@@ -29,7 +29,7 @@
  *      null makes the threshold 0, so only that case is near
  *   3  neither                                                           → warning
  *
- * Not reported: anything inside an instance (fixed at the component source), and an instance's own
+ * Not reported: anything inside an instance, including overrides on its layers, and an instance's own
  * paint unless the instance overrides that property (its `overrides` entry for itself lists fills,
  * strokes or effects) — otherwise the paint is the component's and is reported there. Also: working
  * scaffolding (the <scaffolding> block), sections excluded by pages.exclude_sections, hidden nodes and
@@ -48,9 +48,9 @@
  *              inInstance: [{ hex, count }], note? }
  *            count is paints, nodes the distinct node ids; nearest is the matching entry (grade 1), the
  *            closest one within the threshold (grade 2), or null (grade 3). inInstance counts the colours
- *            an instance holds and does not override — every layer inside one, and its own paint on a
- *            property it does not override — which are fixed at the component source and never bound
- *            here. Both lists are sorted by count, then hex.
+ *            inside instances, including overrides on its layers — every layer inside one, and an
+ *            instance's own paint on a property it does not override — none of which is bound here.
+ *            Both lists are sorted by count, then hex.
  *   SECTION not on the page → audit: one blocking [section] finding; collect: throws.
  *   SECTION inside an excluded section → a `note` saying nothing was audited, and no findings.
  * ========================================================================== */
