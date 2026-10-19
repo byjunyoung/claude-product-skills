@@ -248,11 +248,11 @@ Exit 3 from `adapter.py` on either side means the type names a tool this plugin 
 1. **Find the connector** in the preflight table — the row named by the type. Absent means stop: an adapter cannot be drafted for a tool this machine cannot reach
 2. **List the tools it exposes** and read their descriptions. The names are what the adapter will carry, exactly as this machine has them. Put the connector's name on a `connector:` line near the top, and the sides the file answers for on a `roles:` line — preflight reads the first to know which connector this type requires, `adapter.py` the second to refuse the file for a side it does not serve
 3. **Probe the read-only ones against the real workspace** — the schema, the list, one record — and keep the call that returned, pasted as run. Whether the list is exhaustive or a search is answered by what the call actually does, not by what its name suggests
-4. **Answer the write questions with the tool that would do it, marked `(unverified)`.** The first `/pm:task publish` or `sync` run that uses a marked call clears its mark once the call succeeds, and a call that fails keeps it and stops that run — `/pm:task` says how
+4. **Answer the write questions with the tool that would do it, marked `(unverified)`.** The first run in any `/pm:task` mode that uses a marked call clears its mark once the call succeeds, and a call that fails keeps it and stops that run — `/pm:task` says how
 5. **"Things that bite" starts with one line — `nothing recovered yet`.** It is filled by what bites
 6. **Preview, then write** to the last dir in `adapters.dirs` — `{dir}/trackers/<type>.md` or `{dir}/sources/<type>.md` — never inside the plugin, which an update overwrites. Then go back to the step that stopped
 
-The report lists every answer marked unverified. A config whose adapter is half verified is usable; one whose adapter was guessed is not, and the mark is what tells them apart.
+The report lists every answer marked unverified. A config whose adapter is half verified is usable; one whose adapter was guessed is not, and the mark is what tells them apart. A mark on a source call that only `/pm:log` runs — a calendar read, say — stays until somebody removes it by hand, since nothing that clears marks runs that call; the report says so beside it.
 
 #### 4d. Pair the two sides
 

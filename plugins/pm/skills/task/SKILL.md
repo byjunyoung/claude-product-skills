@@ -15,7 +15,7 @@ Read this file first, then the mode's file, and follow both. What the three mode
 ```
 /pm:task draft <source> [<record>]
 /pm:task publish <record> [--contract | --template]
-/pm:task sync
+/pm:task sync [all | mine]
 ```
 
 Without a mode word, the request decides: a thread, page or conversation to turn into a task → `draft`; "file / publish / update the ticket" → `publish`; "reconcile / sync" → `sync`. Ask only when it is still unclear.
@@ -47,7 +47,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-co
   --need task.record.ref --authored task.record.type,task.record.ref
 ```
 
-`publish` and `sync`, a tracker attached, so the rest must be named:
+`publish`, a tracker attached, so the rest must be named:
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
@@ -55,7 +55,15 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-co
   --authored task.record.type,task.record.ref,task.link_property,task.contract.level
 ```
 
-`sync` adds `task.progress_source` to that `--authored` list only where `task.properties.progress` is named (non-null in the resolved config) — the progress checks are inert without the property, so a config that never mentions the key must not be stopped on the floor's copy of it.
+`sync`, the same, with a shorter `--authored`:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
+  --need task.record.ref,task.link_property,task.mirror.ref \
+  --authored task.record.type,task.record.ref,task.link_property
+```
+
+`sync` adds `task.contract.level,task.progress_source` to that `--authored` list only where `task.properties.progress` is named (non-null in the resolved config) — both feed only the progress checks, which are inert without the property, so a config that never mentions the keys must not be stopped on the floor's copy of them.
 
 A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than interviewing for the value here, or running against a side that was never named.
 
@@ -76,20 +84,17 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventio
 | `publish` | Both | Before the record is first read — the parent search and the duplicate check call the mirror long before anything is attached |
 | `sync` | Both | Before scanning. They also carry what each tool cannot do, which is what the coverage line reports |
 
-It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; `/pm:setup` 4c drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
+`adapter.py` prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; `/pm:setup` 4c drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
 
 ## Rules every mode follows
 
 - **Matching runs on `task.link_property` alone** — the property on the record that holds the ticket's url, one to one. A back-link written in the ticket body is for a human to click, never for matching: it can point at a source that was already discarded, and that is exactly how past mis-matches, duplicates and resurrected tickets happened
-- **Where `task.policy.doc` names a rule document, read it before the first write of the session.** It holds the tracker's own conventions — what may carry a version, who may close what, how a ticket with no parent is treated — and where it disagrees with a default in the config or in these files, **it wins**. Read it once and work from it for the rest of the session; read it again only where a write is refused, or where a ticket comes back changed by whatever enforces those rules. The mirror's adapter says how to fetch it. With the key null there is no such document and the config alone decides
-- **Where `task.template` names a ticket template, read it with the rule document, once per session, before a ticket's body is assembled or judged against it** — `template.task` for a task, `template.parent` for whatever `hierarchy.parent_kind` calls its level. It is the skeleton everyone filing by hand already gets, so it decides **which sections exist and in what order**; `task.ticket.sections` and `task.contract.sections` decide only which slot each of those headings is. Fetch it the way the mirror's adapter says. Where the template is a form rather than a document, its field labels are its headings, in the order the form declares them
-- **Where a configured section name is not in the template, stop and name both.** One of the two has gone stale, and the run cannot tell which — the config may be behind a template somebody renamed, or the template may be a draft nobody adopted. What it must not do is write its own heading next to the template's: two sections then hold the same thing, the tracker's gates read one of them, and nothing about the ticket looks wrong. Where the template cannot be fetched at all, say so and fall back to the configured names — a ticket still has to get filed, and a fetch that failed is not a reason to hold up the work. With the key null the tracker publishes no template and the configured names decide alone
 - **Never invent a mapping.** A project, priority or assignee with no entry in the config is never guessed at. `publish` stops the run with a message — a wrong label is harder to find later than a missing ticket; `sync` skips the row and reports it. In `sync`, **a user id found on another record is not a mapping** — copying it onto a second record because the tracker shows the same name is exactly the invention this rule forbids. An assignee reaches the record only through `task.assignee_map`
 - **Every external write is previewed, and waits for "go".** Creating a record and filling one, filing a ticket and editing one, the write-back into the record, and the `(unverified)` edits below alike. Each mode's file says what its preview holds. Read back afterwards to verify
 
 ### Written for the people who will act on it
 
-These are the title rules. A task is read by whoever picks the work up, and by everyone downstream who has to know what it covers — the person drawing the screens, the one deciding what is in scope this release, the one answering for it once it ships. Most of them do not read the system it is built on. So the title and the sentences under it say **what somebody will see or do**, not what the machine does underneath — a record's title in `draft` as much as a ticket's in `publish`, and what `sync` reports a title against.
+These are the title rules. A task is read by whoever picks the work up, and by everyone downstream who has to know what it covers — the person drawing the screens, the one deciding what is in scope this release, the one answering for it once it ships. Most of them do not read the system it is built on. So the title and the sentences under it say **what somebody will see or do**, not what the machine does underneath — a record's title in `draft`, which follows the first three below; a ticket in `publish`, which follows them all; and what `sync` reports as *Reads as internals*.
 
 - **The title names the work, as a noun phrase.** A word only the internals use — a layer, a gate, a
   flag, a surface — reads as precise to whoever coined it and as nothing at all to everybody else.
@@ -112,9 +117,17 @@ These are the title rules. A task is read by whoever picks the work up, and by e
 - **Plain is not simplified.** The reader knows the product better than anyone, just not its
   internals, so nothing is rounded off to make a sentence read easily
 
+## The tracker's own rules — `publish` and `sync`
+
+`draft` never reads the mirror's adapter, so none of this applies to it.
+
+- **Where `task.policy.doc` names a rule document, read it before the first write of the session.** It holds the tracker's own conventions — what may carry a version, who may close what, how a ticket with no parent is treated — and where it disagrees with a default in the config or in these files, **it wins**. Read it once and work from it for the rest of the session; read it again only where a write is refused, or where a ticket comes back changed by whatever enforces those rules. The mirror's adapter says how to fetch it. With the key null there is no such document and the config alone decides
+- **Where `task.template` names a ticket template, read it with the rule document, once per session, before a ticket's body is assembled or judged against it** — `template.task` for a task, `template.parent` for whatever `hierarchy.parent_kind` calls its level. It is the skeleton everyone filing by hand already gets, so it decides **which sections exist and in what order**; `task.ticket.sections` and `task.contract.sections` decide only which slot each of those headings is. Fetch it the way the mirror's adapter says. Where the template is a form rather than a document, its field labels are its headings, in the order the form declares them
+- **Where a configured section name is not in the template, stop and name both.** One of the two has gone stale, and the run cannot tell which — the config may be behind a template somebody renamed, or the template may be a draft nobody adopted. What it must not do is write its own heading next to the template's: two sections then hold the same thing, the tracker's gates read one of them, and nothing about the ticket looks wrong. Where the template cannot be fetched at all, say so and fall back to the configured names — a ticket still has to get filed, and a fetch that failed is not a reason to hold up the work. With the key null the tracker publishes no template and the configured names decide alone. In `sync` this stop fires only before a create — a reconcile that only reads writes no section, so there is nothing to name
+
 ## `(unverified)` marks
 
-`/pm:setup` 4c drafts an adapter for a tool this plugin has never seen, and writes each call it could not run — the writes, mostly — into the person's adapter file marked `(unverified)`. A `publish` or `sync` run that uses a marked call removes the mark from that line once the call succeeds and its result reads back — in the person's adapter file under `adapters.dirs`, never in a bundled one under `${CLAUDE_PLUGIN_ROOT}`, which an update would overwrite. The run's preview lists the edit — which marks come off if their calls succeed — so the same "go" covers it. A marked call that fails keeps its mark and stops the run, naming the call and the file it came from.
+`/pm:setup` 4c drafts an adapter for a tool this plugin has never seen, and writes each call it could not run — the writes, mostly — into the person's adapter file marked `(unverified)`. A run in any `/pm:task` mode — `draft`, `publish` or `sync` — that runs a marked call successfully removes the mark from that line once the result reads back: in the person's adapter file under `adapters.dirs`, never in a bundled one under `${CLAUDE_PLUGIN_ROOT}`, which an update would overwrite. Whichever preview covers the call gets one more line, `Adapter marks : {call} ({file}) — comes off if it succeeds`, so the same "go" covers the edit — draft's preview, publish's ticket or template-pass preview, either of sync's two tiers. A marked call that fails keeps its mark and stops the run in every mode, naming the call and the file it came from; `sync` first reports what it had already applied.
 
 ## Modes
 

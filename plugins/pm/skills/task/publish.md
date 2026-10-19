@@ -10,13 +10,13 @@ Files a single task record as a ticket in the engineering tracker, or updates th
 
 ## What decides where things go
 
-Config, the adapters, and the rules every mode follows — matching, the rule document and the template, titles, mappings, preview → go — are in `SKILL.md`, read before this file. What follows is publish's own.
+Config, the adapters, the rules every mode follows — matching, titles, mappings, preview → go — and the tracker's own rules — the rule document and the template — are in `SKILL.md`, read before this file. What follows is publish's own.
 
 ## Inputs
 
 - `record` (required): the task record's url
 - `--contract` (optional): writes only the contract's own sections — the two binding ones, plus the requirements section where `contract.sections.requirements` is set — to whichever level `task.contract.level` names. Without it the run files or updates the task's ticket. Omitted with `level: parent`, a run that files a task says at the end whether its parent already has a contract, and offers to write it as a separate run
-- `--template` (optional): runs *Bringing a ticket back to the template* below on the ticket the record links to, and nothing else. A record with no link yet has no ticket to bring back, and with `task.template` null there is no template to bring it to — either way, say so and stop
+- `--template` (optional): reads both adapters as *Adapters* in `SKILL.md` says, then runs *Bringing a ticket back to the template* below on the ticket the record links to, and nothing else. A record with no link yet has no ticket to bring back, and with `task.template` null there is no template to bring it to — either way, say so and stop
 
 **Why the contract is its own run at `level: parent`.** One parent holds many tasks. Rewriting its contract every time a sibling is filed puts a large diff behind a preview nobody reads closely, and the moment the contract is actually written is a different moment — it is what lets the parent leave the planning column. Keeping it separate makes that moment visible.
 
@@ -363,6 +363,7 @@ Sections     : {n} done ({n} specific · {n} from defaults) · {n} QA
                comparison: {n} screens (or "no design handed over")
 Groups       : {group} ({n} done · {n} QA) · {group} (…) · …
                {split offered — past contract.split_offer_at, or "parent already has children"}
+Adapter marks : {call} ({file}) — comes off if it succeeds   ← only where a call this run makes is marked (unverified)
 
 --- body ---
 {step 5 in full}

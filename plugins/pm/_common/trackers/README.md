@@ -87,8 +87,8 @@ Given a type with no file, setup does not ask you to write it. It reads `claude 
 the connector, lists the tools that connector exposes, reads their descriptions, and probes
 the read-only ones — schema, list, one record — against the real workspace. Each question above
 is answered with the call that actually returned, pasted as it was run. Questions that need a
-write are answered with the tool that would do it, marked *unverified* until a `/pm:task publish`
-or `sync` run uses the call and it succeeds, which takes the mark off. The draft is previewed,
+write are answered with the tool that would do it, marked *unverified* until a run in any
+`/pm:task` mode uses the call and it succeeds, which takes the mark off. The draft is previewed,
 then written to the last dir in `adapters.dirs` as `trackers/<type>.md`, and the report says
 which answers are verified and which are not.
 

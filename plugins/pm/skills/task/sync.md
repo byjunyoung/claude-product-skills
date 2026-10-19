@@ -2,11 +2,11 @@
 
 Brings a planning-side task list and the engineering tracker that mirrors it back to the same state, every run. This is not a bulk create: it reads both sides, diagnoses how they drifted, and writes only **after** a proposal has been approved. **Nothing is written automatically.**
 
-Where `task.mirror.type` is `none` there is no second side and nothing to reconcile. *Config* in `SKILL.md` says so and stops before this file is read — that is the correct answer for a single-tracker team, not an error.
+Where `task.mirror.type` is `none` there is no second side and nothing to reconcile. *Config* in `SKILL.md` says so and stops before any of this runs — that is the correct answer for a single-tracker team, not an error.
 
 ## What "correct" means — every verdict rests on these
 
-On top of *Rules every mode follows* in `SKILL.md` — matching on the link property alone above all:
+On top of *Rules every mode follows* and *The tracker's own rules* in `SKILL.md` — matching on the link property alone above all:
 
 - **The unit is one record to one ticket.** Where `task.hierarchy.parent_kind` is set, records map to tasks *under* a parent. **A parent relationship is never changed automatically** — propose it, report it, and change it only on an explicit approval.
 - **Fields have owners.** `task.field_owner` says which side wins for each. A field not listed there is reported as a difference and left alone. "Two-way" means reading both sides to reconcile *existence, closure and duplication* — it does not mean copying every field back and forth.
@@ -33,7 +33,7 @@ On top of *Rules every mode follows* in `SKILL.md` — matching on the link prop
 
 Ask, or take it from the argument.
 
-- **everything** — the whole list. For whoever administers it
+- **all** — the whole list. For whoever administers it
 - **mine** — filtered to one assignee
 
 **A narrower scope is safer.** Most of the damage this skill could do is to someone else's task, and scope is what prevents it. `task.record.scope` sits underneath both: with `members`, a ticket held wholly by people outside `task.assignee_map` is out of the run whichever scope was asked for.
@@ -93,7 +93,7 @@ Only what was approved goes to step 5.
 
 ### 5. Apply
 
-Run the approved changes and nothing else.
+Run the approved changes and nothing else. A call that fails is counted under `errors` in the result and the rest go on — except a call still marked `(unverified)` in the adapter, which stops the run: report what was already applied, then name the call (*`(unverified)` marks* in `SKILL.md`).
 
 **Creating follows the same rules as `/pm:task publish`** — the parent is resolved and confirmed rather than assumed, the ticket carries the configured title and labels, read once for whether the people who will act on it can read it too, the milestone lands on the level `task.hierarchy.milestone_on` names, and the link property is written back afterwards. A project with no entry in `task.label_map.project` is skipped, not guessed at.
 

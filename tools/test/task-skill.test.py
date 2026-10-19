@@ -80,7 +80,7 @@ for s in SHARED:
 check("each shared block once", not bad, "; ".join(bad))
 
 # argument grammar
-GRAMMAR = ["/pm:task draft <source> [<record>]", "/pm:task publish <record> [--contract | --template]", "/pm:task sync"]
+GRAMMAR = ["/pm:task draft <source> [<record>]", "/pm:task publish <record> [--contract | --template]", "/pm:task sync [all | mine]"]
 absent = [g for g in GRAMMAR if g not in ROUTER]
 old_input = [f"{p.name}: {s}" for p in MODE_FILES for s in ("--mode contract", "`mode` (optional)")
              if s in p.read_text(encoding="utf-8")]
@@ -108,14 +108,17 @@ check("record-only check comes before the mode's --need",
       first is not None and "--need" not in first and 0 <= msg_at < need_at,
       f"first call {first!r}; message at {msg_at}, first --need at {need_at}")
 
-# unverified marks are cleared by a run — and setup's promise names a run that does it
+# unverified marks are cleared by a run in any mode — and setup and the trackers contract say the same
 paragraphs = re.split(r"\n\s*\n", ROUTER)
-described = any("(unverified)" in p and "remove" in p for p in paragraphs)
+described = any("(unverified)" in p and "remove" in p and "any `/pm:task` mode" in p for p in paragraphs)
+ANY_MODE = "any `/pm:task` mode"
 setup = read("plugins/pm/skills/setup/SKILL.md")
-promise = [l for l in setup.splitlines() if "(unverified)" in l and "/pm:task publish" in l]
+promise = [l for l in setup.splitlines() if "(unverified)" in l and "/pm:task" in l]
+contract = " ".join(read("plugins/pm/_common/trackers/README.md").split())
 check("unverified marks are cleared by a run",
-      described and promise and all("sync" in l for l in promise),
-      f"router paragraph with remove + (unverified): {described}; setup lines {promise}")
+      described and promise and all(ANY_MODE in l for l in promise) and ANY_MODE in contract,
+      f"router paragraph with remove + (unverified) + any mode: {described}; setup lines {promise}; "
+      f"trackers/README.md says any mode: {ANY_MODE in contract}")
 
 # the router stays short
 n = len(ROUTER.splitlines())
