@@ -198,6 +198,17 @@ case("a drifted paint-scope copy fails, so the bind cannot read a style the audi
      plant_paint_scope_drift,
      1, "[fig] paint-scope copy in token-bind.js differs from audit-tokens.js")
 
+def plant_token_fit_drift(r):
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "token-bind.js"
+    t = f.read_text(encoding="utf-8")
+    start = t.index("// <token-fit>")
+    f.write_text(t[:start] + t[start:].replace('"ALL_SCOPES"', '"ALL_FILLS"', 1), encoding="utf-8")
+
+
+case("a drifted token-fit copy fails, so lint cannot block a colour the bind would refuse",
+     plant_token_fit_drift,
+     1, "[fig] token-fit copy in token-bind.js differs from audit-tokens.js")
+
 case("unknown config key in a _common document",
      lambda r: write(r, "plugins/pm/_common/trackers/README.md", "\n`task.nonexistent_key`\n", append=True),
      1, "[pm] plugins/pm/_common/trackers/README.md: `task.nonexistent_key` is not in the schema")

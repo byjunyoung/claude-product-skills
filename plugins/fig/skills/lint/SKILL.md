@@ -100,8 +100,8 @@ A colour typed in by hand where the design system has a token for it — a named
 
 | Item | Basis |
 |---|---|
-| **Unbound colour, exact token** | A solid fill, stroke, text or effect colour not bound to a variable, whose colour and opacity are exactly a token's |
-| Unbound colour, near or no token | The same, where the nearest token is within `design_system.match_threshold_channel` on every colour channel (near) or further (none). Opacity is set aside here, so the same colour at another opacity — a 20% shadow against an opaque token — is near, never exact. Snapping it changes the colour, so a designer chooses. With the threshold `null`, only that same-colour case is near |
+| **Unbound colour, exact token** | A solid fill, stroke, text or effect colour not bound to a variable, whose colour and opacity are exactly a token's — a token scoped for that property, one a designer could pick there and `/fig:tokens` could bind |
+| Unbound colour, near or no token | The same, where the nearest token scoped for that property is within `design_system.match_threshold_channel` on every colour channel (near) or further (none). Opacity is set aside here, so the same colour at another opacity — a 20% shadow against an opaque token — is near, never exact. Snapping it changes the colour, so a designer chooses. With the threshold `null`, only that same-colour case is near. **An exact colour whose tokens are all scoped for other properties** — a rectangle's fill matching a text-only token, or a primitive scoped to nothing — is reported this way too, as "exact colour, no token scoped for fill colours": no token can be bound there, so the fix is the token's scopes, not the screen |
 
 **The tokens it compares against** are the colour variables bound anywhere on the page plus the file's own local colour variables, each read in its collection's default mode. **A colour typed by hand to match a token's value in another mode** — its dark-mode value, say — therefore grades near or none, not exact — except where a token's own value cannot be read (a library collection the script is not given) and the colour its bound paints show stands in. **A library token nobody in this file has used yet cannot be seen from a script**, so a colour matching only such a token comes back as near or none, not exact. A file with no colour tokens at all — a team with no design system — skips the check: the result is a pass with a note saying so, never a finding on every fill. The note says too when colour variables were found but none could be read.
 
@@ -141,14 +141,14 @@ Every violation carries one of two grades. **The grade never changes what is aud
 | `[state] … orphan` · `… passes through` | blocking | The same two, on a state chain |
 | `[coverage] orphan frame` | blocking | A screen nothing reaches — engineering cannot tell how the user gets there |
 | `[default]` | blocking | The instance carries a library default this screen does not use, and it ships as an empty slot |
-| `[unbound]` … an exact token exists | blocking | A token for this exact colour exists and was not used — engineering copies the hex, and the screen stops following the theme |
+| `[unbound]` … an exact token exists | blocking | A token for this exact colour, scoped for that property, exists and was not used — engineering copies the hex, and the screen stops following the theme |
 | Missing required state ✋, **type settled** | blocking | A state nobody designed is a state engineering invents |
 | `[naming]` · `[order]` | warning | Reads correctly, filed untidily |
 | `[layer name]` | warning | Reads fine to whoever drew it, and to nobody else |
 | `[annotation]` | warning | Pins that pile up stop being read, and a copied pin states a decision nobody made for this screen |
 | `[arrow]` · `[state]` geometry — edge offset, target gap, entry direction, elbows, name order | warning | The connection is right; the drawing is off |
 | `[label]` — z-order, clearance, covering a line | warning | Legibility, not meaning |
-| `[unbound]` — near a token, or none | warning | Snapping it to the nearest token changes the colour, so a designer has to choose |
+| `[unbound]` — near a token, or none scoped for that property | warning | Snapping it to the nearest token changes the colour, so a designer has to choose; and where the colour's only tokens are scoped for other properties, no token can be bound there at all |
 | Missing required state ✋, **type unclear** | warning | Undecided is not the same as missing, and the report has to say which |
 
 Three of these are close calls placed deliberately rather than obviously: `[section overlap]` (ambiguity, not invisibility), `[label] covers` (a label can be read against the wrong arrow), and `[arrow] arrowhead parallel` (the entry direction is wrong, the connection is not). If a file argues otherwise, move it and say so in the report.
@@ -185,7 +185,7 @@ For several pages, split the calls per page and **issue them in one message so t
 
 **C is two stages and its calls are split.** `MODE="collect"` derives STAT from the reference page; `MODE="compare"` checks the working page against it. If one reference page does not yield enough samples, take one form-heavy page and one list-heavy page and sum their STAT.
 
-**D runs in its default mode, one call.** It reads the file's colour variables as well as the page, and writes nothing. Its `MODE="collect"` returns the token dictionary and the unbound colours grouped by hex — that is `/fig:tokens`'s scan, not part of this audit. A file with no colour tokens comes back as `pass: true` with a `note` saying the check was skipped; print the note, as for an excluded section. A `note` may also count colour variables that could not be resolved to a colour and were left out of the comparison.
+**D runs in its default mode, one call.** It reads the file's colour variables as well as the page, and writes nothing. Its `MODE="collect"` returns the token dictionary and the unbound colours grouped by colour and kind, each with the tokens that fit it — that is `/fig:tokens`'s scan, not part of this audit. A file with no colour tokens comes back as `pass: true` with a `note` saying the check was skipped; print the note, as for an excluded section. A `note` may also count colour variables that could not be resolved to a colour and were left out of the comparison.
 
 After editing a script, check its syntax with `scripts/lib/check.sh`. `use_figma` wraps scripts in an async function, so top-level `await` and `return` are both legal — a combination `node --check` alone cannot accept. check.sh wraps them the same way before checking.
 

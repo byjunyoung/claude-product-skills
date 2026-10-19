@@ -44,7 +44,7 @@ the example configs, including a reference to the other plugin's skills), a vers
 changelog entry, a team's own value left in a shipped file (the same documents, plus the scripts),
 a plugin description that differs between
 `plugin.json` and the marketplace, and the blocks pasted into more than one script under `_common/scripts`
-(`sections-deep`, `scaffolding`, `scope-of`, `paint-scope`), which must stay byte-identical across every script that
+(`sections-deep`, `scaffolding`, `scope-of`, `paint-scope`, `token-fit`), which must stay byte-identical across every script that
 carries them — a drift names the file and the reference file it differs from. A description that runs over its length limit fails.
 
 It cannot read a sentence and tell whether it is still true. Every drift found by hand on

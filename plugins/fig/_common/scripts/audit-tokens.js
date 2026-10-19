@@ -22,12 +22,16 @@
  *
  * Colours are compared with their alpha, written "#RRGGBB" where alpha is 1 and "#RRGGBBAA" otherwise —
  * in findings, as the dictionary's keys and as each unbound entry's `hex`. A paint's alpha is its
- * opacity, an effect's its colour's `a`, a variable's its resolved value's `a`. Grades, per unbound colour:
- *   1  colour and alpha both match a dictionary entry                    → blocking
+ * opacity, an effect's its colour's `a`, a variable's its resolved value's `a`. Each paint is graded
+ * against the tokens that can be bound where it is — the <token-fit> block, shared byte for byte with
+ * token-bind.js, so lint never blocks on a token the bind would refuse. Grades, per unbound paint:
+ *   1  colour and alpha both match an entry with a token that fits      → blocking
  *   2  every colour channel within design_system.match_threshold_channel  → warning
- *      of the nearest entry, alpha aside — the same colour at another opacity is near, never exact.
- *      null makes the threshold 0, so only that case is near
+ *      of the nearest entry with a token that fits, alpha aside — the same colour at another
+ *      opacity is near, never exact. null makes the threshold 0, so only that case is near
  *   3  neither                                                           → warning
+ *      — including an exact colour whose tokens are all scoped for other properties ("exact
+ *      colour, no token scoped for fill colours"): nothing in the dictionary can be bound there
  *
  * Not reported: anything inside an instance, including overrides on its layers, and an instance's own
  * paint unless the instance overrides that property (its `overrides` entry for itself lists fills,
@@ -40,17 +44,23 @@
  * so the bind touches exactly the paints this file reports.
  *
  * Returns
- *   audit    { pass, findings, note? } — one [unbound] finding per node and colour, the section named in
- *            msg. A dictionary left empty → { pass: true, findings: [], note }: the check is skipped,
- *            never run against nothing. The note says whether no colour variable was found at all or
- *            some were found and none resolved.
- *   collect  { dictionary: { [hex]: variableKey[] }, unbound: [{ hex, count, nodes, grade, nearest }],
- *              inInstance: [{ hex, count }], note? }
- *            count is paints, nodes the distinct node ids; nearest is the matching entry (grade 1), the
- *            closest one within the threshold (grade 2), or null (grade 3). inInstance counts the colours
- *            inside instances, including overrides on its layers — every layer inside one, and an
- *            instance's own paint on a property it does not override — none of which is bound here.
- *            Both lists are sorted by count, then hex.
+ *   audit    { pass, findings, note? } — one [unbound] finding per node, colour and grade, the kinds it
+ *            is used for there named together and the section named in msg. A dictionary left empty →
+ *            { pass: true, findings: [], note }: the check is skipped, never run against nothing. The
+ *            note says whether no colour variable was found at all or some were found and none resolved.
+ *   collect  { dictionary: { [hex]: [{ key, scopes }] },
+ *              unbound: [{ hex, kind, count, nodes, grade, nearest, tokens }], inInstance: [{ hex, count }], note? }
+ *            The dictionary keeps each token's scopes beside its key (null where they cannot be read).
+ *            unbound has a row per colour and kind ("fill", "text", "stroke", "effect"), split again
+ *            where the tokens that fit differ (a frame's fill and a shape's), so every token a row
+ *            lists fits every paint in it. count is paints, nodes the distinct node ids; nearest is the
+ *            matching entry (grade 1), the closest one within the threshold (grade 2), the colour itself
+ *            where its tokens fit other properties (grade 3), or null (grade 3); tokens are the keys at
+ *            nearest that fit the row — [] where none does — and the only ones /fig:tokens may propose.
+ *            inInstance counts the colours inside instances, including overrides on its layers — every
+ *            layer inside one, and an instance's own paint on a property it does not override — none of
+ *            which is bound here. unbound is sorted by count, then hex, kind and grade; inInstance by
+ *            count, then hex.
  *   SECTION not on the page → audit: one blocking [section] finding; collect: throws.
  *   SECTION inside an excluded section → a `note` saying nothing was audited, and no findings.
  * ========================================================================== */
@@ -199,6 +209,23 @@ const rootsOf = (page, all, ids) => {
 };
 // </paint-scope>
 
+// <token-fit>
+// Which tokens a colour may be bound to, by Figma's VariableScope. Read by the audit to grade a colour
+// and by the bind to choose a token, the same way, so lint never holds a section back for a token the
+// bind would refuse.
+//   scopesFor(n, kind)   the scopes that admit a colour of that kind (coloursOf's) on n: a stroke
+//                        STROKE_COLOR, an effect EFFECT_COLOR, text TEXT_FILL or ALL_FILLS, a fill
+//                        FRAME_FILL on a frame, component, component set or instance and SHAPE_FILL on
+//                        anything else, or ALL_FILLS
+//   fits(v, n, kind)     true where a token whose scopes are v.scopes can be bound there: ALL_SCOPES fits
+//                        every one, a token scoped to nothing — hidden from every picker — fits none, and
+//                        scopes that cannot be read (not an array) are not held against it
+const FRAMELIKE = new Set(["FRAME", "COMPONENT", "COMPONENT_SET", "INSTANCE"]);
+const scopesFor = (n, kind) => kind === "stroke" ? ["STROKE_COLOR"] : kind === "effect" ? ["EFFECT_COLOR"]
+  : kind === "text" ? ["TEXT_FILL", "ALL_FILLS"] : [FRAMELIKE.has(n.type) ? "FRAME_FILL" : "SHAPE_FILL", "ALL_FILLS"];
+const fits = (v, n, kind) => !Array.isArray(v.scopes) || v.scopes.includes("ALL_SCOPES") || scopesFor(n, kind).some(s => v.scopes.includes(s));
+// </token-fit>
+
 const issues = [];
 const add = (tag, grade, node, msg) => issues.push({ tag, grade, node: node == null ? null : node, msg });
 // <scope-of>
@@ -260,18 +287,23 @@ const resolveKey = async (v, seen = new Set()) => {
 const candidates = new Map();
 for (const id of seenAs.keys()) candidates.set(id, await getVar(id));
 for (const v of await figma.variables.getLocalVariablesAsync("COLOR")) candidates.set(v.id, v);
+// Each token keeps its scopes beside its key, so a colour is graded only against the tokens that can be
+// bound where it is (the <token-fit> block). Scopes that cannot be read are null.
 const dictionary = {};
-const put = (k, varKey) => (dictionary[k] = dictionary[k] || []).push(varKey);
+const put = (k, v) => (dictionary[k] = dictionary[k] || []).push({ key: v.key, scopes: Array.isArray(v.scopes) ? [...v.scopes] : null });
 let found = 0, unresolved = 0;
 for (const [id, v] of candidates) {
   if (v && v.resolvedType !== "COLOR") continue;
   found++;
   const k = await resolveKey(v);
-  if (k) { put(k, v.key); continue; }
-  if (v && seenAs.has(id)) { for (const seen of seenAs.get(id)) put(seen, v.key); continue; }
+  if (k) { put(k, v); continue; }
+  if (v && seenAs.has(id)) { for (const seen of seenAs.get(id)) put(seen, v); continue; }
   unresolved++;
 }
-for (const k of Object.keys(dictionary)) dictionary[k] = [...new Set(dictionary[k])].sort();
+for (const k of Object.keys(dictionary)) {
+  const byKey = new Map(dictionary[k].map(t => [t.key, t]));
+  dictionary[k] = [...byKey.keys()].sort().map(key => byKey.get(key));
+}
 const dictKeys = Object.keys(dictionary);
 
 const notes = [];
@@ -293,19 +325,30 @@ if (!dictKeys.length && !COLLECT)
     ? `${found} colour variable${found === 1 ? "" : "s"} found, none could be resolved; [unbound] skipped`
     : "no colour tokens found in this file; [unbound] skipped" };
 
-// ── Grade: 1 colour and alpha both agree, 2 every colour channel within the threshold (alpha may
-// differ, so the same colour at another opacity is near, never exact), 3 neither ──
+// ── Grade, per paint, against the tokens that fit it (the <token-fit> block): 1 colour and alpha both
+// agree with a token that fits, 2 every colour channel within the threshold of the nearest entry with a
+// token that fits (alpha may differ, so the same colour at another opacity is near, never exact), 3
+// neither. An exact colour whose tokens all fit other properties is 3 with `unfit`, its nearest that
+// colour: no token there can take it. `tokens` are the keys at nearest that fit ──
 const channels = k => [1, 3, 5, 7].map(i => (i < k.length ? parseInt(k.slice(i, i + 2), 16) : 255));
-const gradeOf = k => {
-  if (dictionary[k]) return { grade: 1, nearest: k, d: 0, da: 0 };
-  const a = channels(k);
-  let best = null, bd = Infinity, bda = Infinity;
-  for (const t of dictKeys) {
-    const b = channels(t), d = Math.max(...[0, 1, 2].map(i => Math.abs(a[i] - b[i]))), da = Math.abs(a[3] - b[3]);
-    if (d < bd || (d === bd && (da < bda || (da === bda && t < best)))) { bd = d; bda = da; best = t; }
+const fitting = (k, n, kind) => dictionary[k].filter(t => fits(t, n, kind)).map(t => t.key);
+const gradeOf = (k, n, kind) => {
+  if (dictionary[k]) {
+    const tokens = fitting(k, n, kind);
+    return tokens.length ? { grade: 1, nearest: k, tokens, d: 0, da: 0 } : { grade: 3, nearest: k, tokens, unfit: true };
   }
-  return best !== null && bd <= TH ? { grade: 2, nearest: best, d: bd, da: bda } : { grade: 3, nearest: null, d: bd };
+  const a = channels(k);
+  let best = null, bd = Infinity, bda = Infinity, bt = [];
+  for (const t of dictKeys) {
+    const tokens = fitting(t, n, kind);
+    if (!tokens.length) continue;
+    const b = channels(t), d = Math.max(...[0, 1, 2].map(i => Math.abs(a[i] - b[i]))), da = Math.abs(a[3] - b[3]);
+    if (d < bd || (d === bd && (da < bda || (da === bda && t < best)))) { bd = d; bda = da; best = t; bt = tokens; }
+  }
+  return best !== null && bd <= TH ? { grade: 2, nearest: best, tokens: bt, d: bd, da: bda } : { grade: 3, nearest: null, tokens: [], d: bd };
 };
+// Paints of one colour and kind whose grade, nearest and tokens agree make one collect row or finding.
+const outcome = (r, ...rest) => [...rest, r.grade, r.nearest, r.tokens.join(",")].join("|");
 
 // ── Scan the editable nodes in scope — the <paint-scope> walk ──
 // Sections come from the walk above, every depth. Collect also counts what an instance holds and does
@@ -317,35 +360,40 @@ for (const { n, where } of rootsOf(page, allSecs, scope ? scope.ids : null))
   walkColours(n, S, (m, c) => hits.push({ n: m, where, kind: c.kind, key: c.key }), held);
 
 if (COLLECT) {
-  const byCount = (x, y) => y.count - x.count || (x.hex < y.hex ? -1 : x.hex > y.hex ? 1 : 0);
+  const cmp = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
+  const byCount = (x, y) => y.count - x.count || cmp(x.hex, y.hex);
+  // A row per colour and kind, split again where the tokens that fit differ (a frame's fill and a
+  // shape's), so a row never offers a token one of its paints cannot take.
   const agg = new Map();
   for (const h of hits) {
-    if (!agg.has(h.key)) agg.set(h.key, { count: 0, nodes: new Set() });
-    const a = agg.get(h.key);
+    const r = gradeOf(h.key, h.n, h.kind), k = outcome(r, h.key, h.kind);
+    if (!agg.has(k)) agg.set(k, { hex: h.key, kind: h.kind, count: 0, nodes: new Set(), r });
+    const a = agg.get(k);
     a.count++; a.nodes.add(h.n.id);
   }
-  const unbound = [...agg].map(([hex, a]) => {
-    const g = gradeOf(hex);
-    return { hex, count: a.count, nodes: [...a.nodes], grade: g.grade, nearest: g.nearest };
-  }).sort(byCount);
+  const unbound = [...agg.values()]
+    .map(a => ({ hex: a.hex, kind: a.kind, count: a.count, nodes: [...a.nodes], grade: a.r.grade, nearest: a.r.nearest, tokens: a.r.tokens }))
+    .sort((x, y) => byCount(x, y) || cmp(x.kind, y.kind) || x.grade - y.grade);
   const inInstance = [...inInst].map(([hex, count]) => ({ hex, count })).sort(byCount);
   return withNote({ dictionary, unbound, inInstance }, dictKeys.length || found ? null : "no colour tokens found in this file");
 }
 
-// One finding per node and colour: the kinds it is used for on that node are named together.
+// One finding per node, colour and outcome: the kinds that colour grades the same for on that node are
+// named together, and a fill and a stroke the tokens' scopes grade differently are two findings.
 const groups = new Map();
 for (const h of hits) {
-  const k = h.n.id + "|" + h.key;
-  if (!groups.has(k)) groups.set(k, { n: h.n, where: h.where, key: h.key, kinds: [] });
+  const r = gradeOf(h.key, h.n, h.kind), k = outcome(r, h.n.id, h.key);
+  if (!groups.has(k)) groups.set(k, { n: h.n, where: h.where, key: h.key, r, kinds: [] });
   const g = groups.get(k);
   if (!g.kinds.includes(h.kind)) g.kinds.push(h.kind);
 }
 for (const g of groups.values()) {
-  const r = gradeOf(g.key), loc = g.where ? `${g.where} / ${g.n.name}` : g.n.name, what = `${g.kinds.join(", ")} ${g.key}`;
+  const r = g.r, loc = g.where ? `${g.where} / ${g.n.name}` : g.n.name, what = `${g.kinds.join(", ")} ${g.key}`;
   const pct = Math.round(r.da / 255 * 100), alpha = r.da ? `, opacity off by ${pct ? pct + "%" : "<1%"}` : "";
   if (r.grade === 1) add("[unbound]", "blocking", g.n.id, `${loc}: ${what} — an exact token for this colour exists and was not used`);
-  else add("[unbound]", "warning", g.n.id, r.grade === 2
-    ? `${loc}: ${what} — near a token (${r.nearest}, ${r.d} off per channel${alpha}); a designer decides whether to snap it`
+  else add("[unbound]", "warning", g.n.id, r.unfit
+    ? `${loc}: ${what} — exact colour, no token scoped for ${g.kinds.join(" or ")} colours; the tokens of this colour are scoped for other properties`
+    : r.grade === 2 ? `${loc}: ${what} — near a token (${r.nearest}, ${r.d} off per channel${alpha}); a designer decides whether to snap it`
     : `${loc}: ${what} — no token within ${TH} per channel; a designer decides whether it needs one`);
 }
 

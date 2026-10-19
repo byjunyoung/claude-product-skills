@@ -172,9 +172,10 @@ design_system:
   library: auto                               # auto = detect the library the file is connected to
   token_prefixes: []                          # token groups to look up  e.g. ["fill/", "border/", "icon/"]
   # Largest per-channel difference (0–255, opacity aside) at which an unbound colour counts as near
-  # a token. /fig:lint blocks only an exact match, colour and opacity both; a near one is a warning,
-  # since snapping it changes the colour and a designer decides. null is 0: only the same colour at
-  # another opacity counts as near.
+  # a token scoped for its property. /fig:lint blocks only an exact match, colour and opacity both,
+  # with a token scoped for that property; a near one is a warning, since snapping it changes the
+  # colour and a designer decides, and /fig:tokens asks about it node by node rather than proposing
+  # it. null is 0: only the same colour at another opacity counts as near.
   match_threshold_channel: 8
 
 # --- Outside references (optional) ---------------------------------------------

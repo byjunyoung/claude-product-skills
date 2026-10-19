@@ -390,8 +390,8 @@ test("collect, bind the exact rows, audit: the counts agree and nothing exact is
 
   const col = await audit(figma, { MODE: "collect" });
   const exact = col.unbound.filter((u) => u.grade === 1);
-  assert.deepStrictEqual(exact.map((u) => u.hex).sort(), ["#00000080", "#111111", "#3366FF"]);
-  const MAPPING = exact.map((u) => ({ hex: u.hex, variableKey: col.dictionary[u.nearest][0] }));
+  assert.deepStrictEqual(exact.map((u) => `${u.hex} ${u.kind}`).sort(), ["#00000080 fill", "#111111 text", "#3366FF fill", "#3366FF stroke"]);
+  const MAPPING = exact.map((u) => ({ hex: u.hex, variableKey: u.tokens[0] }));
   const out = await bind(figma, MAPPING);
   assert.strictEqual(out.bound, exact.reduce((s, u) => s + u.count, 0), "bound counts paints, as collect's count does");
 
@@ -752,4 +752,70 @@ test("a plain exact fallback after an import failure still binds, and the failur
     skipped: [{ node: "id:Body", reason: "Body: text #111111 — token key:lib-ink could not be imported (no published variable with key key:lib-ink)" }],
   });
   assert.strictEqual(boundTo(find(page, "Body").fills[0]), "ink");
+});
+
+test("a rectangle fill matching a text-only token is a warning, and the dry run refuses that token the same way", async () => {
+  const lib = { vars: [colorVar("ink", { m1: value("#111111") }, { scopes: ["TEXT_FILL"] })], local: ["ink"] };
+  const page = [section("01. Home", [
+    node("RECTANGLE", "Swatch", { fills: [solid("#111111")] }),
+    node("TEXT", "Label", { fills: [solid("#111111")] }),
+  ])];
+  const figma = fakeFigma(page, lib);
+
+  const lint = await audit(figma);
+  assert.deepStrictEqual(lint.findings.map((f) => [f.node, f.grade]), [["id:Swatch", "warning"], ["id:Label", "blocking"]], JSON.stringify(lint));
+  assert.match(lint.findings[0].msg, /fill #111111 — exact colour, no token scoped for fill colours/);
+
+  const dry = await bind(figma, [{ hex: "#111111", variableKey: "key:ink" }], { DRY_RUN: true });
+  assert.deepStrictEqual(dry.paints.map((p) => [p.node, p.candidates.map((c) => c.status)]), [["id:Swatch", ["skip"]], ["id:Label", ["bind"]]]);
+  assert.strictEqual(dry.paints[0].candidates[0].reason, "token ink is not scoped for fill colours");
+  assert.deepStrictEqual(dry.wouldBind.map((w) => w.node), ["id:Label"], "the bind takes ink exactly where lint called it blocking");
+});
+
+test("collect never offers a token the bind would refuse for that row's paints", async () => {
+  // At #111111 the text token's key sorts first, so a mapping read off dictionary[hex][0] would hand a
+  // fill the text token; each row's `tokens` lists only what fits its own paints.
+  const lib = {
+    vars: [
+      colorVar("a-text", { m1: value("#111111") }, { scopes: ["TEXT_FILL"] }),
+      colorVar("b-fill", { m1: value("#111111") }, { scopes: ["FRAME_FILL", "SHAPE_FILL"] }),
+      colorVar("panel", { m1: value("#333333") }, { scopes: ["FRAME_FILL"] }),
+      colorVar("line", { m1: value("#555555") }, { scopes: ["STROKE_COLOR"] }),
+    ],
+    local: ["a-text", "b-fill", "panel", "line"],
+  };
+  const page = [section("01. Home", [
+    frame("Card-Default", { fills: [solid("#111111")], strokes: [solid("#555555")] }, [
+      node("TEXT", "Title", { fills: [solid("#111111")] }),
+      node("RECTANGLE", "Bar", { fills: [solid("#111111")], strokes: [solid("#111111")] }),   // no stroke token at #111111
+      frame("Inset", { fills: [solid("#333336")] }),                                          // near panel, a frame
+      node("ELLIPSE", "Dot", { fills: [solid("#333336")] }),                                  // panel does not fit a shape
+    ]),
+  ])];
+  const figma = fakeFigma(page, lib);
+
+  const col = await audit(figma, { MODE: "collect" });
+  assert.deepStrictEqual(col.dictionary["#111111"].map((t) => t.key), ["key:a-text", "key:b-fill"]);
+  const offered = col.unbound.filter((u) => u.tokens.length);
+  assert.deepStrictEqual(offered.map((u) => [u.hex, u.kind, u.grade, u.tokens]), [
+    ["#111111", "fill", 1, ["key:b-fill"]],
+    ["#111111", "text", 1, ["key:a-text"]],
+    ["#333336", "fill", 2, ["key:panel"]],
+    ["#555555", "stroke", 1, ["key:line"]],
+  ]);
+  assert.deepStrictEqual(col.unbound.filter((u) => !u.tokens.length).map((u) => [u.hex, u.kind, u.nodes, u.nearest]),
+    [["#111111", "stroke", ["id:Bar"], "#111111"], ["#333336", "fill", ["id:Dot"], null]]);
+
+  // Every token offered is never refused for its scope on a paint of its own row. An entry names nodes,
+  // not kinds, so Bar's stroke meets the fill row's token through the node they share — and is refused
+  // there, the one row collect offered nothing for.
+  const MAPPING = offered.flatMap((u) => u.tokens.map((variableKey) => ({ hex: u.hex, variableKey, nodes: u.nodes })));
+  const dry = await bind(figma, MAPPING, { DRY_RUN: true });
+  const inRow = new Set(offered.flatMap((u) => u.nodes.map((n) => `${n}|${u.kind}|${u.hex}`)));
+  const refused = dry.paints.flatMap((p) => p.candidates.filter((c) => /not scoped/.test(c.reason || ""))
+    .map((c) => [p.name, p.kind, c.variableKey, inRow.has(`${p.node}|${p.kind}|${p.hex}`)]));
+  assert.deepStrictEqual(refused, [["Bar", "stroke", "key:b-fill", false]]);
+  assert.deepStrictEqual(dry.wouldBind.map((w) => [w.name, w.kind, w.variableKey]).sort(), [
+    ["Bar", "fill", "key:b-fill"], ["Card-Default", "fill", "key:b-fill"], ["Card-Default", "stroke", "key:line"], ["Title", "text", "key:a-text"],
+  ], "the grade-1 rows bind as offered; the near one waits for its accept");
 });

@@ -50,13 +50,13 @@ A mapping is only as trustworthy as your knowledge of "what color is this token,
 2. **Where a library token's own value cannot be read** (a collection the script is not given), the colour its bound paints show stands in.
 3. **A library token nobody in this file has bound yet cannot be seen from a script.** `search_design_system` over the groups in `design_system.token_prefixes` finds it by name and key (`design_system.library` picks the library; on `auto`, the one the file is connected to) — never by colour, so a mapping to such a token has no colour evidence, and the preview says so. **Never hardcode a library name in this document** — it differs per file.
 
-The dictionary holds variable keys. Names for the preview come from `search_design_system` by key; a key it does not return is shown as the key.
+The dictionary holds each token's variable key with its scopes — the properties it may be bound to. Names for the preview come from `search_design_system` by key; a key it does not return is shown as the key.
 
 > **Caution — a token's real value may differ from the hex you were given.** "Change this grey to `fill/primary`" can still mean `fill/primary` is slightly different from that grey (which is fine if tokenizing is the goal). Whenever the color changes, **the preview must say "this token is #AAA, so the screen becomes #BBB".**
 
 ## Properties
 
-fill · stroke · text color (a TEXT node's fills) · effect color (an effect's color) are all read and bound. Different properties take different token scopes — a background fill `FRAME_FILL`/`SHAPE_FILL`, a border `STROKE_COLOR`, text `TEXT_FILL`, an effect `EFFECT_COLOR`. **The bind script binds a colour only to a token whose scopes include its property** — never a text color to a border token — and returns the rest in `skipped`. One colour that needs a fill token on fills and a text token on text takes two mapping entries for the same hex; each paint takes the first that fits.
+fill · stroke · text color (a TEXT node's fills) · effect color (an effect's color) are all read and bound. Different properties take different token scopes — a background fill `FRAME_FILL`/`SHAPE_FILL`, a border `STROKE_COLOR`, text `TEXT_FILL`, an effect `EFFECT_COLOR`. **The bind script binds a colour only to a token whose scopes include its property** — never a text color to a border token — and returns the rest in `skipped`. The scan grades by the same rule (both scripts carry the same `<token-fit>` block), so a colour counts as exact only against a token that could be bound where it is, and `/fig:lint` never holds a section back for a token this skill would refuse. One colour that needs a fill token on fills and a text token on text takes two mapping entries for the same hex; each paint takes the first that fits.
 
 ## Left alone (read for the report, never bound)
 
@@ -71,13 +71,13 @@ Excluded items that turn up are **reported, never fixed** — colours inside ins
 
 ## Grading — only auto-propose what is safe
 
-The scan grades each unbound colour against the dictionary, colour and opacity together — the same grades `/fig:lint` reports.
+The scan grades each unbound colour against the dictionary, colour and opacity together, counting only the tokens scoped for the property the colour is on — the same grades `/fig:lint` reports.
 
 | Grade | Basis | Handling |
 |---|---|---|
-| 1 — exact | Colour and opacity both equal a token's | Binding changes nothing you can see in the token's default mode → **auto-propose the mapping**. A node set to another mode, where the token renders something else, is not bound without asking (step 3) |
-| 2 — near | Every colour channel within `design_system.match_threshold_channel` of the nearest token, opacity aside — so the same colour at another opacity is near, never exact | Binding changes the colour or the opacity → **show the change; the person decides** |
-| 3 — none | Further from every token, or a brand or special colour | Binding not advised, report only |
+| 1 — exact | Colour and opacity both equal a token's that is scoped for that property | Binding changes nothing you can see in the token's default mode → **auto-propose the mapping**. A node set to another mode, where the token renders something else, is not bound without asking (step 3) |
+| 2 — near | Every colour channel within `design_system.match_threshold_channel` of the nearest token scoped for that property, opacity aside — so the same colour at another opacity is near, never exact | Binding changes the colour or the opacity → **show the change; the person decides** |
+| 3 — none | Further from every token scoped for that property, or a brand or special colour. Also an exact colour whose tokens are all scoped for other properties — a rectangle's fill matching a text-only token; its row's `nearest` is its own hex and its `tokens` are empty | Binding not advised, report only. For an exact colour with no token scoped for it, say so: the fix is the token's scopes, in the library, not a binding here |
 
 The threshold is a baseline, not a verdict — for borderline colors, show the delta so the user can judge. `null` makes it 0, so only the same colour at another opacity is near.
 
@@ -89,8 +89,8 @@ Every step runs a script under `${CLAUDE_PLUGIN_ROOT}/_common/scripts/`, called 
 
 Run `audit-tokens.js` with `const MODE = "collect";`, and `const SECTION = "<section id>";` where a section was given. It returns:
 
-- `dictionary` — `{ hex: [variableKey, …] }`, each colour the file's tokens render and the tokens that render it
-- `unbound` — `[{ hex, count, nodes, grade, nearest }]`, the directly editable colours on no token, one row per colour; `count` is paints, `nodes` the node ids, `nearest` the dictionary entry it was graded against
+- `dictionary` — `{ hex: [{ key, scopes }, …] }`, each colour the file's tokens render and the tokens that render it, each with the properties it may be bound to (`null` where they cannot be read)
+- `unbound` — `[{ hex, kind, count, nodes, grade, nearest, tokens }]`, the directly editable colours on no token, one row per colour and kind (`fill`, `text`, `stroke`, `effect`), split again where the tokens that fit differ — a frame's fill and a shape's, say. `count` is paints, `nodes` the node ids, `nearest` the dictionary entry it was graded against, and `tokens` the keys at `nearest` scoped for every paint in the row — `[]` where none is
 - `inInstance` — `[{ hex, count }]`, colours held inside instances, for the "component repair issue" line
 - `note` — a dictionary left empty, or colour variables that could not be read; print it
 
@@ -98,10 +98,10 @@ A colour at full opacity is written `#RRGGBB` and any other `#RRGGBBAA`, in ever
 
 ### 2. Settle the mapping (user's choice)
 
-- Present grade 1 as a table: hex → token (name and key), count, a few nodes. **When one colour matches two tokens with different meanings equally** (white matching both a static white and a background token, say), do not pick — present the difference in meaning and let the user choose
+- Present grade 1 as a table: hex and kind → token (name and key), count, a few nodes. **Propose only a key from the row's `tokens`** — never one read off the dictionary, which also holds tokens scoped for other properties that the bind would refuse. **When one row lists two tokens with different meanings** (white matching both a static white and a background token, say), do not pick — present the difference in meaning and let the user choose
 - Show grade 2 with what binding changes — a near colour, or **the same colour at another opacity, which is an opacity change** ("the 20% shadow becomes opaque", in the two values it has) — and ask about each such row on its own. A row the person wants goes into the draft mapping as it is; the dry run in step 3 shows, node by node, what it would change
 - Grade 3 is reported only; the user decides whether to proceed
-- The draft mapping is `MAPPING = [{ hex, variableKey }]`, with each hex written as the scan wrote it — no `accept` yet
+- The draft mapping is `MAPPING = [{ hex, variableKey }]`, an entry per row chosen, its `variableKey` from that row's `tokens` and its hex written as the scan wrote it — no `accept` yet
 
 ### 3. Bind (dry run → preview → go → run the dry run's `mapping`)
 

@@ -41,8 +41,8 @@ const section = (name, children, props = {}) => node("SECTION", name, { x: 0, y:
 
 // ── Variables ──
 const value = (h) => ({ ...rgb(h), a: 1 });
-const colorVar = (id, valuesByMode, collection = "c1") =>
-  ({ id, key: "key:" + id, name: id, resolvedType: "COLOR", variableCollectionId: collection, valuesByMode });
+const colorVar = (id, valuesByMode, collection = "c1", more = {}) =>
+  ({ id, key: "key:" + id, name: id, resolvedType: "COLOR", variableCollectionId: collection, valuesByMode, ...more });
 const C1 = { id: "c1", defaultModeId: "m1" };
 
 // One local colour token, #3366FF, and a local alias of it.
@@ -182,7 +182,7 @@ test("an opaque fill against a translucent token is not exact", async () => {
   assert.match(out.findings[0].msg, /fill #000000 — near a token \(#00000080/);
   assert.match(out.findings[1].msg, /fill #00000080 — an exact token/);
   const col = await run(page, lib, { MODE: "collect" });
-  assert.deepStrictEqual(col.dictionary, { "#00000080": ["key:scrim"] }, "alpha 1 writes #RRGGBB, anything else #RRGGBBAA");
+  assert.deepStrictEqual(col.dictionary, { "#00000080": [{ key: "key:scrim", scopes: null }] }, "alpha 1 writes #RRGGBB, anything else #RRGGBBAA");
   assert.deepStrictEqual(col.unbound.map((u) => [u.hex, u.grade, u.nearest]), [["#000000", 2, "#00000080"], ["#00000080", 1, "#00000080"]]);
 });
 
@@ -233,7 +233,7 @@ test("a library token whose collection cannot be read is taken from the paint bo
   assert.deepStrictEqual(out.findings.map((f) => [f.node, f.grade]), [["id:Typed-Default", "blocking"]], JSON.stringify(out));
   assert.strictEqual(out.note, undefined);
   const col = await run(page, lib, { MODE: "collect" });
-  assert.deepStrictEqual(col.dictionary, { "#3366FF": ["key:lib-blue"] });
+  assert.deepStrictEqual(col.dictionary, { "#3366FF": [{ key: "key:lib-blue", scopes: null }] });
 });
 
 test("colour variables that all fail to resolve skip the check and say so", async () => {
@@ -276,14 +276,15 @@ test("collect mode returns the dictionary and graded aggregates", async () => {
   const out = await run(page, lib, { MODE: "collect" });
   assert.deepStrictEqual(out, {
     dictionary: {
-      "#3366FF": ["key:primary"],
-      "#FFFFFF": ["key:surface"],
-      "#111111": ["key:lib-ink"],
+      "#3366FF": [{ key: "key:primary", scopes: null }],
+      "#FFFFFF": [{ key: "key:surface", scopes: null }],
+      "#111111": [{ key: "key:lib-ink", scopes: null }],
     },
     unbound: [
-      { hex: "#3366FF", count: 3, nodes: ["id:Home-Default", "id:Divider"], grade: 1, nearest: "#3366FF" },
-      { hex: "#FAFAFA", count: 1, nodes: ["id:Body"], grade: 2, nearest: "#FFFFFF" },
-      { hex: "#FF0000", count: 1, nodes: ["id:Alert"], grade: 3, nearest: null },
+      { hex: "#3366FF", kind: "fill", count: 2, nodes: ["id:Home-Default", "id:Divider"], grade: 1, nearest: "#3366FF", tokens: ["key:primary"] },
+      { hex: "#3366FF", kind: "stroke", count: 1, nodes: ["id:Divider"], grade: 1, nearest: "#3366FF", tokens: ["key:primary"] },
+      { hex: "#FAFAFA", kind: "text", count: 1, nodes: ["id:Body"], grade: 2, nearest: "#FFFFFF", tokens: ["key:surface"] },
+      { hex: "#FF0000", kind: "fill", count: 1, nodes: ["id:Alert"], grade: 3, nearest: null, tokens: [] },
     ],
     inInstance: [],
     note: "3 colour variables could not be resolved to a colour and were left out of the dictionary",
@@ -353,5 +354,83 @@ test("SECTION applies", async () => {
   assert.deepStrictEqual([exCol.unbound, exCol.inInstance], [[], []]);
   assert.match(exCol.note, /nothing audited/);
   const scoped = await run(page(), lib, { SECTION: "id:01. Home", MODE: "collect" });
-  assert.deepStrictEqual(scoped.unbound, [{ hex: "#3366FF", count: 2, nodes: ["id:Home-Default", "id:Sub-Default"], grade: 1, nearest: "#3366FF" }]);
+  assert.deepStrictEqual(scoped.unbound,
+    [{ hex: "#3366FF", kind: "fill", count: 2, nodes: ["id:Home-Default", "id:Sub-Default"], grade: 1, nearest: "#3366FF", tokens: ["key:lib-blue"] }]);
+});
+
+// ── Scopes: a token counts only where it can be bound — the <token-fit> block token-bind.js shares ──
+// One token per colour, each scoped differently: text only, nothing (a primitive), frame fills only,
+// every property.
+const SCOPED = {
+  collections: [C1],
+  vars: [
+    colorVar("ink", { m1: value("#111111") }, "c1", { scopes: ["TEXT_FILL"] }),
+    colorVar("raw", { m1: value("#222222") }, "c1", { scopes: [] }),
+    colorVar("panel", { m1: value("#333333") }, "c1", { scopes: ["FRAME_FILL"] }),
+    colorVar("any", { m1: value("#444444") }, "c1", { scopes: ["ALL_SCOPES"] }),
+  ],
+  local: ["ink", "raw", "panel", "any"],
+};
+
+test("an exact colour is blocking only where a token of it is scoped for that property", async () => {
+  const out = await run([section("01. Home", [
+    node("TEXT", "Label", { fills: [solid("#111111")] }),                        // ink fits text: blocking
+    node("RECTANGLE", "Swatch", { fills: [solid("#111111")] }),                 // ink is text only: warning
+    node("RECTANGLE", "Raw", { fills: [solid("#222222")] }),                    // scoped to nothing: warning
+    frame("Panel-Default", { fills: [solid("#333333")] }),                      // a frame fill: blocking
+    node("RECTANGLE", "Chip", { fills: [solid("#333333")] }),                   // a shape fill: warning
+    node("RECTANGLE", "Rule", { strokes: [solid("#444444")] }),                 // ALL_SCOPES: blocking
+  ])], SCOPED);
+  assert.deepStrictEqual(out.findings.map((f) => [f.node, f.grade]), [
+    ["id:Label", "blocking"], ["id:Swatch", "warning"], ["id:Raw", "warning"],
+    ["id:Panel-Default", "blocking"], ["id:Chip", "warning"], ["id:Rule", "blocking"],
+  ], JSON.stringify(out, null, 1));
+  const msg = (id) => out.findings.find((f) => f.node === id).msg;
+  assert.match(msg("id:Swatch"), /^01\. Home \/ Swatch: fill #111111 — exact colour, no token scoped for fill colours/);
+  assert.match(msg("id:Raw"), /fill #222222 — exact colour, no token scoped for fill colours/);
+  assert.match(msg("id:Chip"), /fill #333333 — exact colour, no token scoped for fill colours/);
+  for (const id of ["id:Swatch", "id:Raw", "id:Chip"]) assert.doesNotMatch(msg(id), /exact token/, "lint-grades reads these words as blocking");
+});
+
+test("a node's fill and stroke of one colour are graded apart where their scopes differ", async () => {
+  const out = await run([section("01. Home", [
+    frame("Card-Default", { fills: [solid("#333333")], strokes: [solid("#333333")] }),   // panel fits the fill, not the stroke
+  ])], SCOPED);
+  assert.deepStrictEqual(out.findings.map((f) => [f.node, f.grade]), [["id:Card-Default", "blocking"], ["id:Card-Default", "warning"]], JSON.stringify(out));
+  assert.match(out.findings[0].msg, /: fill #333333 — an exact token/);
+  assert.match(out.findings[1].msg, /: stroke #333333 — exact colour, no token scoped for stroke colours/);
+});
+
+test("a near colour is graded only against tokens scoped for its property", async () => {
+  const out = await run([section("01. Home", [
+    frame("Panel-Default", { fills: [solid("#333336")] }),                      // 3 off panel, which fits a frame
+    node("RECTANGLE", "Chip", { fills: [solid("#333336")] }),                   // panel does not fit a shape
+  ])], SCOPED);
+  assert.deepStrictEqual(out.findings.map((f) => [f.node, f.grade]), [["id:Panel-Default", "warning"], ["id:Chip", "warning"]]);
+  assert.match(out.findings[0].msg, /near a token \(#333333, 3 off per channel\)/);
+  assert.match(out.findings[1].msg, /no token within 8 per channel/, "the frame-only token is not offered for a shape");
+});
+
+test("collect splits each colour by kind and lists, per row, only the tokens that fit it", async () => {
+  const out = await run([section("01. Home", [
+    node("TEXT", "Label", { fills: [solid("#111111")] }),
+    node("RECTANGLE", "Swatch", { fills: [solid("#111111")] }),
+    frame("Panel-Default", { fills: [solid("#333333")], strokes: [solid("#333333")] }),
+    node("RECTANGLE", "Chip", { fills: [solid("#333336")] }),
+    frame("Pane-Default", { fills: [solid("#333336")] }),
+  ])], SCOPED, { MODE: "collect" });
+  assert.deepStrictEqual(out.dictionary, {
+    "#111111": [{ key: "key:ink", scopes: ["TEXT_FILL"] }],
+    "#222222": [{ key: "key:raw", scopes: [] }],
+    "#333333": [{ key: "key:panel", scopes: ["FRAME_FILL"] }],
+    "#444444": [{ key: "key:any", scopes: ["ALL_SCOPES"] }],
+  }, "the dictionary keeps each token's scopes beside its key");
+  assert.deepStrictEqual(out.unbound, [
+    { hex: "#111111", kind: "fill", count: 1, nodes: ["id:Swatch"], grade: 3, nearest: "#111111", tokens: [] },
+    { hex: "#111111", kind: "text", count: 1, nodes: ["id:Label"], grade: 1, nearest: "#111111", tokens: ["key:ink"] },
+    { hex: "#333333", kind: "fill", count: 1, nodes: ["id:Panel-Default"], grade: 1, nearest: "#333333", tokens: ["key:panel"] },
+    { hex: "#333333", kind: "stroke", count: 1, nodes: ["id:Panel-Default"], grade: 3, nearest: "#333333", tokens: [] },
+    { hex: "#333336", kind: "fill", count: 1, nodes: ["id:Pane-Default"], grade: 2, nearest: "#333333", tokens: ["key:panel"] },
+    { hex: "#333336", kind: "fill", count: 1, nodes: ["id:Chip"], grade: 3, nearest: null, tokens: [] },
+  ], "sorted by count, hex, kind, then grade");
 });

@@ -12,7 +12,7 @@
  *   CFG      naming.arrow_delimiter / label_prefix / state_chain_prefix and placeholder_style (the
  *            <scaffolding> block), pages.exclude_sections
  *   MAPPING  [{ hex, variableKey, nodes?, accept?, paints? }] — hex in collect's form ("#RRGGBB" where alpha is 1,
- *            "#RRGGBBAA" otherwise), variableKey one of the keys collect's dictionary lists. Several
+ *            "#RRGGBBAA" otherwise), variableKey one of the `tokens` a collect row lists for it. Several
  *            entries may share a hex: each paint tries the entries that name its node in MAPPING order
  *            and takes the first that can be bound to it, so one colour can go to a fill token on fills
  *            and a text token on text.
@@ -82,7 +82,8 @@
  *     true. The reason names what it would render, and the mode where the node sets one. A token
  *     whose value cannot be read on the node counts as differing
  *   - a token whose `scopes` do not include the property the colour is on (ALL_SCOPES fits every one,
- *     and a token scoped to nothing — hidden from every picker — fits none)
+ *     and a token scoped to nothing — hidden from every picker — fits none): the <token-fit> block,
+ *     shared byte for byte with audit-tokens.js, which grades a colour by the same rule
  *   - a variableKey that is not a local colour variable and cannot be imported — reported on every
  *     paint it was tried on, even one a later candidate binds
  * Not read at all, as in the audit: hidden layers and what they hold, excluded sections, a section's or
@@ -373,11 +374,22 @@ for (const key of new Set(targets.flatMap(t => wanted.get(t.c.key).filter(e => c
   }
 }
 
-// The scopes a colour can be bound under, by the property it is on (Figma's VariableScope).
+// <token-fit>
+// Which tokens a colour may be bound to, by Figma's VariableScope. Read by the audit to grade a colour
+// and by the bind to choose a token, the same way, so lint never holds a section back for a token the
+// bind would refuse.
+//   scopesFor(n, kind)   the scopes that admit a colour of that kind (coloursOf's) on n: a stroke
+//                        STROKE_COLOR, an effect EFFECT_COLOR, text TEXT_FILL or ALL_FILLS, a fill
+//                        FRAME_FILL on a frame, component, component set or instance and SHAPE_FILL on
+//                        anything else, or ALL_FILLS
+//   fits(v, n, kind)     true where a token whose scopes are v.scopes can be bound there: ALL_SCOPES fits
+//                        every one, a token scoped to nothing — hidden from every picker — fits none, and
+//                        scopes that cannot be read (not an array) are not held against it
 const FRAMELIKE = new Set(["FRAME", "COMPONENT", "COMPONENT_SET", "INSTANCE"]);
 const scopesFor = (n, kind) => kind === "stroke" ? ["STROKE_COLOR"] : kind === "effect" ? ["EFFECT_COLOR"]
   : kind === "text" ? ["TEXT_FILL", "ALL_FILLS"] : [FRAMELIKE.has(n.type) ? "FRAME_FILL" : "SHAPE_FILL", "ALL_FILLS"];
 const fits = (v, n, kind) => !Array.isArray(v.scopes) || v.scopes.includes("ALL_SCOPES") || scopesFor(n, kind).some(s => v.scopes.includes(s));
+// </token-fit>
 // What the token renders on this node, keyed like a paint — in the node's own mode, aliases followed —
 // or null where it cannot be read. The grade came from the collection's default mode; this is what the
 // screen would show.
