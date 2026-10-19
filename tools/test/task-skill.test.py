@@ -145,6 +145,33 @@ check("publish falls back to the role and says so",
       and any("falls back" in l and "says which" in l for l in re.split(r"(?<=[.!?])\s+", publish_text.replace("\n", " "))),
       "task.design_heading named: " + str("task.design_heading" in publish_text))
 
+# --- frontmatter helpers (allowed-tools, descriptions) ---
+def frontmatter(rel):
+    import yaml
+    text = read(rel)
+    return yaml.safe_load(text.split("---", 2)[1])
+
+
+def tools_of(rel):
+    return [x.strip() for x in str(frontmatter(rel)["allowed-tools"]).split(",")]
+
+
+# allowed-tools match the calls: the GitHub adapter runs gh, so no GitHub MCP tool is pre-approved
+task_tools = tools_of("plugins/pm/skills/task/SKILL.md")
+check("allowed-tools match the calls (task: no github mcp tool)",
+      not [t for t in task_tools if t.startswith("mcp__plugin_github_github__")], str(task_tools))
+check("allowed-tools match the calls (task: notion and slack read tools stay)",
+      "mcp__claude_ai_Notion__notion-fetch" in task_tools and "mcp__claude_ai_Slack__slack_read_thread" in task_tools)
+check("allowed-tools match the calls (log: no issue_read)",
+      not any("issue_read" in t for t in tools_of("plugins/pm/skills/log/SKILL.md")))
+prd_tools = tools_of("plugins/pm/skills/prd/SKILL.md")
+check("allowed-tools match the calls (prd: WebFetch, slack read, figma read)",
+      "WebFetch" in prd_tools and "mcp__claude_ai_Slack__slack_read_thread" in prd_tools
+      and "mcp__plugin_figma_figma__get_metadata" in prd_tools, str(prd_tools))
+check("prd says reference_sources connectors will prompt",
+      "will prompt for permission" in read("plugins/pm/skills/prd/SKILL.md"))
+check("allowed-tools match the calls (setup: Edit)", "Edit" in tools_of("plugins/pm/skills/setup/SKILL.md"))
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)

@@ -1,7 +1,7 @@
 ---
 name: setup
 description: Sets up pm-conventions.yaml. It starts local — tasks, specs and a daily log as markdown files, no other tool needed — and attaches a tracker after, reading its schema rather than guessing and querying ids nobody finds by hand (board fields, option ids, issue types). It asks what publishing and syncing need, and leaves null what nobody can answer. Run it first on a new workspace. Triggers - "/pm:setup", "set up the pm config", "read my tracker schema", "pm 설정 만들어줘", "트래커 스키마 읽어줘", "일감 설정 초안".
-allowed-tools: AskUserQuestion, Read, Write, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__get_me, mcp__plugin_github_github__list_repository_collaborators
+allowed-tools: AskUserQuestion, Read, Write, Edit, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-get-users, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__get_me, mcp__plugin_github_github__list_repository_collaborators
 ---
 
 # pm:setup — read the schemas, draft the config
