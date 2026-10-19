@@ -104,6 +104,18 @@ for name, text in (("SKILL.md", deck), ("setup.md", setup)):
     check(f"deck {name} loads create-new-file before create_new_file",
           bool(calls) and 0 <= skill < calls[0] and "default light theme" in text, f"{skill} vs {calls}")
 
+# ---- Task 4: handoff finds its task, or lists the candidates and asks -------------------------------------
+ho = read(SK + "handoff/SKILL.md")
+ho_tools = [x.strip() for x in tools_line(ho).split(",")]
+nt = next((l for l in ho.splitlines() if l.startswith("- **No `task` input")), "")
+check("handoff searches the tracker and asks on none or several",
+      "mcp__claude_ai_Notion__notion-search" in ho_tools
+      and "mcp__plugin_github_github__search_issues" in ho_tools
+      and "cannot search the tracker" not in ho
+      and "notion-search" in nt and "search_issues" in nt and "task_tracker.ref" in nt
+      and "exactly one" in nt.lower() and "never picks" in nt and "read-only" in nt.lower()
+      and "before any preview" in nt, nt[:160])
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")
