@@ -1,6 +1,6 @@
 ---
 name: lint
-description: Audits a Figma design page read-only — frame membership and bounds, section overlap, naming, arrow geometry and entry direction and pass-through, coverage orphans, [state] dashed links, variants stacked on one another inside a component set, and component default residue carried over by duplication. Reports violations and writes nothing. Each one comes back graded blocking or warning, which is what decides whether a section can be handed to engineering. Rules come from figma-conventions.yaml and the audit code lives in one place under ${CLAUDE_PLUGIN_ROOT}/_common/scripts. It is the single gate that absorbs the checks fig:prep and fig:arrows would otherwise each carry, and it is called again right after those skills write. Triggers - "/fig:lint", "lint this page", "audit the design", "검증해줘", "규칙 위반 검사해줘", "피그마 검수", "화면 복제 후 검수".
+description: Audits a Figma design page read-only against figma-conventions.yaml and grades each violation blocking or warning, which decides whether a section can be handed to engineering. Triggers - "/fig:lint", "lint this page", "audit the design", "검증해줘", "규칙 위반 검사해줘", "피그마 검수", "화면 복제 후 검수".
 allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
 ---
 

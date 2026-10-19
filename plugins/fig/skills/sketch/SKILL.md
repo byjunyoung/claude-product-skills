@@ -1,6 +1,6 @@
 ---
 name: sketch
-description: Agrees the direction of a screen in the conversation before anything is drawn — the decisions, one question at a time with a recommendation, a table of what was settled, a rough text wireframe of each state, a state tree, and what differs from today. Writes nothing, to Figma or disk. Reads the PRD (markdown, Notion, or pm's) when there is one. Triggers - "/fig:sketch", "sketch this screen first", "wireframe this", "와이어프레임 먼저", "스케치부터 해줘", "방향부터 맞추자".
+description: Agrees the direction of a screen in the conversation before anything is drawn, with decisions one at a time, a rough text wireframe of each state and what differs from today, reading the PRD when there is one and writing nothing to Figma or disk. Triggers - "/fig:sketch", "sketch this screen first", "wireframe this", "와이어프레임 먼저", "스케치부터 해줘", "방향부터 맞추자".
 allowed-tools: AskUserQuestion, Bash, Read, Glob, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__claude_ai_Notion__notion-fetch
 ---
 

@@ -96,9 +96,9 @@ def plant_desc(r, skill, desc, dest=None):
     src.write_text(text, encoding="utf-8")
 
 
-case("long description warns",
+case("long description fails",
      lambda r: plant_desc(r, "log-review", "a" * 600),
-     0, "[pm:log-review] description is 600 characters (limit 500)")
+     1, "[pm:log-review] description is 600 characters (limit 500)")
 
 with tempfile.TemporaryDirectory() as tmp:
     repo = copy_repo(tmp)

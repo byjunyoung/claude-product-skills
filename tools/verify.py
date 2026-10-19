@@ -24,7 +24,7 @@ REPO = Path(__file__).resolve().parents[1]
 MARKET = REPO / ".claude-plugin" / "marketplace.json"
 
 # A skill's description is loaded into every session that has the plugin installed, so its length is
-# a standing cost. Over the limit is reported as a warning for now; Phase 3 turns it into a failure.
+# a standing cost. Over the limit fails the check.
 DESC_LIMIT = 500
 DESC_LIMIT_OVERRIDE = {("fig", "deck"): 700, ("pm", "task"): 700}
 
@@ -235,7 +235,7 @@ def check_plugin(name, root, yaml):
                 if isinstance(desc, str):
                     limit = DESC_LIMIT_OVERRIDE.get((name, sk), DESC_LIMIT)
                     if len(desc) > limit:
-                        warns.append(f"[{name}:{sk}] description is {len(desc)} characters (limit {limit})")
+                        fails.append(f"[{name}:{sk}] description is {len(desc)} characters (limit {limit})")
             except yaml.YAMLError as e:
                 where = getattr(e, "problem_mark", None)
                 spot = f" (line {where.line + 1}, column {where.column + 1})" if where else ""

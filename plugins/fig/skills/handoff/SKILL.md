@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Hands finished sections to engineering. Runs /fig:lint as the gate, lets the person pick which passing sections go, pins the named version handed over, hands over the section links, and writes one line into the task file (or page, or issue) where a tracker is set, or prints it where none is. It never sets a Dev Mode status. Nothing else is touched. Triggers - "/fig:handoff", "hand this off", "send this to engineering", "개발 넘겨줘", "핸드오프 해줘", "이 섹션 개발팀에 넘겨".
+description: Hands finished sections to engineering by running /fig:lint as the gate, letting you pick which passing sections go, and writing one line into the task doc where a tracker is set, touching nothing else and never setting a Dev Mode status. Triggers - "/fig:handoff", "hand this off", "send this to engineering", "개발 넘겨줘", "핸드오프 해줘", "이 섹션 개발팀에 넘겨".
 allowed-tools: AskUserQuestion, Bash, Read, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__add_issue_comment, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__select_browser, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find
 ---
 

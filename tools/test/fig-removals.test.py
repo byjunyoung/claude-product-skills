@@ -198,6 +198,19 @@ for rel in ("README.md", "README.ko.md"):
     check(f"{rel} Notion row no longer names lint and sync",
           bool(row) and "/fig:lint" not in row and "/fig:sync" not in row, row)
 
+# ---- descriptions in one shape ---------------------------------------------------------------------
+import glob
+for f in sorted(glob.glob(str(REPO / "plugins/fig/skills/*/SKILL.md"))):
+    sk = Path(f).parent.name
+    desc = yaml.safe_load(Path(f).read_text(encoding="utf-8").split("---")[1])["description"]
+    limit = 700 if sk == "deck" else 500
+    head, sep, rest = desc.partition(" Triggers - ")
+    sentences = [s for s in re.split(r"(?<=[.!?])\s+", head.strip()) if s]
+    ok = bool(sep) and len(desc) <= limit and len(sentences) == 1 and head.rstrip().endswith(".") \
+        and rest.startswith('"/fig:' + sk + '"')
+    check(f"fig descriptions in one shape: {sk}", ok,
+          f"{len(desc)} chars (limit {limit}), {len(sentences)} sentences before Triggers")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")
