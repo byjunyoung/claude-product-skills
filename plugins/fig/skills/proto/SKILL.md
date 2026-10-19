@@ -1,6 +1,6 @@
 ---
 name: proto
-description: Rebuilds a Figma design as code so that input, validation, state, and branching actually work in a single HTML file. Not a click-through screenshot demo — something you press to check the UX and get a feel for the implementation spec. The pipeline runs as settle scope by interview, read Figma faithfully (structure, exact labels, visual tokens), build as vanilla single-file HTML, then verify real behavior in a browser. Triggers - "/fig:proto", "make a working prototype", "make this design actually clickable", "동작 프로토타입 만들어", "프로토타이핑 해줘", "실제로 눌러보고 입력되게".
+description: Rebuilds a Figma design as a single HTML file in which input, validation, state and branching really work, for when the UX has to be pressed through before it is built. Triggers - "/fig:proto", "make a working prototype", "make this design actually clickable", "동작 프로토타입 만들어", "프로토타이핑 해줘", "실제로 눌러보고 입력되게".
 allowed-tools: AskUserQuestion, Bash, Read, Write, Edit, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__use_figma, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__read_console_messages
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: code
-description: Applies a Figma design to real code in a frontend repo — porting changed parts into existing code with minimal edits, or implementing screens and state variants that exist only in the design. Reads the repo's own naming, tokens, and state-management conventions first so it never overwrites them, checks both by numbers and by screenshot comparison, then opens a branch and a PR. Triggers - "/fig:code", "apply this design to the code", "implement this screen in the frontend", "시안 코드에 반영해줘", "피그마 바뀐 거 앱에 적용", "시안대로 코드 고쳐줘".
+description: Applies a Figma design to a frontend repo once it is ready to build, as a branch and a PR that port what changed with minimal edits or build what exists only in the design, following the repo's own conventions. Triggers - "/fig:code", "apply this design to the code", "implement this screen in the frontend", "시안 코드에 반영해줘", "피그마 바뀐 거 앱에 적용", "시안대로 코드 고쳐줘".
 allowed-tools: AskUserQuestion, Bash, Read, Write, Edit, Glob, Grep, mcp__plugin_figma_figma__get_design_context, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_variable_defs, mcp__plugin_figma_figma__download_assets, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__read_console_messages
 ---
 
@@ -27,7 +27,7 @@ Cross that line and something breaks. Tearing up the repo's conventions to match
 - A build-less single-HTML behavioural prototype → `/fig:proto`
 - Just listing frames or reading structure → `/fig:read`
 - Auditing the design's own structure, flow, and naming → `/fig:lint`
-- Marking AS-IS/TO-BE changes on the design and writing them up → `/fig:diff`
+- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma — it needs a Dev Mode seat, and compares a frame with its own version history, not two separate frames
 - Applying into the canonical Figma page rather than into code → `/fig:sync`
 - The reverse direction, a screen up into Figma → `/fig:draw`, which places it against this file's own canonical page and patterns before handing the assembly to `figma:figma-generate-design`
 

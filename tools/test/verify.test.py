@@ -96,9 +96,9 @@ def plant_desc(r, skill, desc, dest=None):
     src.write_text(text, encoding="utf-8")
 
 
-case("long description warns",
+case("long description fails",
      lambda r: plant_desc(r, "log-review", "a" * 600),
-     0, "[pm:log-review] description is 600 characters (limit 500)")
+     1, "[pm:log-review] description is 600 characters (limit 500)")
 
 with tempfile.TemporaryDirectory() as tmp:
     repo = copy_repo(tmp)
@@ -153,6 +153,26 @@ case("a rename map to a skill that exists passes",
 case("a rename map to a skill that does not exist still fails",
      lambda r: write(r, "README.md", "\n`/pm:old-name → /pm:nonexistent`\n", append=True),
      1, "→ /pm:nonexistent does not exist")
+
+case("a rename map with both ends backticked passes",
+     lambda r: [write(r, f, "\n`/pm:old-name` → `/pm:setup`\n", append=True) for f in ("README.md", "README.ko.md")],
+     0)
+
+case("a bare stale name next to a backticked rename map still fails",
+     lambda r: write(r, "README.md",
+                     "\n`/fig:old-name` → `/fig:read`\n\nRun /fig:old-name to see it.\n", append=True),
+     1, "→ /fig:old-name does not exist")
+
+case("a removal note in either language passes",
+     lambda r: [write(r, f, n, append=True) for f, n in (
+         ("README.md", "\n`/fig:old-name` → (removed — nothing replaces it)\n"),
+         ("README.ko.md", "\n`/fig:old-name` → (삭제 — 대체하는 스킬은 없다)\n"))],
+     0)
+
+case("a bare stale name next to a removal note still fails",
+     lambda r: write(r, "README.md",
+                     "\n`/fig:old-name` → (removed — nothing replaces it)\n\nRun /fig:old-name to see it.\n", append=True),
+     1, "→ /fig:old-name does not exist")
 
 print()
 if failures:

@@ -24,7 +24,7 @@ REPO = Path(__file__).resolve().parents[1]
 MARKET = REPO / ".claude-plugin" / "marketplace.json"
 
 # A skill's description is loaded into every session that has the plugin installed, so its length is
-# a standing cost. Over the limit is reported as a warning for now; Phase 3 turns it into a failure.
+# a standing cost. Over the limit fails the check.
 DESC_LIMIT = 500
 DESC_LIMIT_OVERRIDE = {("fig", "deck"): 700, ("pm", "task"): 700}
 
@@ -235,7 +235,7 @@ def check_plugin(name, root, yaml):
                 if isinstance(desc, str):
                     limit = DESC_LIMIT_OVERRIDE.get((name, sk), DESC_LIMIT)
                     if len(desc) > limit:
-                        warns.append(f"[{name}:{sk}] description is {len(desc)} characters (limit {limit})")
+                        fails.append(f"[{name}:{sk}] description is {len(desc)} characters (limit {limit})")
             except yaml.YAMLError as e:
                 where = getattr(e, "problem_mark", None)
                 spot = f" (line {where.line + 1}, column {where.column + 1})" if where else ""
@@ -378,7 +378,9 @@ def check_plugin(name, root, yaml):
 SKILL_REF = re.compile(r"(?<![\w/.-])/(fig|pm):([a-z][a-z-]*)")
 # A rename map — `/pm:old-name → /pm:new-name` — is how a README tells a reader what an old command is
 # called now. The old side is a name that no longer exists on purpose; the new side is still checked.
-RENAME_FROM = re.compile(r"(?<![\w/.-])/(?:fig|pm):[a-z][a-z-]*(?= → /(?:fig|pm):[a-z])")
+# A removal note — `/fig:old-name` → (removed — …) / (삭제 — …) — is the same map for a skill with no
+# successor: only the old name is skipped, and the same name written bare elsewhere still fails.
+RENAME_FROM = re.compile(r"(?<![\w/.-])/(?:fig|pm):[a-z][a-z-]*(?=`? → (?:`?/(?:fig|pm):[a-z]|\(removed|\(삭제))")
 
 
 def check_references(plugins: dict[str, set[str]]) -> None:

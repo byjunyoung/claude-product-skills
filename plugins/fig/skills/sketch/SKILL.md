@@ -1,7 +1,7 @@
 ---
 name: sketch
-description: Agrees the direction of a screen in the conversation before anything is drawn — the decisions, one question at a time with a recommendation, a table of what was settled, a rough text wireframe of each state, a state tree, and what differs from today. Writes nothing, to Figma or disk. Reads the PRD (markdown, Notion, or pm's) when there is one. Triggers - "/fig:sketch", "sketch this screen first", "wireframe this", "와이어프레임 먼저", "스케치부터 해줘", "방향부터 맞추자".
-allowed-tools: AskUserQuestion, Bash, Read, Glob, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_design_context, mcp__claude_ai_Notion__notion-fetch
+description: Agrees the direction of a screen in the conversation before anything is drawn, with decisions one at a time, a rough text wireframe of each state and what differs from today, reading the PRD when there is one and writing nothing to Figma or disk. Triggers - "/fig:sketch", "sketch this screen first", "wireframe this", "와이어프레임 먼저", "스케치부터 해줘", "방향부터 맞추자".
+allowed-tools: AskUserQuestion, Bash, Read, Glob, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__claude_ai_Notion__notion-fetch
 ---
 
 # fig:sketch — agree the direction before the file
@@ -72,8 +72,10 @@ The sketch is a means of agreeing, not a deliverable. Every part of it has a can
 decision table      ->  the spec entry                 /pm:prd
 each state          ->  a frame on the page            /fig:prep stubs it, /fig:draw draws it
 transition tree     ->  the flow arrows                /fig:arrows
-what differs        ->  the AS-IS section, the diff    /fig:diff
+what differs        ->  Dev Mode's Compare changes     (in Figma)
 ```
+
+*Compare changes* needs a Dev Mode seat, and it compares a frame with its own version history, not two separate frames — so it shows what differs once the screen itself has been changed in place.
 
 So this skill writes no file and no Figma node, and the report says where each settled item goes next rather than storing it. Where somebody needs the sketch outside this conversation, it is the conversation's own text — copy it from there.
 

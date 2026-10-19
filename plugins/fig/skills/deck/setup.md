@@ -1,29 +1,20 @@
----
-name: deck-setup
-description: Measures a team slide template into local deck assets — template-spec.md, template.js, and reference images. Canvas, type scale, colors, and the archetype catalog are read from actual nodes; anything the sample is too thin to settle is left empty rather than guessed. Run once before using /fig:deck in a new environment, or again after the template is revised. Triggers - "/fig:deck-setup", "extract the slide template", "set up the deck assets", "덱 템플릿 뽑아줘", "발표 템플릿 추출", "템플릿 다시 추출".
-allowed-tools: Read, Write, Bash, AskUserQuestion, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__create_new_file, mcp__plugin_figma_figma__get_screenshot
----
+# Measuring the presentation template
 
-# deck-setup — extracting a presentation template
-
-`/fig:deck` uses the team template's coordinates, colours, and typography exactly as they are. Where those values come from is this skill. **It does not read a remote template on every run** — it reads local assets extracted here once.
+This is the measuring step of `/fig:deck`, run from its step 0 when the template assets are missing or the template was revised. `/fig:deck` uses the team template's coordinates, colours, and typography exactly as they are. Where those values come from is this step. **`/fig:deck` does not read a remote template on every run** — it reads local assets extracted here once.
 
 **The premise**: never invent a value. Where an observation is ambiguous, leave it empty rather than fill it. An empty slot is read by `/fig:deck` as "that archetype does not exist", and it picks another. Mix up "not there" with "could not measure" and the deck quietly drifts away from the template.
 
-**Prerequisites**: always load `figma:figma-use` and `figma:figma-use-slides` before calling `use_figma`. Step 2 (measure) is **zero writes** — the script only `return`s a report.
+**Prerequisites**: always load `figma:figma-use` and `figma:figma-use-slides` before calling `use_figma`. Step 2 (measure) is **zero writes** — the script only `return`s a report. The Figma writes are the mirror file (step 1) and the verification builds (step 5); each waits for its own preview and go. The local assets (step 4) are written without one.
 
 **Open with what this produces.** After this, `/fig:deck` builds slides from your own template's archetypes rather than a generic layout. Ten to fifteen minutes with the template to hand, and one thing is asked of you that MCP cannot do — applying the template. The template file itself is never touched. Name each step as it begins.
 
-## When to invoke
+## When to run it
 
-- Using `/fig:deck` for the first time in a new environment, at a new company
+- `/fig:deck` is used for the first time in a new environment, at a new company
 - The team template has been revised and the values have moved
-- The assets folder is missing, or `/fig:deck` has stopped with "no assets"
+- The assets folder is missing, or `template-spec.md` or `template.js` is not in it
 
-## When NOT to invoke
-
-- Building the deck itself → `/fig:deck`
-- Extracting design-file conventions → `/fig:setup` (a separate thing. This one is for Slides templates only)
+Extracting design-file conventions is `/fig:setup`, a separate thing — this one is for Slides templates only.
 
 ## Configuration
 
@@ -33,11 +24,13 @@ allowed-tools: Read, Write, Bash, AskUserQuestion, mcp__plugin_figma_figma__use_
 
 ## 1. Reach the template
 
-The source template file is usually outside MCP's reach. When it is, make a mirror.
+The source template file is usually outside MCP's reach. When it is, make a mirror. This is a Figma write, so it waits for a go. (When the template is reachable directly and no mirror is needed, the verification builds in step 5 still never go into the team's own template file — they go into a new Slides file created behind this same whoami → preview → go.)
 
-1. Create an empty Slides file — `create_new_file`, editorType `slides`
-2. **Ask the user to apply the team template from the Templates panel, and wait.** MCP cannot apply it
-3. Applying it pulls in the sample slides wholesale. Those are the source for the catalog
+1. **Check the seat first** — `whoami`. A plan listed with `seat: View` cannot take the `use_figma` writes that steps 1 and 5 are made of; stop and say so rather than creating a file that cannot be built in
+2. **Preview, then wait for the go.** Say what will be created — a new empty Slides file named `deck-template-mirror`, in the person's drafts, which this run will leave behind and name in the closing report — and ask "go?" Nothing is created before it
+3. After the go, create the empty Slides file — `create_new_file`, editorType `slides`. Keep its name and link for the report
+4. **Ask the user to apply the team template from the Templates panel, and wait.** MCP cannot apply it
+5. Applying it pulls in the sample slides wholesale. Those are the source for the catalog
 
 Confirm it was applied before going on. Text still reading `Inter` or 'Pick a style' means it has not been.
 
@@ -73,7 +66,7 @@ Where reference images help, screenshot each archetype into `template-assets/` n
 
 ## 4. Write the assets
 
-Create three things in `deck.assets_dir`. They are local files, so write them without a preview — but say so before overwriting anything already there.
+Create three things in `deck.assets_dir`. They are local files, so they are written without a preview-and-go — but say so before overwriting anything already there.
 
 **`template-spec.md`** — the human-readable spec.
 
@@ -102,16 +95,18 @@ Builders use `newSlide`, `addText`, `addRect`, `addImageRect`, and `addLine` fro
 
 ## 5. Verify
 
-**Do not stop at writing the spec. Actually build one slide.**
+**Do not stop at writing the spec. Actually build one slide.** The builds are Figma writes into the mirror file, so each batch waits for a go.
 
-1. Pick one archetype from the catalog and build a slide with the `template.js` builder
-2. Compare coordinates, sizes, and colours against the original sample
-3. A mismatch means the spec is wrong. Fix the spec, not the slide
+1. **Preview the builds, then wait for the go.** Name the mirror file and list the slides about to be built (the archetype, and the family it stands for). One go can cover the first slide; the per-family slides after it are a second preview and a second go. Nothing is built before the go
+2. Pick one archetype from the catalog and build a slide with the `template.js` builder
+3. Compare coordinates, sizes, and colours against the original sample
+4. A mismatch means the spec is wrong. Fix the spec, not the slide
 
-Once one is right, build one per family — four families, four more slides. Title position is the family that goes wrong most often.
+Once one is right, preview and go again, then build one per family — four families, four more slides. Title position is the family that goes wrong most often.
 
-Report three things at the end.
+**Report** at the end:
 
+- The mirror file this run created — its name and link — so the person can delete it when they no longer need it. If the run stopped before the file was created, say that none was
 - How many archetypes went into the catalog, and how many were **left empty for want of a measurement**
 - How many title-position families there are, and how many distinct content-top y values
 - Whether the team font exists in this environment — without it `/fig:deck` runs on a substitute and the letter-spacing changes

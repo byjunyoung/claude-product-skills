@@ -44,7 +44,7 @@ the example configs, including a reference to the other plugin's skills), a vers
 changelog entry, a team's own value left in a shipped file (the same documents, plus the scripts),
 a plugin description that differs between
 `plugin.json` and the marketplace, and the copies of the nested-section helper that the audit scripts
-must keep identical (`sections-deep`). A description that runs long is reported as a warning.
+must keep identical (`sections-deep`). A description that runs over its length limit fails.
 
 It cannot read a sentence and tell whether it is still true. Every drift found by hand on
 2026-09-01 was of that kind — a README still promising a Figma write that had turned out to be

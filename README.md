@@ -128,7 +128,7 @@ The rest of this section has each step in full. From there, [**fig**](#fig--the-
 | **The Figma MCP plugin** (`plugin:figma`) | Every `fig` skill reads and writes Figma through it. Confirm it answers before going further |
 | **A Figma file** | `/fig:setup` infers conventions by measuring a file you already work in. An empty one, or a first one, takes the starter path instead — four rules proposed in plain words, then the first skeleton laid on a page |
 | **`python3` with PyYAML, and `node`** | Config resolution runs on the host. `node` is for `fig`'s audit scripts, which are syntax-checked with `node --check`, and on the `pm` side only for the importer that brings in an existing Notion log |
-| **A Figma personal access token** *(optional)* | A key you generate in Figma yourself (Settings → Security), which lets a skill ask Figma directly instead of going through the app. `/fig:read` enumerates every page over the REST API with one; without it, it falls back to the MCP and may see only some pages. `/fig:handoff` reads a saved version back through the same API where `handoff.version` is on — with no token it asks for the version's link to be pasted instead, and never hands over unpinned |
+| **A Figma personal access token** *(optional)* | A key you generate in Figma yourself (Settings → Security), which lets a skill ask Figma directly instead of going through the app. `/fig:read` enumerates every page over the REST API with one; without it, it falls back to the MCP and may see only some pages. `/fig:handoff` and `/fig:sync` read a saved version back through the same API — handoff where `handoff.version` is on, sync where `sync.named_version` is set. With no token, `/fig:handoff` asks for the version's link to be pasted instead and never hands over unpinned; `/fig:sync`, which has no link to pin, reports that the version could not be confirmed |
 | **The `gh` command** *(pm, where the tracker is GitHub)* | GitHub's own command-line tool, installed on your machine and logged in separately from Claude. The GitHub side runs on it, not on Claude's connection. Log in with the account that can see the tracker — a personal account looking at a company repository sees nothing — and give it board access once with `gh auth refresh -s read:project` |
 
 `pm` needs none of the Figma side. If you only write specs, install it alone.
@@ -143,15 +143,16 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | Skill | Also needs |
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — they drive a real browser |
-| `/fig:prep` `/fig:draw` `/fig:lint` `/fig:sync` `/fig:diff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
-| `/fig:diff` `/pm:setup` `/pm:task` | **GitHub** — only where `task_tracker.type` / `task.mirror.type` is `github`. Two logins are involved: Claude's connection, and the `gh` command the tracker is read through — `/pm:task` uses `gh` alone. The check covers both, and names the account `gh` is on |
+| `/fig:handoff` `/fig:sync` | **Claude in Chrome** — optional, only to save a named version in Figma's web app; without it they hand the step back to you, with the name to use |
+| `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
+| `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — only where `task_tracker.type` / `task.mirror.type` is `github`. Two logins are involved: Claude's connection, and the `gh` command the tracker is read through — `/pm:task` uses `gh` alone. The check covers both, and names the account `gh` is on |
 | `/fig:qa` `/pm:task draft` | **A chat tool** — only where the request source is a thread. For `pm`, `sources.chat_type` names it; `/fig:qa` takes the tool from the link. Slack ships |
 | `/pm:log` | **A calendar and a chat tool** — both optional, named by `sources.calendar_type` and `sources.chat_type`; Google Calendar and Slack ship. Named as `none` they are skipped and the log says so. A scheduler on your own machine, if you want it unattended |
 | `/pm:prd` | **Notion** — only where `prd.target` is `notion`. **Web search** — only where `prd.precedent.enabled` is true (the default), and only for a feature entry drafted for the first time. **A screen-reference connector** — optional, only for the services `prd.precedent.reference_sources` names. **Slack and Figma** — optional, only to read a thread or a design file among the material you hand it |
 | `/fig:draw` | **A screen-reference connector** — optional, only for the services `references.sources` names, and only when a new pattern has to be defined |
 | `/fig:draw` `/fig:sketch` `/fig:qa` `/fig:handoff` | **pm** — optional. Installed alongside (0.38.0 or later), its PRD and its markdown task files are read and written. Without it, they still run, and say what they could not borrow |
 
-The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The Chrome rows are not — those three open a browser.
+The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The Claude in Chrome row for `/fig:proto`, `/fig:code` and `/fig:qa` is not — those three open a browser.
 
 Notion, GitHub, markdown, Slack and Google Calendar come with support built in; the rows read the same for any other tool your settings name.
 
@@ -186,7 +187,7 @@ there if something required is absent, rather than running on and coming back th
 |---|---|---|
 | `fig` | `/fig:setup <your figma file URL>` | how your file already names frames, spaces sections and draws arrows |
 | `pm` | `/pm:setup` | where your specs and tasks live — local files by default — and a tracker's schema where you name one |
-| `fig`, and you will use `/fig:deck` | `/fig:deck-setup` | your team's slide template |
+| `fig`, and you will use `/fig:deck` | nothing to run first — `/fig:deck` measures it on first use | your team's slide template |
 
 **What the first run is like.** Each setup opens by saying what it will produce and how long it
 takes, shows its steps, and names each one as it begins — read-only until it writes, and what
@@ -246,9 +247,11 @@ settings and it writes the support from what is connected. What it could not try
 unverified, and the mark comes off the first time a `/pm:task` run makes that call work; a marked
 write that fails stops the run and names the call.
 
-**deck.** `/fig:deck-setup` measures your team's slide template into `~/.claude/deck-assets`.
+**deck.** On first use, `/fig:deck` measures your team's slide template into `./deck-assets` — a folder in the
+project you run it from, the default of `deck.assets_dir`. Run it from another folder and it measures again there;
+a team sharing one template across projects can point `deck.assets_dir` at a shared folder, such as `~/.claude/deck-assets`.
 The plugin ships no template values at all, because deck backgrounds carry company wordmarks
-and can't be distributed. Run it once before `/fig:deck`, and again when the template is revised.
+and can't be distributed. It runs the first time you use `/fig:deck`, and again whenever you tell it the template was revised.
 
 ### 3. Judge the first audit (fig)
 
@@ -274,7 +277,6 @@ That's setup done. [**fig**](#fig--the-design-file) covers the loop from here.
 /fig:arrows   Wire transition arrows and state groups
 /fig:lint     Audit structure, flow, and components in one pass
 /fig:handoff  Gate the passing sections, hand over the links, leave one line in the task
-/fig:diff     For revisions to existing screens, pin change annotations
 ```
 
 `prep` comes first because it builds the to-draw list. A list screen needs an empty state; a form needs a validation-failure state. Stub those as dashed placeholders and the gaps become visible. The point is that they surface before engineering asks.
@@ -295,7 +297,7 @@ Before it draws anything, though, it asks a question that is easy to skip: **how
 /fig:sync     Full audit of what made it into canonical → apply → archive
 ```
 
-Working copies and the canonical page use identical screen names, so comparing names tells you nothing about what's missing. The audit judges on three signals together: the text inside a screen, the screen's height, and its component links.
+Working copies and the canonical page use identical screen names, so a name alone cannot say whether a change made it across. The audit pairs each working screen with the canonical one of the same name and judges on three signals together: the text inside the pair, the screen's height, and its component links. Text only the working screen has, missing from canonical, means the change did not make it. Text only canonical has may be later work that landed there since, so it is marked for checking rather than counted as missing, and applying never removes it without asking. A change none of the three can see — a colour that leaves the height and the components as they were — goes undetected, and the report says so. A working screen whose name fails the file's own frame rule (`naming.frame_pattern`) is asked about rather than guessed at; `/fig:prep` normalises names first. With no rule set (`null` — deliberately left empty), screens pair by exact name.
 
 When the structure matches, it edits values rather than replacing the whole screen. Node ids survive, so deep links from specs and tickets keep working.
 
@@ -314,12 +316,12 @@ Neither touches the file. Run one when you inherit a file someone else has been 
 /fig:proto    Before engineering starts, rebuild the design as a single HTML page that really accepts input and saves
 /fig:code     Apply the design to a frontend repo
 /fig:qa       Audit a shipped screen against the spec and report defects
-/fig:deck     Turn a document into a deck (run deck-setup first)
+/fig:deck     Turn a document into a deck (measures the template on first use)
 ```
 
 `proto` isn't a click-through demo. Enter a value, save it, and it shows up in the list. Clicking through surfaces ordering problems that a static design hides.
 
-`deck` moves one source document into a presentation flow and builds a Figma Slides deck. It uses the team template's coordinates, colors and type as-is — when a content shape isn't in the catalog it never invents a layout, it fits the nearest archetype by trimming content or splitting the slide. `/fig:deck-setup` measures those values into local assets, which stay out of the published plugin since template backgrounds carry company wordmarks.
+`deck` moves one source document into a presentation flow and builds a Figma Slides deck. It uses the team template's coordinates, colors and type as-is — when a content shape isn't in the catalog it never invents a layout, it fits the nearest archetype by trimming content or splitting the slide. `/fig:deck` measures those values into local assets on first use (a new mirror file in Figma, which it names at the end so you can delete it, and a go before each Figma write), and they stay out of the published plugin since template backgrounds carry company wordmarks.
 
 `qa` audits what actually shipped against the spec. `draw` and `sketch` take a document passed to the run; `qa` takes none and starts at `qa.baseline.prd`; left unset, that means `pm`'s PRD where `pm` is installed. The rule is that a finding reads "this breaks rule X in document Y", never "this looks off" — anything without a baseline is filed as needs-checking rather than a defect.
 
@@ -344,7 +346,6 @@ flowchart TD
     lint{"fig:lint<br/>audit gate · zero writes"}
     proto["fig:proto<br/>working prototype"]
     handoff["Handoff"]
-    diff["fig:diff<br/>change annotations"]
     code["fig:code<br/>apply to frontend"]
     sync["fig:sync<br/>canonical page after release"]
     qa["fig:qa<br/>audit what shipped"]
@@ -353,7 +354,6 @@ flowchart TD
     lint -- violations --> prep
     lint -- pass --> proto
     lint -- pass --> handoff
-    handoff --> diff
     handoff --> code
     handoff --> qa
     handoff -. after release .-> sync
@@ -374,12 +374,14 @@ flowchart TD
 | `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task — `pm`'s markdown task file, a Notion page or a GitHub issue — or printed where there is none |
 | `/fig:tokens` | Audit design system token binding for colors |
 | `/fig:sync` | Full canonical-page audit → apply → archive |
-| `/fig:diff` | Annotate changes · write up the task doc |
 | `/fig:proto` | Working single-file HTML prototype |
 | `/fig:code` | Apply the design to a frontend repo |
 | `/fig:qa` | Audit a shipped screen against the PRD (a markdown file, a Notion page, or `pm`'s) and the design, and report defects, each with screenshots |
-| `/fig:deck-setup` | Measure a team slide template into local deck assets |
 | `/fig:deck` | Turn a source document into a Figma Slides deck |
+
+`/fig:diff` → (removed — Dev Mode's *Compare changes* shows what changed, on a Dev Mode seat and between a frame and its own version history rather than two separate frames; no written AS-IS/TO-BE record)
+
+`/fig:deck-setup` → `/fig:deck` (measuring the slide template is now its first step)
 
 ### What `/fig:lint` looks at
 
@@ -534,13 +536,13 @@ Each works on its own. Installed together, `fig` reads the PRD where `pm` writes
 | The requirements doc | `qa.baseline.prd` | `prd.target`, and the `prd.notion` block |
 | The task record | `task_tracker.ref` | `task.record.ref` |
 
-**Left unset, `fig` borrows — but only what `pm` keeps in local files.** The PRD is looked up in one order: a document you pass to the run, then `qa.baseline.prd`, then — with `pm` 0.38.0 or later installed — `pm`'s PRD folder (`prd.markdown.dir`, where `prd.target` is `markdown` or `git`), then none. `/fig:handoff` writes its one line into `pm`'s task file only where `pm` keeps its records as markdown, as its local start does. There the line goes under the heading `pm`'s `task.design_heading` names — "Design changes" unless you set it — because that is where `/pm:task publish` looks for it; `fig`'s own `task_tracker.ui_section_heading` is for a Notion page or a GitHub issue only. A `pm` that keeps either in Notion is not followed there: the PRD has to be named in `qa.baseline.prd`, and the handover line is printed, so `fig` never starts writing into pages nobody pointed it at. Without `pm` — not installed, switched off, or older than 0.38.0 — nothing is written through it: there is no PRD unless you name one, and the line is printed with a note saying why. `/fig:diff` does not borrow; it writes only where `task_tracker` names Notion or GitHub.
+**Left unset, `fig` borrows — but only what `pm` keeps in local files.** The PRD is looked up in one order: a document you pass to the run, then `qa.baseline.prd`, then — with `pm` 0.38.0 or later installed — `pm`'s PRD folder (`prd.markdown.dir`, where `prd.target` is `markdown` or `git`), then none. `/fig:handoff` writes its one line into `pm`'s task file only where `pm` keeps its records as markdown, as its local start does. There the line goes under the heading `pm`'s `task.design_heading` names — "Design changes" unless you set it — because that is where `/pm:task publish` looks for it; `fig`'s own `task_tracker.ui_section_heading` is for a Notion page or a GitHub issue only. A `pm` that keeps either in Notion is not followed there: the PRD has to be named in `qa.baseline.prd`, and the handover line is printed, so `fig` never starts writing into pages nobody pointed it at. Without `pm` — not installed, switched off, or older than 0.38.0 — nothing is written through it: there is no PRD unless you name one, and the line is printed with a note saying why. Where `task_tracker` names Notion or GitHub, `/fig:handoff` writes into that page or issue itself and borrows nothing.
 
-Each of the two is shared for a reason. The spec is read twice, at both ends of the same feature: `/fig:draw` reads it while the screens are being drawn, so the words in the file are the words the document settled rather than plausible ones written to fill a label — and `/fig:qa` reads it afterwards, because a defect report is only worth handing over when it reads *this breaks rule X in document Y*. `/pm:prd` is what wrote document Y. `/fig:handoff` and `/fig:diff` need the task record because the line saying what was handed over, and an AS-IS/TO-BE table, belong beside the request that caused them — and `/pm:task draft` is what opened that record.
+Each of the two is shared for a reason. The spec is read twice, at both ends of the same feature: `/fig:draw` reads it while the screens are being drawn, so the words in the file are the words the document settled rather than plausible ones written to fill a label — and `/fig:qa` reads it afterwards, because a defect report is only worth handing over when it reads *this breaks rule X in document Y*. `/pm:prd` is what wrote document Y. `/fig:handoff` needs the task record because the line saying what was handed over belongs beside the request that caused it — and `/pm:task draft` is what opened that record.
 
 That first read matters more than it sounds. A ticket's acceptance conditions are written from the design's own structure and copy, so a label somebody invented while drawing becomes a line engineering builds against and ticks off. Reading the spec while drawing is what stops a guess from hardening into a requirement.
 
-Neither link is required. Write `qa.baseline.prd` **empty** — as `null`, which is how these settings say *deliberately left empty*, and the check that needs it is skipped rather than failed — and `pm`'s PRD is not consulted either: `/fig:qa` then files everything as needs-checking rather than as a defect, and `/fig:draw` asks you for a source instead of assuming one. Set `task_tracker.type` to `none` and `/fig:diff` prints its table as markdown instead, and `/fig:handoff` its line. You lose the linkage, not the skill.
+Neither link is required. Write `qa.baseline.prd` **empty** — as `null`, which is how these settings say *deliberately left empty*, and the check that needs it is skipped rather than failed — and `pm`'s PRD is not consulted either: `/fig:qa` then files everything as needs-checking rather than as a defect, and `/fig:draw` asks you for a source instead of assuming one. Set `task_tracker.type` to `none` and `/fig:handoff` prints its line instead. You lose the linkage, not the skill.
 
 **One more thing crosses, and it travels as data rather than as config.** Where `handoff.version` is on, `/fig:handoff` pins the moment it hands over — a Figma named version — and writes its label and date into the task doc. `/pm:task publish` reads that line from under `task.design_heading` to fill the ticket's referenced-version row — in a record without that heading, from the section that plays its role, saying which heading it read — and where `contract.design_match_line` is set, the done condition reads *the build matches the {version} design*. Without the pin that condition points at a target that moves the next time somebody opens the file.
 
@@ -639,9 +641,9 @@ Without a token it can only see what the desktop app has open. To list every pag
 </details>
 
 <details>
-<summary><b>`/fig:deck` says there are no assets.</b></summary>
+<summary><b>`/fig:deck` asks for the team template and creates a file before building anything.</b></summary>
 
-The slide template has not been measured yet. Run `/fig:deck-setup` once — it reads your team's template into `~/.claude/deck-assets`. The plugin ships no template, because template backgrounds carry company wordmarks.
+That is the first-use measuring step: the slide template has not been measured into `deck.assets_dir` yet — `./deck-assets` in the folder you run it from, unless you pointed it at a shared folder, so a project opened from another folder measures again. It creates an empty mirror Slides file (after your go), asks you to apply the team template there, and reads the values from it. The plugin ships no template, because template backgrounds carry company wordmarks. It stops here if your seat in the plan is View (it checks first), or if there is no template to apply.
 
 </details>
 
@@ -772,10 +774,11 @@ plugins/
     README.md
     skills/
       setup   read  prep   arrows  lint
-      handoff sync  diff   tokens
-      proto   code  qa     deck    deck-setup     one SKILL.md each
+      handoff sync  tokens
+      proto   code  qa     deck           one SKILL.md each (plus setup.md, pitfalls.md)
     _common/
       conventions.example.yaml           config schema + bundled defaults
+      version-pin.md                     saving a named version, one procedure read by handoff and sync
       scripts/
         audit-struct.js                  membership, bounds, overlap, naming, ordering
         audit-flow.js                    arrow geometry, entry direction, pass-through, labels, coverage

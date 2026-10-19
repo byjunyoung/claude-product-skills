@@ -183,10 +183,7 @@ references:
 
 # --- Canonical sync ------------------------------------------------------------
 sync:
-  pair_patterns:                              # section names that form a comparison pair
-    to_be: 'to.?be|after'
-    as_is: 'as.?is|before|current'
-  text_diff_max_len: 40                       # strings longer than this are not used as diff keys
+  text_diff_max_len: 40                       # display only: sync's report and previews cut a longer string to this many characters with "…". Every string is still compared whole, whatever its length. null shows every string whole
   version_page_pattern: null                  # e.g. '^\[Update\] v[\d.]+'
   named_version: null                         # title of the version saved after apply. null saves none — the default,
                                               # because saveVersionHistoryAsync is not exposed to use_figma (see handoff below)
@@ -203,9 +200,8 @@ handoff:
   #
   # Figma's own named versions are that moment — a file-level snapshot a deeplink
   # pins with version-id — so nothing is copied and no frozen duplicate exists.
-  # Saving one is done by hand: use_figma's allowlist rejects the version API the
-  # (`saveVersionHistoryAsync` is not a supported API, 2026-08-31). The skill
-  # asks, the person saves, the skill reads it back.
+  # Saving one goes through Figma's web app, behind its own preview and go; the
+  # procedure is plugins/fig/_common/version-pin.md, shared with sync.named_version.
   version:
     enabled: false                            # true where your handovers pin a version
     name:  "{release} handover"               # what the person types into Figma's version history
@@ -213,32 +209,32 @@ handoff:
     ref:   "{label} · {date}"                 # how it is written into the task doc and the ticket
 
 # --- Task tracker --------------------------------------------------------------
-# Where the task doc lives — /fig:handoff writes its one line there, and /fig:diff its
-# comparison table. type decides which of these happens:
+# Where the task doc lives — /fig:handoff writes its one line there. type decides how:
 #   null      unset: /fig:handoff borrows pm's task record, but only where pm is installed and
-#             keeps its records as markdown. Anywhere else, and for /fig:diff, this behaves like none
+#             keeps its records as markdown. Anywhere else, this behaves like none
 #   markdown  /fig:handoff writes through pm into its markdown task folder (ref, where written,
-#             names the folder). /fig:diff treats it as none
-#   none      write nothing; /fig:handoff prints its line, /fig:diff stops at the Figma
-#             annotations and prints the table
-#   notion | github   the tracker named, with ref pointing at it (database id, repo name)
+#             names the folder)
+#   none      write nothing; /fig:handoff prints its line
+#   notion | github   the tracker named, with ref pointing at it (database id, repo name).
+#             /fig:handoff inserts the line under ui_section_heading — after that heading in a
+#             Notion page, in that section of a GitHub issue body (or as a comment where the
+#             body has no such section)
 # A ref written without a type is stopped by --authored: it no longer says which kind of
 # tracker it points at.
 task_tracker:
   type: null                                  # null | markdown | notion | github | none
   ref: null                                   # database id, repo name, and so on
-  ui_section_heading: null                    # heading in the Notion or GitHub doc where changes are written up. null writes under "Design changes". In pm's markdown records pm's task.design_heading decides instead. For records in Notion or GitHub, keep it equal to pm's task.design_heading, or /pm:task publish falls back to reading by role on every run
-  annotation_category: "Changed"              # a shared category to reuse. never create new ones
-  scope_tags: []                              # classification tags prefixed to labels
+  ui_section_heading: null                    # heading in the Notion or GitHub doc that /fig:handoff writes its line under. null writes under "Design changes". In pm's markdown records pm's task.design_heading decides instead. For records in Notion or GitHub, keep it equal to pm's task.design_heading, or /pm:task publish falls back to reading by role on every run
 
-# --- Presentation decks (/fig:deck · /fig:deck-setup) ---------------------------
+# --- Presentation decks (/fig:deck) -------------------------------------------
 # Template values — colors, type, coordinates, archetypes — do not belong here.
-# /fig:deck-setup measures your team template into assets_dir as template-spec.md
-# and template.js. Those assets stay local: template backgrounds usually carry a
+# /fig:deck measures your team template into assets_dir as template-spec.md
+# and template.js the first time (or when the template is revised). Those assets
+# stay local: template backgrounds usually carry a
 # company wordmark, which must never ship inside a plugin.
 deck:
   assets_dir: "./deck-assets"   # use ~/.claude/deck-assets if several projects share a template
-  template_file: null           # Slides file key of the team template. null means setup asks
+  template_file: null           # Slides file key of the team template. null means the measuring step asks
   # Archetype fidelity. A template is a menu, so the more archetypes you draw
   # from, the more title positions scatter across the deck.
   #   title-unified       keep each archetype's coordinates, but allow one title family

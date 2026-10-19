@@ -1,7 +1,7 @@
 ---
 name: draw
-description: Draws a screen, or fills a stub `/fig:prep` left behind, inside the file's conventions. Finds the file's arrangement pattern (or has one defined), then clones the nearest canonical screen so the whole screen comes out with the change in it. Copy comes from the PRD (markdown, Notion, or pm's), the running system or the file's precedent, never invented. Direction is agreed first in `/fig:sketch`. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "이 화면 그려줘", "placeholder 채워줘".
-allowed-tools: AskUserQuestion, Bash, Read, Glob, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__search_design_system, mcp__plugin_figma_figma__get_design_context, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
+description: Draws a screen, or fills a stub `/fig:prep` left behind, once its direction is agreed, cloning the nearest canonical screen inside the file's conventions so the whole screen comes out with the change in it, with copy taken from the PRD, the running system or the file's precedent and never invented. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "이 화면 그려줘", "placeholder 채워줘".
+allowed-tools: AskUserQuestion, Bash, Read, Glob, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__search_design_system, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
 ---
 
 # fig:draw — draw the screen
@@ -28,7 +28,7 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 - Checking for violations only, zero writes → `/fig:lint`
 - Auditing token bindings → `/fig:tokens`
 - Applying finished work into the canonical page → `/fig:sync`
-- Marking what changed between two designs → `/fig:diff`
+- Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma — it needs a Dev Mode seat, and compares a frame with its own version history, not two separate frames
 - Turning a finished design into a working prototype → `/fig:proto`
 - Applying a finished design to front-end code → `/fig:code`
 
@@ -115,7 +115,7 @@ So draw the real screen. Where one fact is genuinely unsettled, leave a plausibl
 TBD (needs confirmation): <the question, specifically>
 ```
 
-That is `/fig:prep`'s own wording, reused verbatim and deliberately: one search then finds every open question in the file, whether it sits on a stub prep left or on a screen this skill finished. **The annotation carries no category** — `task_tracker.annotation_category` belongs to `/fig:diff`, and an open question filed as a change is read as a change.
+That is `/fig:prep`'s own wording, reused verbatim and deliberately: one search then finds every open question in the file, whether it sits on a stub prep left or on a screen this skill finished. **The annotation carries no category**, so an open question is never filed as a change.
 
 A target that really carries nothing decidable — a state nobody has spec'd at all, on a screen with no precedent to read — is the one case where handing it back as a stub is still correct. That is the boundary: **stub what nothing yet answers, draw what something does.**
 
@@ -217,7 +217,7 @@ return { createdNodeIds: [clone.id], removedStubId: stub ? stub.id : null }
 
 **Empty the clone's annotations in the same call.** A clone brings every Dev Mode annotation its source carried, down to pins on instances deep inside it — last round's change labels, navigation notes, open questions that were already answered. Nobody wrote them for this screen, they read as if somebody did, and they multiply with every clone of a clone. The same holds for anything cloned *into* a screen, a modal or a card taken from another frame: clear it the moment it lands.
 
-**The only annotation this skill writes is the open question** (`TBD (needs confirmation): …`, see "What's undecided stays inline"). Everything else already has a home that is not the canvas — navigation is the flow arrows, before-and-after is the AS-IS section, rules are the spec, implementation notes are the ticket, and "this is a draft suggestion" is the spec entry's own marker. Writing any of them as a pin puts a second copy on the canvas that nobody updates when the first one changes. The same question pinned on several sibling frames is one pin, on the representative frame.
+**The only annotation this skill writes is the open question** (`TBD (needs confirmation): …`, see "What's undecided stays inline"). Everything else already has a home that is not the canvas — navigation is the flow arrows, before-and-after is the canonical page and the working page, rules are the spec, implementation notes are the ticket, and "this is a draft suggestion" is the spec entry's own marker. Writing any of them as a pin puts a second copy on the canvas that nobody updates when the first one changes. The same question pinned on several sibling frames is one pin, on the representative frame.
 
 `absorb()` decides its coordinate correction from the parent **before** the call, so a node already inside that section is not shifted twice. Fonts are the reason it exists: text in a font that is not synced to the cloud cannot be moved with `appendChild` or `insertChild`, and the whole call is rejected.
 
@@ -261,7 +261,7 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 | Reparenting a clone with `appendChild` | Local-font text fails to load and the call is rejected. Use `absorb()` |
 | Opening with a full preview, or a spec draft, whose values you chose yourself | The person has to judge the direction and the document at once, and usually cannot picture either. Agree the direction with `/fig:sketch` first, then preview |
 | Pins that came along with a clone | Last round's labels read as this round's decisions. Clear the clone's annotations in the call that clones it, including those on nested instances |
-| Explaining the screen in pins — navigation, before/after, rules, code notes | Each already lives in the arrows, the AS-IS section, the spec or the ticket. Pin only an open question, once |
+| Explaining the screen in pins — navigation, before/after, rules, code notes | Each already lives in the arrows, the canonical and working pages, the spec or the ticket. Pin only an open question, once |
 | Calling it done on an isolated screenshot | The gate is `/fig:lint` plus a whole-section screenshot, as everywhere else here |
 | Skipping `/fig:tokens` because every frame was cloned | A clone of a draft carries the draft's hand-typed colours. Check every drawn frame |
 | Checking each drawn screen on its own | Render all of them in one image before reporting — a screen that is wrong only relative to its siblings looks fine alone |
@@ -277,7 +277,7 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 - Never invent a fact a source could have settled, and never leave an unsourced value unmarked
 - Never change anything on the cloned screen the target did not call for
 - Never draw a new visual language for a state the design system already answers
-- Never create an annotation category, and never file an open question under the one `/fig:diff` uses
+- Annotations carry no category: never create one, and never file an open question as a change
 - Never leave a cloned frame carrying its source's annotations, and never pin anything but an open question
 
 ## Notes

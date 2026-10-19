@@ -1,7 +1,7 @@
 ---
 name: setup
-description: Reads an unfamiliar Figma file and drafts its figma-conventions.yaml. Naming, spacing, section and arrow style are observed from actual nodes; a thin or split sample stays null. What only a person knows — which pages count, the screen width, where the PRD and tasks live — is asked; the rest is left to the defaults. Ends with /fig:lint, judged by its false positives. Triggers - "/fig:setup", "work out this file's conventions", "draft the config", "이 파일 관례 뽑아줘", "설정 초안 만들어줘", "이 파일에 맞게 세팅해줘".
-allowed-tools: AskUserQuestion, Bash, Read, Write, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
+description: Reads an unfamiliar Figma file before the other skills are used on it and drafts its figma-conventions.yaml from observed nodes, leaving a thin or split sample null and asking only what a person knows, then ends with /fig:lint judged by its false positives. Triggers - "/fig:setup", "work out this file's conventions", "draft the config", "이 파일 관례 뽑아줘", "설정 초안 만들어줘", "이 파일에 맞게 세팅해줘".
+allowed-tools: AskUserQuestion, Bash, Read, Write, Edit, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
 ---
 
 # fig:setup — infer a file's conventions, draft the config
@@ -79,8 +79,10 @@ Report the table as it returns, then judge it:
 - **unknown** on Claude in Chrome — it is a browser extension rather than an MCP server, so
   the shell cannot see it. It matters only for `/fig:proto`, `/fig:code` and `/fig:qa`
 - **The seat is not visible from the shell either.** This skill only reads, so a View seat is
-  fine here. The skills that write — `/fig:prep`, `/fig:arrows`, `/fig:diff`, `/fig:sync`,
-  `/fig:tokens`, `/fig:deck` — check it themselves with `whoami` before their first write
+  fine here. The skills that write — `/fig:prep`, `/fig:draw`, `/fig:arrows`, `/fig:sync`,
+  `/fig:tokens`, `/fig:deck` — check it themselves with `whoami` before their first write.
+  `/fig:handoff`'s one Figma write, the named version, goes through the web app, so a seat that
+  cannot save shows up there
 - **Only `plugin:figma` can be required on a file with no config.** Once the config names a
   tracker in `task_tracker.type`, that connector is required on later runs and a run that
   cannot reach it stops on its name. Until then the other connectors read as optional, and

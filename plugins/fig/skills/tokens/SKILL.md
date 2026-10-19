@@ -1,7 +1,7 @@
 ---
 name: tokens
-description: Audits whether the colors on a Figma frame or page are bound to design system tokens, and maps and binds hardcoded colors to the right token. Derives token-to-hex from bindings already in the file so every mapping has evidence, grades the results, and auto-proposes only the safe ones. Lint mode (check only) and bind mode are separate. Which library and which token groups come from the design_system section of figma-conventions.yaml; on auto it detects the library the file is connected to. Triggers - "/fig:tokens", "check the token bindings", "find unbound colors", "토큰 바인딩 검수", "하드코딩 색상 검사", "디자인시스템 연동 점검".
-allowed-tools: AskUserQuestion, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__search_design_system, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__whoami
+description: Audits whether the colors on a Figma frame or page are bound to design system tokens and binds the hardcoded ones it can map safely from bindings already in the file, after a screen is drawn or whenever a color may have been typed in by hand. Triggers - "/fig:tokens", "check the token bindings", "find unbound colors", "토큰 바인딩 검수", "하드코딩 색상 검사", "디자인시스템 연동 점검".
+allowed-tools: AskUserQuestion, Bash, Read, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__search_design_system, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__whoami
 ---
 
 # fig:tokens — audit and repair design system token bindings
