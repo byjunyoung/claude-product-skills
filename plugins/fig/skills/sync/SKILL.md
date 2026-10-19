@@ -77,11 +77,15 @@ Compare each finished working frame directly with the canonical frame of the sam
 
 - A string only in the working frame → it **must be present** on the canonical page to count as applied
 - A string only in the canonical frame → it **must be absent** once applied (this is what catches rewording and removals)
-- A working frame with no canonical twin of that name is reported as "new — not on the canonical page", with its whole text as candidates
+- A working frame named `[screen]-[state]` with no canonical twin is reported as "new — not on the canonical page", with its whole text as candidates. It counts as **Not applied**
+- A working frame whose name does not follow `[screen]-[state]` (renamed, never prepped) is not called new: it is reported as "unmatched by name — asked", and the person is pointed at `/fig:prep` to normalise names first
+- A `[screen]-[state]` name that appears more than once on the canonical page cannot be matched to one frame: every match is listed and the working frame goes under **Needs checking**
+- A canonical frame with no working twin is not audited. A whole frame removed from the working page is invisible to this signal
+- A difference is read as it stands. This signal does not infer which side changed — a canonical-only string can be something canonical gained after the work
 
 **Signal 2 — frame height**
 
-Changes that add or remove elements change the height. If the new version's height matches canonical and differs from the current version, that is evidence of applied; the reverse is evidence of not applied. Never decisive alone — it supports signal 1.
+Changes that add or remove elements change the height. If the working frame's height matches the canonical frame's, that is evidence of applied; a height that differs is evidence of not applied (or of canonical having moved on since). Never decisive alone — it supports signal 1.
 
 **Signal 3 — component master**
 
@@ -92,7 +96,7 @@ Component-level changes (a state added, hierarchy tidied) do not show up in fram
 | Bucket | Basis |
 |---|---|
 | Applied | At least one signal clearly supports it, with no signal against |
-| Not applied | A new-version keyword is missing from canonical, or a current-version keyword is still there |
+| Not applied | A working-frame-only string is missing from canonical, a canonical-only string is still there, or the working frame is new (no canonical twin) |
 | Needs checking | All three signals are silent — a purely visual change where the two frames' text is identical and heights match |
 
 **Never decide the needs-checking cases.** Collect them, report them, and ask whether to run a screenshot comparison — it costs per item, so it does not run automatically. A working frame edited after the release so that it now matches canonical lands here too, and says nothing about whether the work was applied.
@@ -101,7 +105,7 @@ Component-level changes (a state added, hierarchy tidied) do not show up in fram
 
 Only the not-applied cases. For each one, **compare the structure first.**
 
-List the text nodes of the canonical frame and the new-version frame in document order as `parent name|characters` and compare.
+List the text nodes of the canonical frame and the working frame in document order as `parent name|characters` and compare.
 
 - **Order, count, and parent names all match** → only the values differ. **Edit the values.** Node ids survive, so external deep links hold. Count the intended edits in advance and put a guard in the script that aborts when the count differs from expected
 - **Anything differs** → the structure changed. **Move the frame** as the convention prescribes, and note in the report that external links pointing at the old canonical frame id will break (see the deep link audit)
@@ -110,7 +114,7 @@ Value edits are text edits, so **read the target node's current fonts with `getS
 
 **Preview → go.** State the target frames, what will change and how many, the method (value edit or move), and the reasoning. With several pieces, split them and pass a gate per piece.
 
-Right after applying, run the same comparison again and confirm the result matches the new version.
+Right after applying, run the same comparison again and confirm the result matches the working frame.
 
 ### Step 4 — archive
 
@@ -163,23 +167,29 @@ If nothing was un-applied, report just that, briefly.
 **Name-matched text comparison (one whole archive page)**
 
 ```js
-const page = await figma.getNodeByIdAsync(PAGE_ID);
-await figma.setCurrentPageAsync(page);
 const texts = n => [...new Set(n.findAll(x => x.type === 'TEXT').map(t => t.characters.trim()).filter(s => s && s.length < CFG.sync.text_diff_max_len))];
-const out = [];
-const canon = {};   // [screen]-[state] name -> text set, from the canonical page (load it the same way first)
-for (const f of CANON_FRAMES) canon[f.name] = new Set(texts(f));
 function frames(n, acc) {   // dig through the section hierarchy, collect screen frames only
   for (const c of n.children || []) {
     if (c.type === 'FRAME') acc.push(c); else if (c.type === 'SECTION') frames(c, acc);
   }
   return acc;
 }
+const canonPage = await figma.getNodeByIdAsync(CANON_PAGE_ID);   // the canonical page, from the confirmed axes
+await figma.setCurrentPageAsync(canonPage);
+const canon = {};   // [screen]-[state] name -> every canonical frame carrying it (a repeated name is kept, not overwritten)
+for (const f of frames(canonPage, [])) (canon[f.name] = canon[f.name] || []).push({ id: f.id, set: new Set(texts(f)) });
+const page = await figma.getNodeByIdAsync(PAGE_ID);   // the working or archive page being judged
+await figma.setCurrentPageAsync(page);
+const out = [];
 for (const f of frames(page, [])) {
   const W = new Set(texts(f)), C = canon[f.name];
-  if (!C) { out.push({ frame: f.name, mode: 'new', note: 'new — not on the canonical page', all: [...W].slice(0, 70) }); continue; }
-  const onlyWorking = [...W].filter(x => !C.has(x)), onlyCanonical = [...C].filter(x => !W.has(x));
-  out.push({ frame: f.name, mode: onlyWorking.length || onlyCanonical.length ? 'differs' : 'applied', onlyWorking, onlyCanonical });
+  if (!/\S-\S/.test(f.name)) { out.push({ frame: f.name, mode: 'unmatched', note: 'unmatched by name — asked (run /fig:prep to normalise names first)' }); continue; }
+  if (!C) { out.push({ frame: f.name, mode: 'new', bucket: 'not applied', note: 'new — not on the canonical page', all: [...W].slice(0, 70) }); continue; }
+  if (C.length > 1) { out.push({ frame: f.name, mode: 'ambiguous', bucket: 'needs checking', canonicalIds: C.map(c => c.id) }); continue; }
+  const onlyWorking = [...W].filter(x => !C[0].set.has(x)), onlyCanonical = [...C[0].set].filter(x => !W.has(x));
+  out.push(onlyWorking.length || onlyCanonical.length
+    ? { frame: f.name, mode: 'differs', bucket: 'not applied', onlyWorking, onlyCanonical }
+    : { frame: f.name, mode: 'identical', bucket: 'applied' });
 }
 return out;
 ```
@@ -187,7 +197,7 @@ return out;
 **Finding the keywords in canonical frames**
 
 ```js
-const KW = [/* the strings from the diff above */];
+const KW = [/* the strings from the comparison above */];
 function tf(n, acc) {   // dig through the section hierarchy, collect screen frames only
   for (const c of n.children || []) {
     if (c.type === 'SECTION') tf(c, acc);
@@ -257,4 +267,4 @@ return figma.currentPage.children.filter(c => c.type === 'SECTION' && c.id !== t
 - **Page deletion is an independent gate** — never folded into another confirmation
 - Any judgement the config does not cover (value edit versus move) has its reasoning written into the report each time
 - Archive pages are never renamed or moved by this skill — only named as candidates
-- Never "improve" canonical in a direction the new version does not have. Applying means matching the new version, and stopping there
+- Never "improve" canonical in a direction the working frame does not have. Applying means matching the working frame, and stopping there
