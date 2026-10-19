@@ -15,7 +15,8 @@
  *          `pass` is true exactly when `findings` is empty.
  *
  * Optional input: `const SECTION = "<section node id>";` — audit that section and the sections nested in
- * it, at any depth, and nothing else (no page-level membership, top-level order or other sections).
+ * it, at any depth. Page-level checks stay out of it ([membership] for loose frames, [order] across all
+ * sections); a section overlapping a neighbour is still reported when either side is in scope.
  * An id not on the page returns one blocking [section] finding; an id inside a section that
  * pages.exclude_sections excludes returns pass with a `note` and no findings.
  *
@@ -55,22 +56,25 @@ const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
 
 const issues = [];
 const add = (tag, grade, node, msg) => issues.push({ tag, grade, node: node == null ? null : node, msg });
-// SECTION narrows the audit to one section and every section nested in it. `all` is the walk's
-// output; the result is the set of in-scope section ids, or a ready-made early return.
+// <scope-of>
+// SECTION narrows an audit to one section and every section nested in it. Given the walk's output,
+// scopeOf returns { ids } (the in-scope section ids), { missing: true } or { excluded: true };
+// each caller words its own finding or note.
 const SEC = typeof SECTION !== "undefined" && SECTION ? String(SECTION) : null;
 const scopeOf = all => {
   const t = all.find(d => d.s.id === SEC);
-  const add = (tag, grade, node, msg) => ({ tag, grade, node, msg });
-  if (!t) return { done: { pass: false, findings: [add("[section]", "blocking", null, `section ${SEC} is not on this page`)] } };
-  if (t.skipped) return { done: { pass: true, findings: [], note: `section ${SEC} is excluded by pages.exclude_sections; nothing audited` } };
+  if (!t) return { missing: true };
+  if (t.skipped) return { excluded: true };
   const ids = new Set(), take = n => { ids.add(n.id); for (const c of n.children) if (c.type === "SECTION") take(c); };
   take(t.s);
   return { ids };
 };
+// </scope-of>
 const secs = figma.currentPage.children.filter(c => c.type === "SECTION");   // top level: order and the page-level overlap
 const deepAll = sectionsDeep(figma.currentPage.children, skipSection);       // every depth, the whole page
 const scope = SEC ? scopeOf(deepAll) : null;
-if (scope && scope.done) return scope.done;
+if (scope && scope.missing) { add("[section]", "blocking", null, `section ${SEC} is not on this page`); return { pass: false, findings: issues }; }
+if (scope && scope.excluded) return { pass: true, findings: [], note: `section ${SEC} is excluded by pages.exclude_sections; nothing audited` };
 const deep = SEC ? deepAll.filter(d => scope.ids.has(d.s.id)) : deepAll;     // the per-section checks
 // Section -> the section holding it, built from the walk above (not from `.parent`). A variable
 // mode set on an outer section reaches every screen under it, however deep.
@@ -113,12 +117,16 @@ for (const { s, skipped } of deep) {
 // Section overlap — an excluded section on either side is dropped from the check.
 // Only siblings are compared: a nested section lies inside its parent by design, and siblings
 // share the parent's coordinate space, so their own x/y compare directly.
-const siblingGroups = [...(SEC ? [] : [secs]), ...deep.filter(d => !d.skipped).map(d => d.s.children.filter(c => c.type === "SECTION"))];
+// Under SECTION every pair with at least one side in scope is still reported, so a target sitting
+// on its neighbour is caught; pairs wholly outside it are not.
+const wanted = s => !SEC || scope.ids.has(s.id);
+const siblingGroups = [secs, ...deepAll.filter(d => !d.skipped).map(d => d.s.children.filter(c => c.type === "SECTION"))];
 for (const group of siblingGroups)
   for (let i = 0; i < group.length; i++)
     for (let j = i + 1; j < group.length; j++) {
       const a = group[i], b = group[j];
       if (skipSection(a) || skipSection(b)) continue;
+      if (!wanted(a) && !wanted(b)) continue;
       if (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y)
         add("[section overlap]", "blocking", a.id, `${a.name} ∩ ${b.name}`);
     }

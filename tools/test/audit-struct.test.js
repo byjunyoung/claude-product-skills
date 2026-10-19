@@ -29,9 +29,9 @@ const frame = (name, x, y, w = 100, h = 100) => ({
 });
 const section = (name, x, y, w, h, children) => ({ type: "SECTION", id: "id:" + name, name, x, y, width: w, height: h, children });
 
-const run = (pageChildren, cfg = baseCfg(), SECTION) =>
+const run = (pageChildren, cfg = baseCfg(), SECTION, sets = []) =>
   new AsyncFunction("CFG", "SECTION", "figma", SRC)(cfg, SECTION, {
-    currentPage: { name: "[UI] Fixture", children: pageChildren, findAllWithCriteria: () => [] },
+    currentPage: { name: "[UI] Fixture", children: pageChildren, findAllWithCriteria: () => sets },
   });
 
 // Outer 2000x2000 at the origin holds an inner 500x300 at (50, 50). The inner section holds two
@@ -190,4 +190,43 @@ test("SECTION inside an excluded parent audits nothing and says so", async () =>
     pass: true, findings: [],
     note: "section id:L3 is excluded by pages.exclude_sections; nothing audited",
   });
+});
+
+test("SECTION that is itself excluded audits nothing and says so", async () => {
+  const cfg = baseCfg();
+  cfg.pages.exclude_sections = ["^L2$"];
+  const out = await run(levels(), cfg, "id:L2");
+  assert.deepStrictEqual(out, {
+    pass: true, findings: [],
+    note: "section id:L2 is excluded by pages.exclude_sections; nothing audited",
+  });
+});
+
+test("SECTION still reports the target overlapping its neighbour", async () => {
+  const overlaps = (out) => out.findings.filter((i) => i.tag === "[section overlap]");
+  // top level: A (0..500) and B (400..900) overlap; C is clear of both
+  const top = () => [section("A", 0, 0, 500, 300, []), section("B", 400, 0, 500, 300, []), section("C", 3000, 0, 500, 300, [])];
+  assert.strictEqual(overlaps(await run(top(), baseCfg(), "id:A")).length, 1);
+  assert.strictEqual(overlaps(await run(top(), baseCfg(), "id:C")).length, 0);
+  // nested: P1 and P2 overlap inside Outer; Q is far away
+  const nest = () => [section("Outer", 0, 0, 5000, 5000, [
+    section("P1", 0, 0, 500, 300, []), section("P2", 400, 0, 500, 300, []), section("Q", 3000, 0, 500, 300, []),
+  ])];
+  assert.strictEqual(overlaps(await run(nest(), baseCfg(), "id:P2")).length, 1);
+  assert.strictEqual(overlaps(await run(nest(), baseCfg(), "id:Q")).length, 0);
+});
+
+test("SECTION keeps only the [variant stack] findings of component sets inside it", async () => {
+  const set = (id, parent) => ({
+    type: "COMPONENT_SET", id, name: id, layoutMode: "NONE", parent,
+    children: [{ x: 0, y: 0, width: 50, height: 50, name: "v1" }, { x: 10, y: 10, width: 50, height: 50, name: "v2" }],
+  });
+  const page = [
+    section("In", 0, 0, 500, 300, []),
+    section("Out", 3000, 0, 500, 300, []),
+  ];
+  const sets = [set("cs:in", page[0]), set("cs:out", page[1])];
+  const stacks = (out) => out.findings.filter((i) => i.tag === "[variant stack]").map((i) => i.node);
+  assert.deepStrictEqual(stacks(await run(page, baseCfg(), undefined, sets)), ["cs:in", "cs:out"]);
+  assert.deepStrictEqual(stacks(await run(page, baseCfg(), "id:In", sets)), ["cs:in"]);
 });

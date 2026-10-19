@@ -105,3 +105,11 @@ test("SECTION inside an excluded parent audits nothing and says so", async () =>
     note: "section L3 is excluded by pages.exclude_sections; nothing audited",
   });
 });
+
+test("SECTION that is itself excluded audits nothing and says so", async () => {
+  const r = await run(levels(), undefined, "L2", { exclude_sections: ["^L2$"] });
+  assert.deepStrictEqual(r, {
+    pass: true, findings: [], unknown: [],
+    note: "section L2 is excluded by pages.exclude_sections; nothing audited",
+  });
+});

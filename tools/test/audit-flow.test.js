@@ -239,3 +239,19 @@ test("SECTION narrows a duplicate frame name to the chosen section", () => {
   assert.ok(tagged(runSec(page, undefined), "[duplicate name]").length === 1);
   assert.ok(tagged(runSec(page, "One"), "[duplicate name]").length === 0);
 });
+
+test("SECTION that is itself excluded audits nothing and says so", () => {
+  const cfg = { ...CFG, pages: { exclude_sections: ["^L2$"] } };
+  assert.deepStrictEqual(runSec(levelsPage(), "L2", cfg), {
+    pass: true, findings: [],
+    note: "section L2 is excluded by pages.exclude_sections; nothing audited",
+  });
+});
+
+test("the duplicate-name message differs once SECTION is set", () => {
+  const page = [sec("One", 0, [frame("same_default", 0, 0), frame("same_default", 300, 0)])];
+  assert.match(tagged(runSec(page, undefined), "[duplicate name]")[0].msg, /so narrow with the section input/);
+  const msg = tagged(runSec(page, "One"), "[duplicate name]")[0].msg;
+  assert.match(msg, /inside the chosen section/);
+  assert.doesNotMatch(msg, /narrow/);
+});

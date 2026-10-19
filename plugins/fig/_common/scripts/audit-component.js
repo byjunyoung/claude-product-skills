@@ -52,18 +52,20 @@ const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
 };
 // </sections-deep>
 
-// SECTION narrows the audit to one section and every section nested in it. `all` is the walk's
-// output; the result is the set of in-scope section ids, or a ready-made early return.
+// <scope-of>
+// SECTION narrows an audit to one section and every section nested in it. Given the walk's output,
+// scopeOf returns { ids } (the in-scope section ids), { missing: true } or { excluded: true };
+// each caller words its own finding or note.
 const SEC = typeof SECTION !== "undefined" && SECTION ? String(SECTION) : null;
 const scopeOf = all => {
   const t = all.find(d => d.s.id === SEC);
-  const add = (tag, grade, node, msg) => ({ tag, grade, node, msg });
-  if (!t) return { done: { pass: false, findings: [add("[section]", "blocking", null, `section ${SEC} is not on this page`)] } };
-  if (t.skipped) return { done: { pass: true, findings: [], note: `section ${SEC} is excluded by pages.exclude_sections; nothing audited` } };
+  if (!t) return { missing: true };
+  if (t.skipped) return { excluded: true };
   const ids = new Set(), take = n => { ids.add(n.id); for (const c of n.children) if (c.type === "SECTION") take(c); };
   take(t.s);
   return { ids };
 };
+// </scope-of>
 const page = figma.root.children.find(p => p.name.indexOf(PAGE) !== -1);
 if (!page) throw new Error(`page not found: ${PAGE}`);
 await figma.setCurrentPageAsync(page);
@@ -108,7 +110,9 @@ const exclude = (C.pages || {}).exclude_sections;
 const EXCL = exclude && exclude.length ? new RegExp(exclude.join("|")) : null;
 const walked = sectionsDeep(page.children, SEC ? s => !!(EXCL && EXCL.test(s.name)) : () => false);
 const scope = SEC ? scopeOf(walked) : null;
-if (scope && scope.done) return { ...scope.done, unknown: [] };
+const add = (tag, grade, node, msg) => ({ tag, grade, node, msg });
+if (scope && scope.missing) return { pass: false, findings: [add("[section]", "blocking", null, `section ${SEC} is not on this page`)], unknown: [] };
+if (scope && scope.excluded) return { pass: true, findings: [], note: `section ${SEC} is excluded by pages.exclude_sections; nothing audited`, unknown: [] };
 for (const { s } of walked.filter(d => !SEC || (scope.ids.has(d.s.id) && !d.skipped))) {
   for (const f of s.children.filter(c => c.type === "FRAME" && !c.name.startsWith(LABEL))) {
     const fb = f.absoluteBoundingBox;
