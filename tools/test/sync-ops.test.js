@@ -127,3 +127,13 @@ test("fourEdgeClear also catches a section to the left of and above the target",
   const overlapTop = box("T3", 200, 100, 100, 100);    // starts inside "above" (0..150)
   assert.deepStrictEqual(fourEdgeClear(overlapTop, 100, 100).hits.map((h) => h.name), ["above"]);
 });
+
+test("a font that cannot load writes nothing", async () => {
+  const { editValues } = ops({
+    loadFontAsync: async (f) => { if (f.family === "Missing") throw new Error("font not available"); },
+  });
+  const node = (id, family) => ({ id, characters: "old", getStyledTextSegments: () => [{ fontName: { family, style: "R" } }] });
+  const nodes = [node("a", "A"), node("b", "B"), node("c", "Missing")];
+  await assert.rejects(() => editValues(nodes.map((t) => [t, "new"]), 3), /font not available/);
+  assert.deepStrictEqual(nodes.map((t) => t.characters), ["old", "old", "old"]);
+});

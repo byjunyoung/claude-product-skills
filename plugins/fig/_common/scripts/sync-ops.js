@@ -38,7 +38,8 @@ function sameStructure(a, b) {
 }
 
 /** Value edit (guard plus font loading). editValues checks the number of edits against the one the
- *  audit settled on before anything is written, then calls editValue for each. */
+ *  audit settled on, then loads every font for every edit, and only then writes — a font that cannot
+ *  load leaves every node as it was. */
 async function editValue(t, v) {
   const fonts = new Set();
   for (const s of t.getStyledTextSegments(['fontName'])) fonts.add(JSON.stringify(s.fontName));
@@ -48,8 +49,11 @@ async function editValue(t, v) {
 }
 async function editValues(edits, EXPECTED) {   // edits: [textNode, newValue] pairs
   if (edits.length !== EXPECTED) throw new Error(`aborted: expected ${EXPECTED}, got ${edits.length}`);
+  const fonts = new Set();   // every font for every edit is loaded before the first write
+  for (const [t] of edits) for (const s of t.getStyledTextSegments(['fontName'])) fonts.add(JSON.stringify(s.fontName));
+  for (const fs of fonts) await figma.loadFontAsync(JSON.parse(fs));
   const ids = [];
-  for (const [t, v] of edits) ids.push(await editValue(t, v));
+  for (const [t, v] of edits) ids.push(await editValue(t, v));   // editValue's own load is a harmless repeat
   return { mutatedNodeIds: ids };
 }
 
