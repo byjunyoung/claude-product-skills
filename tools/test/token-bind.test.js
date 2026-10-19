@@ -104,6 +104,10 @@ const audit = (figma, { cfg = baseCfg(), SECTION, MODE } = {}) =>
   new AsyncFunction("CFG", "SECTION", "MODE", "figma", AUDIT)(cfg, SECTION, MODE, figma);
 
 const boundTo = (p) => (p && p.boundVariables && p.boundVariables.color ? p.boundVariables.color.id : null);
+// The skill's own path: a dry run, then the real run of the `mapping` it returned — the only way a real
+// run gets an accepted entry, whose `paints` only a dry run can fill in.
+const viaPreview = async (figma, MAPPING, opts = {}) =>
+  bind(figma, (await bind(figma, MAPPING, { ...opts, DRY_RUN: true })).mapping, opts);
 
 // One local token (#3366FF), one library token only importable by key (#FF0000).
 const LIB = () => ({
@@ -221,7 +225,7 @@ test("a visible change — colour or opacity — is skipped unless the entry acc
   assert.match(strict.skipped[2].reason, /^Near-Default: fill #3B66FF — token primary renders #3366FF here, not #3B66FF — binding changes what you see/);
 
   const p2 = page();
-  const loose = await bind(fakeFigma(p2, lib), MAP(true));
+  const loose = await viaPreview(fakeFigma(p2, lib), MAP(true));
   assert.deepStrictEqual(loose, { bound: 4, skipped: [] });
   assert.strictEqual(boundTo(find(p2, "Glow-Default").effects[0]), "primary");
   assert.strictEqual(boundTo(find(p2, "Near-Default").fills[0]), "primary");
@@ -256,7 +260,7 @@ test("a token that renders another colour in a node's mode is skipped there, and
 
   const p2 = page();
   // The rows that render the same bind as they are; the accepted entry covers only the nodes it names.
-  const accepted = await bind(fakeFigma(p2, lib), [
+  const accepted = await viaPreview(fakeFigma(p2, lib), [
     { hex: "#FFFFFF", variableKey: "key:surface" },
     { hex: "#FFFFFF", variableKey: "key:surface", accept: true, nodes: ["id:Dark-Default", "id:Card"] },
   ]);
@@ -415,8 +419,13 @@ test("accept: true without nodes is rejected before anything is written; nodes l
   await assert.rejects(bind(fakeFigma(p1, LIB()), [{ hex: "#3366FF", variableKey: "key:primary", nodes: "id:Exact-A" }]), /nodes is a list of node ids/);
   assert.deepStrictEqual(p1[0].children.map((f) => boundTo(f.fills[0])), [null, null, null, null], "the rejected runs wrote nothing");
 
+  // A real run takes an accepted entry only with the paints its dry run listed it for
+  await assert.rejects(bind(fakeFigma(p1, LIB()), [{ hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: ["id:Near-A"] }]),
+    /MAPPING entry for #3B66FF has accept: true but no paints/);
+  assert.deepStrictEqual(p1[0].children.map((f) => boundTo(f.fills[0])), [null, null, null, null], "still nothing written");
+
   const p2 = page();
-  const out = await bind(fakeFigma(p2, LIB()), [
+  const out = await viaPreview(fakeFigma(p2, LIB()), [
     { hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: ["id:Near-A"] },
     { hex: "#3366FF", variableKey: "key:primary", nodes: ["id:Exact-B"] },
   ]);
@@ -471,8 +480,8 @@ test("a dry run writes nothing and returns, per node, what would bind, what woul
     { node: "id:Near", name: "Near", kind: "fill", hex: "#3B66FF", variable: "primary", variableKey: "key:primary", change: "#3B66FF → #3366FF" });
   assert.ok(preview.skipped.some((s) => s.node === "id:Dark-Default"), "the mode node was not accepted, so it stays skipped");
 
-  // 3. The real run writes exactly what that preview listed
-  const real = await bind(fakeFigma(p2, lib), final);
+  // 3. The real run of that preview's mapping writes exactly what it listed
+  const real = await bind(fakeFigma(p2, lib), preview.mapping);
   assert.strictEqual(real.bound, preview.wouldBind.length);
   assert.deepStrictEqual(real.skipped, preview.skipped);
   assert.deepStrictEqual(["Home-Default", "Near", "Dark-Default"].map((n) => boundTo(find(p2, n).fills[0])), ["surface", "primary", null]);
@@ -665,7 +674,82 @@ test("a paint no token can bind reports every token it tried, and each change ac
 
   // The later token's change, once accepted on that node, binds
   const p2 = page();
-  const accepted = await bind(fakeFigma(p2, lib), [...MAPPING, { hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: ["id:Near"] }]);
+  const accepted = await viaPreview(fakeFigma(p2, lib), [...MAPPING, { hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: ["id:Near"] }]);
   assert.deepStrictEqual(accepted, { bound: 1, skipped: [] });
   assert.strictEqual(boundTo(find(p2, "Near").fills[0]), "primary");
+});
+
+test("a token that cannot be imported is reported, and an accepted change binds only the paints its preview showed it on", async () => {
+  // libfill is a library token bound elsewhere on the page, so a dry run reads it; the editor cannot import it
+  const lib = {
+    vars: [
+      colorVar("libfill", { m1: value("#3B66FF") }, { scopes: ["SHAPE_FILL"] }),
+      colorVar("primary", { m1: value("#3366FF") }),
+    ],
+    local: ["primary"],
+    published: [],
+  };
+  const page = [section("01. Home", [
+    node("RECTANGLE", "Ref", { fills: [{ ...solid("#3B66FF"), boundVariables: { color: alias("libfill") } }] }),
+    node("RECTANGLE", "Badge", { fills: [solid("#3B66FF")], strokes: [solid("#3B66FF")] }),
+  ])];
+  const figma = fakeFigma(page, lib);
+  const MAPPING = [
+    { hex: "#3B66FF", variableKey: "key:libfill" },
+    { hex: "#3B66FF", variableKey: "key:primary" },
+    { hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: ["id:Badge"] },
+  ];
+
+  const dry = await bind(figma, MAPPING, { DRY_RUN: true });
+  assert.deepStrictEqual(dry.paints.map((p) => [p.kind, p.candidates]), [
+    ["fill", [{ variableKey: "key:libfill", variable: "libfill", status: "bind" }]],
+    ["stroke", [
+      { variableKey: "key:libfill", variable: "libfill", status: "skip", reason: "token libfill is not scoped for stroke colours" },
+      { variableKey: "key:primary", variable: "primary", status: "skip",
+        reason: "token primary renders #3366FF here, not #3B66FF — binding changes what you see; accept: true binds it anyway", change: "#3B66FF → #3366FF" },
+      { variableKey: "key:primary", accept: true, variable: "primary", status: "bind", change: "#3B66FF → #3366FF" },
+    ]],
+  ], "a candidate says when its entry is an accepted one");
+  assert.deepStrictEqual(dry.mapping, [
+    { hex: "#3B66FF", variableKey: "key:libfill", nodes: ["id:Badge"] },
+    { hex: "#3B66FF", variableKey: "key:primary", nodes: ["id:Badge"] },
+    { hex: "#3B66FF", variableKey: "key:primary", nodes: ["id:Badge"], accept: true, paints: [{ node: "id:Badge", prop: "strokes", index: 0 }] },
+  ], "the accepted entry carries the one paint the preview showed it binding");
+
+  const real = await bind(figma, dry.mapping);
+  assert.deepStrictEqual(figma.imports, ["key:libfill"]);
+  const failed = "token key:libfill could not be imported (no published variable with key key:libfill)";
+  assert.deepStrictEqual(real, {
+    bound: 1,
+    skipped: [
+      { node: "id:Badge", reason: `Badge: fill #3B66FF — ${failed}` },
+      { node: "id:Badge", reason: "Badge: fill #3B66FF — token primary renders #3366FF here, not #3B66FF — binding changes what you see; accept: true binds it anyway",
+        change: "#3B66FF → #3366FF", variableKey: "key:primary" },
+      { node: "id:Badge", reason: `Badge: stroke #3B66FF — ${failed}` },
+    ],
+  }, "the fill never takes the change accepted for the stroke; every import failure is named, the stroke's too");
+  const badge = find(page, "Badge");
+  assert.deepStrictEqual([boundTo(badge.fills[0]), boundTo(badge.strokes[0])], [null, "primary"], "the stroke binds as previewed");
+});
+
+test("a plain exact fallback after an import failure still binds, and the failure is still reported", async () => {
+  const lib = {
+    vars: [colorVar("lib-ink", { m1: value("#111111") }), colorVar("ink", { m1: value("#111111") })],
+    local: ["ink"],
+    published: [],                                                                  // lib-ink cannot be imported
+  };
+  const page = [section("01. Home", [node("TEXT", "Body", { fills: [solid("#111111")] })])];
+  const figma = fakeFigma(page, lib);
+  const dry = await bind(figma, [{ hex: "#111111", variableKey: "key:lib-ink" }, { hex: "#111111", variableKey: "key:ink" }], { DRY_RUN: true });
+  assert.deepStrictEqual(dry.paints[0].candidates, [
+    { variableKey: "key:lib-ink", status: "unchecked" },
+    { variableKey: "key:ink", variable: "ink", status: "bind" },
+  ]);
+
+  const real = await bind(figma, dry.mapping);
+  assert.deepStrictEqual(real, {
+    bound: 1,
+    skipped: [{ node: "id:Body", reason: "Body: text #111111 — token key:lib-ink could not be imported (no published variable with key key:lib-ink)" }],
+  });
+  assert.strictEqual(boundTo(find(page, "Body").fills[0]), "ink");
 });

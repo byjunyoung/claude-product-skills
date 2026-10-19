@@ -11,7 +11,7 @@
  * Inputs
  *   CFG      naming.arrow_delimiter / label_prefix / state_chain_prefix and placeholder_style (the
  *            <scaffolding> block), pages.exclude_sections
- *   MAPPING  [{ hex, variableKey, nodes?, accept? }] — hex in collect's form ("#RRGGBB" where alpha is 1,
+ *   MAPPING  [{ hex, variableKey, nodes?, accept?, paints? }] — hex in collect's form ("#RRGGBB" where alpha is 1,
  *            "#RRGGBBAA" otherwise), variableKey one of the keys collect's dictionary lists. Several
  *            entries may share a hex: each paint tries the entries that name its node in MAPPING order
  *            and takes the first that can be bound to it, so one colour can go to a fill token on fills
@@ -24,33 +24,47 @@
  *            value in the mode a node is set to — and said go to that change, node by node. It needs
  *            nodes: an entry with accept and no nodes is rejected before anything is written, so a go
  *            never covers a node its preview did not list. Without accept, any such difference is skipped.
+ *            paints: [{ node, prop, index }] — on an accepted entry only, the paints (n[prop][index]) a
+ *            dry run listed it for; the entry is then tried on those paints and no other, so its change
+ *            lands only where the preview showed it. A dry run takes an accepted entry with or without
+ *            them and returns them in its `mapping`; a real run rejects an accepted entry without them
+ *            before anything is written, so it only ever takes one from a dry run's `mapping`.
  *   SECTION  optional — that section and the sections nested in it; without it, the whole page
  *   DRY_RUN  optional — true or false; anything else ("true", 1, null) throws before anything is read.
  *            true writes nothing at all: no node, no paint, and no import — the file is as it was. It
  *            reads only the tokens already in the file (local ones, and library ones bound somewhere on
  *            the page), and returns what the same MAPPING would do, for the preview:
  *            { paints: [{ node, name, kind, hex,
- *                         candidates: [{ variableKey, variable?, status, reason?, change? }] }],
+ *                         candidates: [{ variableKey, accept?, variable?, status, reason?, change? }] }],
  *              wouldBind: [{ node, name, kind, hex, variable, variableKey, change? }], skipped,
- *              unchecked: [{ variableKey, nodes: [ids] }], mapping: [{ hex, variableKey, nodes, accept? }] }
+ *              unchecked: [{ variableKey, nodes: [ids] }],
+ *              mapping: [{ hex, variableKey, nodes, accept?, paints? }] }
  *            paints has a row per paint an entry names and the walk does not leave. Its candidates are
- *            the entries that name its node, in the order the bind tries them, up to the first that
- *            binds — the bind never tries one after it. status "bind": this token binds the paint;
- *            "skip": it does not, and reason says why; "unchecked": a token not in the file yet, whose
- *            scopes and value on the node are read only when the bind imports it — where it does not
- *            fit, or would change the colour and no accepted entry names the node, the bind goes on to
- *            the next candidate. variable is the token's name where it was read. change is what the
- *            screen would show instead ("#3B66FF → #3366FF", "opacity 20% → 100%", "#FFFFFF → #1E1E1E
- *            (mode Dark)"): on a "skip", a difference accept: true would lift; on a "bind", an accepted one.
+ *            the entries tried on it, in the order the bind tries them, up to the first that binds —
+ *            the bind never tries one after it. accept: true marks a candidate whose entry is an accepted
+ *            one. status "bind": this token binds the paint; "skip": it does not, and reason says why;
+ *            "unchecked": a token not in the file yet, whose scopes and value on the node are read only
+ *            when the bind imports it — where it does not fit, or would change the colour and its own
+ *            entry is not an accepted one, the bind goes on to the next candidate. variable is the
+ *            token's name where it was read. change is what the screen would show instead ("#3B66FF →
+ *            #3366FF", "opacity 20% → 100%", "#FFFFFF → #1E1E1E (mode Dark)"): on a "skip", a difference
+ *            accept: true would lift; on a "bind", an accepted one.
  *            wouldBind has a row per paint settled to bind — a "bind" candidate and no "unchecked" one —
- *            with that token. skipped is what the real run would return for the colours the walk leaves
- *            and for the paints settled not to bind (every candidate a "skip"). A paint with an
- *            "unchecked" candidate is in neither: the bind settles it, among the candidates listed.
+ *            with that token. skipped is what the real run would return for the colours the walk leaves,
+ *            for the paints settled not to bind (every candidate a "skip"), and for a token that could
+ *            not be read on a settled paint, even one that binds. A paint with an "unchecked" candidate
+ *            is in neither: the bind settles it.
  *            unchecked lists each token not in the file yet and the nodes it is tried on.
  *            mapping is the MAPPING given, each entry's nodes set to the ids this run listed under it —
- *            as a candidate, or as a colour the walk leaves — and an entry that listed none left out.
- *            The real run after the go takes it as its MAPPING, so it binds only the nodes this preview
- *            showed, each paint to one of its candidates, in their order.
+ *            as a candidate, or as a colour the walk leaves — an accepted entry's paints set to the
+ *            paints it was a candidate on, and an entry that listed none left out. The real run after
+ *            the go takes it as its MAPPING. So it binds only nodes this preview showed, each to a token
+ *            listed for that node, and makes no visible change the preview did not show on that paint: a
+ *            plain entry binds only where the colour stays the same, an accepted one only on its paints.
+ *            Where a token cannot be imported, the failure is reported and the paint goes on to the next
+ *            candidate listed for its node — which, since a visible change needs its paint in an accepted
+ *            entry's paints, binds there only if the colour stays the same, or with the accepted change
+ *            the preview showed for that paint.
  *
  * What it binds: exactly the colours audit-tokens.js reports — the <paint-scope> block, shared with it
  * byte for byte — whose colour and alpha equal a MAPPING hex. A fill, stroke or text colour is bound with
@@ -69,7 +83,8 @@
  *     whose value cannot be read on the node counts as differing
  *   - a token whose `scopes` do not include the property the colour is on (ALL_SCOPES fits every one,
  *     and a token scoped to nothing — hidden from every picker — fits none)
- *   - a variableKey that is not a local colour variable and cannot be imported
+ *   - a variableKey that is not a local colour variable and cannot be imported — reported on every
+ *     paint it was tried on, even one a later candidate binds
  * Not read at all, as in the audit: hidden layers and what they hold, excluded sections, a section's or
  * component set's own paint, paints switched off, and paints already bound.
  *
@@ -81,10 +96,11 @@
  * Returns { bound, skipped } (DRY_RUN: { wouldBind, skipped, unchecked, paints, mapping }) — bound counts
  *   paints, as collect's `count` does; skipped is [{ node, reason, change?, variableKey? }], one per node
  *   and reason, the reason opening "<node name>: <kind> <hex> — ". A paint no candidate binds has a row
- *   for every token it tried, in that order. change and variableKey are set on a row that is a visible
+ *   for every token it tried, in that order; a paint that binds has one only for a token tried before
+ *   it that could not be read or imported. change and variableKey are set on a row that is a visible
  *   difference accept: true with that node and that token would lift — the rows a preview asks about.
- *   DRY_RUN not true or false, MAPPING empty or malformed, accept without nodes, or SECTION not on the
- *   page → throws before anything is written. SECTION inside an excluded section → { bound: 0 (or
+ *   DRY_RUN not true or false, MAPPING empty or malformed, accept without nodes, a real run's accept
+ *   without paints, or SECTION not on the page → throws before anything is written. SECTION inside an excluded section → { bound: 0 (or
  *   wouldBind, unchecked, paints and mapping all []), skipped: [{ node: SECTION, reason }] }.
  * ========================================================================== */
 
@@ -254,22 +270,35 @@ const keyOf = h => {
   if (!/^[0-9A-F]{6}([0-9A-F]{2})?$/.test(s)) throw new Error(`MAPPING hex "${h}" is not #RRGGBB or #RRGGBBAA`);
   return "#" + (s.length === 8 && s.endsWith("FF") ? s.slice(0, 6) : s);
 };
+const PROPS = new Set(["fills", "strokes", "effects"]);
+const paintKey = (node, prop, index) => node + "\n" + prop + "\n" + index;
 const wanted = new Map(), entries = [];
 for (const m of MAPPING) {
   if (!m || !m.variableKey) throw new Error(`MAPPING entry ${JSON.stringify(m)} has no variableKey`);
-  const k = keyOf(m.hex), has = m.nodes !== undefined && m.nodes !== null;
+  const k = keyOf(m.hex), has = m.nodes !== undefined && m.nodes !== null, hasPaints = m.paints !== undefined && m.paints !== null;
   if (m.accept === true && !(Array.isArray(m.nodes) && m.nodes.length))
     throw new Error(`MAPPING entry for ${k} has accept: true but no nodes — accept covers only the nodes a preview listed, so name them`);
   if (has && !(Array.isArray(m.nodes) && m.nodes.length && m.nodes.every(x => typeof x === "string" && x)))
     throw new Error(`MAPPING entry for ${k}: nodes is a list of node ids`);
-  // listed: the nodes this run reports under the entry — what a dry run's `mapping` hands back as its nodes
-  const e = { hex: k, variableKey: String(m.variableKey), accept: m.accept === true, nodes: has ? new Set(m.nodes) : null, listed: new Set() };
+  // An accepted change binds only the paints a dry run listed it for, which only a dry run can name: a
+  // real run takes an accepted entry only from a dry run's `mapping`, where it carries them.
+  if (hasPaints && m.accept !== true) throw new Error(`MAPPING entry for ${k}: paints belongs only to an accept: true entry`);
+  if (hasPaints && !(Array.isArray(m.paints) && m.paints.every(p => p && typeof p.node === "string" && p.node && PROPS.has(p.prop) && Number.isInteger(p.index) && p.index >= 0)))
+    throw new Error(`MAPPING entry for ${k}: paints is a list of { node, prop, index }`);
+  if (m.accept === true && !hasPaints && !DRY)
+    throw new Error(`MAPPING entry for ${k} has accept: true but no paints — run the mapping the dry run returned, whose accepted entries name the paints the preview showed them on`);
+  // listed: the nodes this run reports under the entry — what a dry run's `mapping` hands back as its nodes;
+  // onPaints: for an accepted entry, the paints it was tried on — what `mapping` hands back as its paints
+  const e = { hex: k, variableKey: String(m.variableKey), accept: m.accept === true, nodes: has ? new Set(m.nodes) : null,
+              paints: hasPaints ? new Set(m.paints.map(p => paintKey(p.node, p.prop, p.index))) : null, listed: new Set(), onPaints: new Map() };
   if (!wanted.has(k)) wanted.set(k, []);
   wanted.get(k).push(e);
   entries.push(e);
 }
-// Whether an entry, or any entry for a colour, names this node.
+// Whether an entry, or any entry for a colour, names this node; and whether an entry is tried on this
+// paint — an accepted entry that names its paints only on those.
 const covers = (e, n) => !e.nodes || e.nodes.has(n.id);
+const coversPaint = (e, n, c) => covers(e, n) && (!e.paints || e.paints.has(paintKey(n.id, c.prop, c.i)));
 const named = (n, key) => wanted.has(key) && wanted.get(key).some(e => covers(e, n));
 // A colour the walk leaves is reported under every entry for it that names the node, so the real run,
 // given those nodes, reports it too.
@@ -329,7 +358,7 @@ const boundOnPage = async () => {
   return boundByKey;
 };
 const tokens = new Map();   // variableKey → { v }, { error } or, in a dry run, { unchecked: true }
-for (const key of new Set(targets.flatMap(t => wanted.get(t.c.key).filter(e => covers(e, t.n)).map(e => e.variableKey)))) {
+for (const key of new Set(targets.flatMap(t => wanted.get(t.c.key).filter(e => coversPaint(e, t.n, t.c)).map(e => e.variableKey)))) {
   if (local.has(key)) { tokens.set(key, { v: local.get(key) }); continue; }
   if (DRY) {
     const v = (await boundOnPage()).get(key);
@@ -392,25 +421,29 @@ const changeText = async (v, n, rk, ck) => {
 // ── Each paint tries the entries that name its node, in MAPPING order, up to the first that binds ──
 // A dry run goes on past a token it cannot read yet, so the preview shows what follows it: the real run
 // tries the same entries in the same order, and moves to the next where that token does not fit or
-// would change the colour.
+// would change the colour. A plain entry binds only where the colour stays the same, and an accepted one
+// only on the paints its dry run listed it for — so where a token cannot be imported, a paint goes on to
+// no visible change the preview did not show for it.
 const plan = new Map();   // node id → { n, props: Map(prop → [{ i, v }]) }
 const paints = [], wouldBind = [], unchecked = new Map();   // unchecked: variableKey → node ids (dry run only)
 for (const { n, c } of targets) {
-  const tried = [];   // { variableKey, variable?, status, reason?, change? }
+  const tried = [], failed = new Set();   // tried: { variableKey, accept?, variable?, status, reason?, change? }
   let chosen = null;
   for (const e of wanted.get(c.key)) {
-    if (!covers(e, n)) continue;
+    if (!coversPaint(e, n, c)) continue;
     e.listed.add(n.id);
-    const t = tokens.get(e.variableKey);
+    if (e.accept) e.onPaints.set(paintKey(n.id, c.prop, c.i), { node: n.id, prop: c.prop, index: c.i });
+    const t = tokens.get(e.variableKey), at = { variableKey: e.variableKey, ...(e.accept ? { accept: true } : {}) };
     if (t.unchecked) {
       // Not in the file, so neither its scopes nor its value here can be read without importing it.
       if (!unchecked.has(e.variableKey)) unchecked.set(e.variableKey, new Set());
       unchecked.get(e.variableKey).add(n.id);
-      tried.push({ variableKey: e.variableKey, status: "unchecked" });
+      tried.push({ ...at, status: "unchecked" });
       continue;
     }
-    if (t.error) { tried.push({ variableKey: e.variableKey, status: "skip", reason: t.error }); continue; }
-    const v = t.v, at = { variableKey: e.variableKey, variable: v.name };
+    if (t.error) { const x = { ...at, status: "skip", reason: t.error }; failed.add(x); tried.push(x); continue; }
+    const v = t.v;
+    at.variable = v.name;
     if (!fits(v, n, c.kind)) { tried.push({ ...at, status: "skip", reason: `token ${v.name} is not scoped for ${c.kind} colours` }); continue; }
     const rk = renderedOn(v, n), change = rk === c.key ? null : await changeText(v, n, rk, c.key);
     if (change && !e.accept) { tried.push({ ...at, status: "skip", reason: await changeOn(v, n, rk, c.key), change }); continue; }
@@ -420,11 +453,11 @@ for (const { n, c } of targets) {
   }
   paints.push({ node: n.id, name: n.name, kind: c.kind, hex: c.key, candidates: tried });
   if (tried.some(x => x.status === "unchecked")) continue;   // a dry run only: settled when the bind runs
-  if (!chosen) {
-    // A row for every token it tried, in that order; a visible change carries what accept would lift.
-    for (const x of tried) skip(n, c, x.reason, x.change ? { change: x.change, variableKey: x.variableKey } : undefined);
-    continue;
-  }
+  // A paint none binds: a row for every token it tried, in that order, a visible change carrying what
+  // accept would lift. A paint that binds: a row still for each token that could not be read or imported.
+  for (const x of tried)
+    if (!chosen || failed.has(x)) skip(n, c, x.reason, x.change ? { change: x.change, variableKey: x.variableKey } : undefined);
+  if (!chosen) continue;
   wouldBind.push({ node: n.id, name: n.name, kind: c.kind, hex: c.key, variable: chosen.v.name, variableKey: chosen.variableKey,
                    ...(chosen.change ? { change: chosen.change } : {}) });
   if (!plan.has(n.id)) plan.set(n.id, { n, props: new Map() });
@@ -438,9 +471,10 @@ if (DRY) return {
   unchecked: [...unchecked].map(([variableKey, ids]) => ({ variableKey, nodes: [...ids] })),
   paints,
   // The MAPPING to run after the go: every entry naming the nodes this run listed under it, so the real
-  // run binds no node the preview did not show. An entry that listed none would bind nothing; it is left out.
+  // run binds no node the preview did not show, and an accepted entry the paints too, so its change lands
+  // on no paint the preview did not show it on. An entry that listed none would bind nothing; it is left out.
   mapping: entries.filter(e => e.listed.size)
-    .map(e => ({ hex: e.hex, variableKey: e.variableKey, nodes: [...e.listed], ...(e.accept ? { accept: true } : {}) })),
+    .map(e => ({ hex: e.hex, variableKey: e.variableKey, nodes: [...e.listed], ...(e.accept ? { accept: true, paints: [...e.onPaints.values()] } : {}) })),
 };
 
 // ── Write: rebuild each array and reassign it — a paint array is read-only in place ──

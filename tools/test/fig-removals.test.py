@@ -344,6 +344,9 @@ check("tokens runs the mapping its dry run returned, every entry naming its node
       "`mapping`" in tokens and "`paints`" in tokens and "plain ones too" in tokens
       and "skipped and reported, not bound" not in tokens and "`[{ node, reason }]`" not in tokens
       and "Run the same `MAPPING`" not in tokens)
+check("tokens takes an accepted change only on the paints its preview showed, and reports every import failure",
+      "→ the same run" not in tokens and "the paints the dry run listed it for" in tokens
+      and "even where a later token binds that paint" in tokens and "the token not in the file yet that is tried first" not in tokens)
 check("no fig document says an instance's colours are fixed at the component's source",
       not [rel for rel, text in tracked_text_files() if rel.startswith("plugins/fig") and "fixed at the component" in text])
 t_head = fm_of_text(tokens)["description"].partition(" Triggers - ")[0]
