@@ -440,6 +440,30 @@ test("a node's fill and stroke of one colour are graded apart where their scopes
   assert.match(out.findings[1].msg, /: stroke #333333 — exact colour, no token scoped for stroke colours/);
 });
 
+test("an exact colour with only unfit tokens still offers a fitting near token", async () => {
+  const lib = {
+    collections: [C1],
+    vars: [
+      colorVar("ink", { m1: value("#111111") }, "c1", { scopes: ["TEXT_FILL"] }),
+      colorVar("dark", { m1: value("#141414") }, "c1", { scopes: ["SHAPE_FILL"] }),   // 3 off, and a shape can take it
+    ],
+    local: ["ink", "dark"],
+  };
+  const page = () => [section("01. Home", [
+    node("RECTANGLE", "Swatch", { fills: [solid("#111111")] }),
+    node("TEXT", "Label", { fills: [solid("#111111")] }),
+  ])];
+  const out = await run(page(), lib);
+  assert.deepStrictEqual(out.findings.map((f) => [f.node, f.grade]), [["id:Swatch", "warning"], ["id:Label", "blocking"]], JSON.stringify(out));
+  assert.match(out.findings[0].msg, /fill #111111 — near a token \(#141414, 3 off per channel\); this exact colour's tokens are scoped for other properties/);
+  assert.doesNotMatch(out.findings[0].msg, /exact token/, "lint-grades reads these words as blocking");
+  const col = await run(page(), lib, { MODE: "collect" });
+  assert.deepStrictEqual(col.unbound.map((u) => [u.kind, u.grade, u.nearest, u.tokens]), [
+    ["fill", 2, "#141414", ["key:dark"]],
+    ["text", 1, "#111111", ["key:ink"]],
+  ]);
+});
+
 test("a near colour is graded only against tokens scoped for its property", async () => {
   const out = await run([section("01. Home", [
     frame("Panel-Default", { fills: [solid("#333336")] }),                      // 3 off panel, which fits a frame

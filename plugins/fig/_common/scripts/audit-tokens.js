@@ -30,10 +30,12 @@
  *      them must not hold back a page whose sections pass
  *   2  every colour channel within design_system.match_threshold_channel  → warning
  *      of the nearest entry with a token that fits, alpha aside — the same colour at another
- *      opacity is near, never exact. null makes the threshold 0, so only that case is near
+ *      opacity is near, never exact. null makes the threshold 0, so only that case is near. An
+ *      exact colour whose tokens are all scoped for other properties is graded this way too, and
+ *      its message says so ("this exact colour's tokens are scoped for other properties")
  *   3  neither                                                           → warning
- *      — including an exact colour whose tokens are all scoped for other properties ("exact
- *      colour, no token scoped for fill colours"): nothing in the dictionary can be bound there
+ *      — including that exact colour where no token that fits is near either ("exact colour, no
+ *      token scoped for fill colours"): nothing in the dictionary can be bound there
  *
  * Not reported: anything inside an instance, including overrides on its layers, and an instance's own
  * paint unless the instance overrides that property (its `overrides` entry for itself lists fills,
@@ -60,7 +62,8 @@
  *            where the tokens that fit differ (a frame's fill and a shape's), so every token a row
  *            lists fits every paint in it. count is paints, nodes the distinct node ids; nearest is the
  *            matching entry (grade 1), the closest one within the threshold (grade 2), the colour itself
- *            where its tokens fit other properties (grade 3), or null (grade 3); tokens are the keys at
+ *            where its tokens fit other properties and nothing that fits is near (grade 3), or null
+ *            (grade 3); tokens are the keys at
  *            nearest that fit the row — [] where none does — and the only ones /fig:tokens may propose.
  *            inInstance counts the colours inside instances, including overrides on its layers — every
  *            layer inside one, and an instance's own paint on a property it does not override — none of
@@ -333,15 +336,14 @@ if (!dictKeys.length && !COLLECT)
 // ── Grade, per paint, against the tokens that fit it (the <token-fit> block): 1 colour and alpha both
 // agree with a token that fits, 2 every colour channel within the threshold of the nearest entry with a
 // token that fits (alpha may differ, so the same colour at another opacity is near, never exact), 3
-// neither. An exact colour whose tokens all fit other properties is 3 with `unfit`, its nearest that
+// neither. An exact colour whose tokens all fit other properties goes on to the near search like any
+// other, marked `unfitExact`; where nothing that fits is near, it is 3 with `unfit`, its nearest that
 // colour: no token there can take it. `tokens` are the keys at nearest that fit ──
 const channels = k => [1, 3, 5, 7].map(i => (i < k.length ? parseInt(k.slice(i, i + 2), 16) : 255));
 const fitting = (k, n, kind) => dictionary[k].filter(t => fits(t, n, kind)).map(t => t.key);
 const gradeOf = (k, n, kind) => {
-  if (dictionary[k]) {
-    const tokens = fitting(k, n, kind);
-    return tokens.length ? { grade: 1, nearest: k, tokens, d: 0, da: 0 } : { grade: 3, nearest: k, tokens, unfit: true };
-  }
+  const exact = dictionary[k] ? fitting(k, n, kind) : null;
+  if (exact && exact.length) return { grade: 1, nearest: k, tokens: exact, d: 0, da: 0 };
   const a = channels(k);
   let best = null, bd = Infinity, bda = Infinity, bt = [];
   for (const t of dictKeys) {
@@ -350,7 +352,8 @@ const gradeOf = (k, n, kind) => {
     const b = channels(t), d = Math.max(...[0, 1, 2].map(i => Math.abs(a[i] - b[i]))), da = Math.abs(a[3] - b[3]);
     if (d < bd || (d === bd && (da < bda || (da === bda && t < best)))) { bd = d; bda = da; best = t; bt = tokens; }
   }
-  return best !== null && bd <= TH ? { grade: 2, nearest: best, tokens: bt, d: bd, da: bda } : { grade: 3, nearest: null, tokens: [], d: bd };
+  if (best !== null && bd <= TH) return { grade: 2, nearest: best, tokens: bt, d: bd, da: bda, ...(exact ? { unfitExact: true } : {}) };
+  return exact ? { grade: 3, nearest: k, tokens: [], unfit: true } : { grade: 3, nearest: null, tokens: [], d: bd };
 };
 // Paints of one colour and kind whose grade, nearest and tokens agree make one collect row or finding.
 const outcome = (r, ...rest) => [...rest, r.grade, r.nearest, r.tokens.join(",")].join("|");
@@ -402,7 +405,7 @@ for (const g of groups.values()) {
   else add("[unbound]", "warning", g.n.id, r.grade === 1
     ? `${loc}: ${what} — matches a token exactly but sits outside every section, which handoff does not gate; bind it all the same`
     : r.unfit ? `${loc}: ${what} — exact colour, no token scoped for ${g.kinds.join(" or ")} colours; the tokens of this colour are scoped for other properties`
-    : r.grade === 2 ? `${loc}: ${what} — near a token (${r.nearest}, ${r.d} off per channel${alpha}); a designer decides whether to snap it`
+    : r.grade === 2 ? `${loc}: ${what} — near a token (${r.nearest}, ${r.d} off per channel${alpha})${r.unfitExact ? "; this exact colour's tokens are scoped for other properties" : ""}; a designer decides whether to snap it`
     : `${loc}: ${what} — no token within ${TH} per channel; a designer decides whether it needs one`);
 }
 
