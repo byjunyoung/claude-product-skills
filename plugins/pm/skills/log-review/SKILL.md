@@ -1,6 +1,6 @@
 ---
 name: log-review
-description: Turns a period of daily logs into accomplishment statements for a self-review, promotion case or CV, stitching entries by url so work spanning weeks is one item, asking only what the files cannot know, and never rating your work or supplying a number you did not give. Triggers - "/pm:log-review", "turn last month's logs into highlights", "what did I accomplish this quarter", "성과 정리해줘", "이번 분기 뭐 했는지 정리", "이력서용으로 뽑아줘".
+description: Turns a period of daily logs into accomplishment statements for a self-review, promotion case or CV. Triggers - "/pm:log-review", "turn last month's logs into highlights", "what did I accomplish this quarter", "성과 정리해줘", "이번 분기 뭐 했는지 정리", "이력서용으로 뽑아줘".
 allowed-tools: AskUserQuestion, Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -15,6 +15,7 @@ Reads the daily files `/pm:log` wrote over a period and produces the thing those
 ## Principles
 
 - **Only what the files support.** Every statement traces to entries in the period. Nothing is added from memory or inference.
+- **It does not rate your work.** The statements say what was done and what came of it; whether it was good, or how it compares, is left to whoever reads them.
 - **Numbers come from the user.** If no figure is given, the statement carries `log.review.unknown_metric` rather than a fabricated one. A vague number is worse than a missing one — it will be read back as fact in a room where it can be challenged.
 - **Quotes stay quotes.** Anything from the `What others said` section is carried across verbatim with its link. Never paraphrased into praise.
 - **Existing entries are not rewritten.** The highlights document accumulates. A rerun of the same period updates only what the user changes in the preview.
