@@ -106,6 +106,57 @@ with tempfile.TemporaryDirectory() as tmp2:
                        cwd=proj2, env=env2, capture_output=True, text=True, timeout=300)
     check("renamed fork → no traceback", "Traceback" not in r.stderr and r.stdout.strip() != "", r.stderr[-400:])
 
+# fig borrows pm's PRD and task files, so its config can name a markdown PRD or tracker that
+# needs no connector. Run on fig's copy with no pm reachable: FIG_PM_ROOT unset, an empty
+# CLAUDE_CONFIG_DIR, a temp HOME. Every GIT_* key is dropped, as a pre-push hook exports GIT_DIR.
+FIG_SCRIPT = REPO / "plugins" / "fig" / "_common" / "scripts" / "lib" / "preflight.py"
+
+
+def run_fig(cwd, home, cfgdir):
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_") and k != "FIG_PM_ROOT"}
+    env.update(HOME=str(home), CLAUDE_CONFIG_DIR=str(cfgdir), PYTHONUSERBASE=site.getuserbase())
+    r = subprocess.run([sys.executable, str(FIG_SCRIPT)], cwd=cwd, env=env, capture_output=True, text=True, timeout=300)
+    return r.stdout
+
+
+def section(out, title):
+    return out.split(title, 1)[1].split("\n\n", 1)[0] if title in out else ""
+
+
+with tempfile.TemporaryDirectory() as tmp3:
+    home3, proj3, cfg3 = Path(tmp3) / "home", Path(tmp3) / "proj", Path(tmp3) / "claude"
+    (home3 / ".claude").mkdir(parents=True); proj3.mkdir(); cfg3.mkdir()
+    conv = proj3 / "figma-conventions.yaml"
+
+    out = run_fig(proj3, home3, cfg3)
+    # The verdict's first line depends on whether the Figma connector is up on this machine (fig
+    # has a hard one, pm none), so the machine-free line is the one asserted.
+    check("fig, no config → nothing needed yet", "no settings yet" in line(out, "needed because"), line(out, "needed because"))
+
+    conv.write_text('qa:\n  baseline:\n    prd: "0123456789abcdef0123456789abcdef"\n')
+    out = run_fig(proj3, home3, cfg3)
+    check("legacy string qa.baseline.prd → Notion required",
+          "qa.baseline.prd.type: notion" in line(out, "needed because"), line(out, "needed because"))
+
+    conv.write_text("qa:\n  baseline:\n    prd: {type: markdown, ref: ./docs/prd}\n")
+    out = run_fig(proj3, home3, cfg3)
+    check("qa.baseline.prd markdown → nothing required",
+          "name no tool" in line(out, "needed because"), line(out, "needed because"))
+
+    # Not FAIL because of this row: the verdict itself can FAIL here on a machine without the
+    # Figma connector, so the assertion is that the Fix-first list never names the tracker.
+    conv.write_text("task_tracker:\n  type: markdown\n")
+    out = run_fig(proj3, home3, cfg3)
+    check("task_tracker markdown without pm → attention, not FAIL",
+          "pm is not installed" in section(out, "Worth knowing") and "task_tracker" not in section(out, "Fix first"),
+          section(out, "Worth knowing") or (out.splitlines()[-1] if out else ""))
+
+    conv.write_text("task_tracker:\n  ref: x\n")
+    out = run_fig(proj3, home3, cfg3)
+    check("task_tracker.ref without type → FAIL naming the key",
+          out.splitlines()[-1].endswith("· FAIL") and "task_tracker.type" in section(out, "Fix first"),
+          out.splitlines()[-1] if out else "")
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)
