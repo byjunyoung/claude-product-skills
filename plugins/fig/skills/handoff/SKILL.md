@@ -1,7 +1,7 @@
 ---
 name: handoff
 description: Hands finished sections to engineering. Runs /fig:lint as the gate, lets the person pick which passing sections go, pins the named version handed over, hands over the section links, and writes one line into the task file (or page, or issue) where a tracker is set, or prints it where none is. It never sets a Dev Mode status. Nothing else is touched. Triggers - "/fig:handoff", "hand this off", "send this to engineering", "개발 넘겨줘", "핸드오프 해줘", "이 섹션 개발팀에 넘겨".
-allowed-tools: AskUserQuestion, Bash, Read, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__add_issue_comment, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__select_browser, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find
+allowed-tools: AskUserQuestion, Bash, Read, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__add_issue_comment, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__select_browser, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find
 ---
 
 # fig:handoff — hand finished sections to engineering
@@ -87,26 +87,24 @@ The gate reads **blocking only** (lint, "Severity"). A section is not held back 
 
 Show the candidates as a table — name and warnings still open (`—` where none) — and ask which go: all, or some. One question. Sections held back by blocking appear below the table with those reasons, so the person sees why they are not offered.
 
-### 3. Pin the version
+### 3. Pin the version — preview → go → save → read back
 
 Only where `handoff.version.enabled`. With it off, skip to step 4 and the doc line carries the links and a date alone.
 
-Follow `${CLAUDE_PLUGIN_ROOT}/_common/version-pin.md`: ask which release this handover belongs to, settle the name `handoff.version.name` produces, save it behind its own preview → go, and read it back. Every section link from here on carries `&version-id={version id}`, and the date in `handoff.version.ref` is the version's own.
+This is the first write, so it has its own preview. Ask which release this handover belongs to, settle the name `handoff.version.name` produces, and show that name as the one entry about to be added to the file's version history. After the go, follow `${CLAUDE_PLUGIN_ROOT}/_common/version-pin.md` to save it and read it back. Nothing is saved before the go.
 
-### 4. Preview → go
+Every section link from here on carries `&version-id={version id}`, and the date in `handoff.version.ref` is the version's own.
 
-One preview with everything this run will do:
+### 4. Preview the doc line → go → write
+
+The second write has its own preview, so a version that went in is never followed by a doc line nobody has seen. One preview with everything this step will do:
 
 - the sections going over
 - the section links: `https://figma.com/design/{fileKey}/?node-id={section id with : replaced by -}` — the same links `/fig:prep` hands over, because engineering opens sections, not frames
 - where a version was pinned: the label, its date, and the `&version-id=` every link now carries
 - where `action` is not `print`: the one line that goes into the task doc — the links, "handed over {date}, {n} sections", and the pinned version written as `handoff.version.ref` — under `{heading}`, appended after what is already there. For `write` the preview names the file and shows the line under the heading; for `notion` it names the page and the heading the line goes after, and for `github` the issue and whether it is the body or a comment. **That line is what `/pm:task publish` reads to fill a ticket's referenced-version row**, so the label and the date go in as they came back from the file, not as they were typed
 
-Then the go.
-
-### 5. Write
-
-The task-doc line, where `action` writes one — nothing in the Figma file. For `write`, after the go, with the heading and the line passed single-quoted and every `'` inside them written as `'\''` — a `"`, `$` or backtick in a version label then reaches the file as it is, rather than ending the argument or being expanded by the shell:
+Then the go. After it, the task-doc line, where `action` writes one — nothing in the Figma file. For `write`, with the heading and the line passed single-quoted and every `'` inside them written as `'\''` — a `"`, `$` or backtick in a version label then reaches the file as it is, rather than ending the argument or being expanded by the shell:
 
 ```bash
 python3 {script} append-under --path {file} --heading '{heading}' --line '{line}'
@@ -118,14 +116,14 @@ For `notion` and `github` the heading is `task_tracker.ui_section_heading`, or t
 
 | action | Target | Method |
 |---|---|---|
-| `notion` | the `ui_section_heading` section of the task page (usually behind an empty callout) | `notion-update-page` with `update_content`, catching the heading (and the callout under it) as `old_str` and **inserting the line after them**. Never replace the whole body |
+| `notion` | the `ui_section_heading` section of the task page — directly after the heading, and after whatever block opens the section (such as a callout) | `notion-update-page` with `update_content`, taking the heading as `old_str`, plus whatever opening block sits right under it where there is one, and **inserting the line after them**. `old_str` never relies on a particular block being there. Never replace the whole body |
 | `github` | the task issue | If the body has that section, insert the line beneath it with `issue_write` (send the whole edited body back, changing nothing else). If it does not, add the line as a comment with `add_issue_comment` |
 
 - **Search for the target section first.** Where the heading is missing or named differently, confirm where the line should go. Where there is already content under it, do not overwrite — append after it
 - **Never replace the whole body** of a page or an issue, and never touch a section other than that one
 - If no task was found, say so and print the line instead
 
-### 6. Read back
+### 5. Read back
 
 Re-read the task doc where the line went and confirm it landed under the heading, with the pinned links as written. For a file, `Read` it: the line sits under the heading, once. A mismatch is reported, not retried.
 
@@ -148,7 +146,7 @@ Re-read the task doc where the line went and confirm it landed under the heading
 
 ## Constraints
 
-- The writes are the version entry (through the web app, behind the go) and the one doc line. Frames, sections, names, positions and Dev Mode status are never touched
+- The writes are the version entry (through the web app) and the one doc line, each behind its own preview and go, in that order. Frames, sections, names, positions and Dev Mode status are never touched
 - A section carrying a lint **blocking** is never handed over, whoever asks. A warning alone never withholds one
 - **Never hand over unpinned where `handoff.version.enabled`.** An unpinned handover reads as pinned to whoever gets it, and that is worse than stopping
 - Never save a version, rename one, or write a date that is not the version's own

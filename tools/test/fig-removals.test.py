@@ -4,7 +4,7 @@ Reads the repository as it stands (no copy); every case is a plain look at a tra
 
     python3 tools/test/fig-removals.test.py
 """
-import os, subprocess, sys
+import os, re, subprocess, sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -103,6 +103,20 @@ sync_tools = sync.split("allowed-tools:", 1)[1].split("\n", 1)[0]
 check("sync lists the browser tools", "mcp__claude-in-chrome__navigate" in sync_tools)
 check("sync report counts unmatched-by-name items",
       "unmatched" in sync.split("## Reporting", 1)[1].split("## Implementation", 1)[0])
+
+# ---- handoff previews before each write ------------------------------------------------------------
+handoff = read("plugins/fig/skills/handoff/SKILL.md")
+h_tools = handoff.split("allowed-tools:", 1)[1].split("\n", 1)[0]
+check("handoff lists Skill", "Skill" in [t.strip() for t in h_tools.split(",")])
+body = handoff.split("## Procedure", 1)[1]
+vstep = body.split("### 3.", 1)[1].split("### 4.", 1)[0] if "### 3." in body else ""
+check("version step: go comes before save",
+      re.search(r"\bgo\b", vstep) and re.search(r"\bsave", vstep, re.I) and re.search(r"\bgo\b", vstep).start() < re.search(r"\bsave", vstep, re.I).start())
+dstep = body.split("### 4.", 1)[1].split("### 5.", 1)[0] if "### 4." in body else ""
+check("doc-line step has its own go before the write",
+      "go" in dstep and "append-under" in dstep and dstep.index("go") < dstep.index("append-under"))
+check("notion write does not lean on a callout",
+      "usually behind an empty callout" not in handoff and "whatever block opens the section" in handoff)
 
 print()
 if failures:
