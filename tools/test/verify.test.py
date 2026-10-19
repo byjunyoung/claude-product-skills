@@ -127,7 +127,48 @@ def plant_sections_deep_drift(r):
 
 
 case("sections-deep copies differ", plant_sections_deep_drift,
-     1, "[fig] sections-deep copies differ: audit-flow.js")
+     1, "[fig] sections-deep copy in audit-flow.js differs from audit-component.js")
+
+
+def plant_probe_drift(r):
+    """probe-page.js is not an audit-*.js script, and still carries the block."""
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "probe-page.js"
+    t = f.read_text(encoding="utf-8")
+    start = t.index("// <sections-deep>")
+    f.write_text(t[:start] + t[start:].replace("inherited = false", "inherited = true", 1), encoding="utf-8")
+
+
+case("a drifted sections-deep copy in probe-page.js fails, naming it and the reference file",
+     plant_probe_drift,
+     1, "[fig] sections-deep copy in probe-page.js differs from audit-component.js")
+
+
+def plant_missing_marker(r):
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "audit-struct.js"
+    f.write_text(f.read_text(encoding="utf-8").replace("// <sections-deep>", "// (marker removed)"), encoding="utf-8")
+
+
+case("an audit script that lost its sections-deep marker fails", plant_missing_marker,
+     1, "[fig] sections-deep marker missing from audit-struct.js")
+
+
+def plant_scaffolding_drift(r):
+    d = r / "plugins" / "fig" / "_common" / "scripts"
+    for name, body in (("audit-flow.js", "// one"), ("audit-struct.js", "// two")):
+        f = d / name
+        f.write_text(f.read_text(encoding="utf-8") + f"\n// <scaffolding>\n{body}\n// </scaffolding>\n", encoding="utf-8")
+
+
+case("a drifted scaffolding copy fails", plant_scaffolding_drift,
+     1, "[fig] scaffolding copy in audit-struct.js differs from audit-flow.js")
+
+
+def plant_lone_scaffolding(r):
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "audit-flow.js"
+    f.write_text(f.read_text(encoding="utf-8") + "\n// <scaffolding>\n// one\n// </scaffolding>\n", encoding="utf-8")
+
+
+case("a marked block carried by one file only passes", plant_lone_scaffolding, 0)
 
 case("unknown config key in a _common document",
      lambda r: write(r, "plugins/pm/_common/trackers/README.md", "\n`task.nonexistent_key`\n", append=True),

@@ -60,19 +60,23 @@ async function absorb(jobs) {
 
 /** Section resize + neighbour-invasion check.
  *  Sections do not auto-resize. The most common accident when growing one to fit a placeholder is
- *  invading the row below or beside. All four edges have to be checked — vertical alone misses it. */
+ *  invading the row below or beside. All four edges have to be checked — vertical alone misses it.
+ *  The neighbours are the sections in the same parent, whether that is the page or another section:
+ *  their x/y share one coordinate space, so a nested section is checked against its own siblings. */
 function resizeSection(section, contentW, contentH) {
   const m = LO.section_resize_margin || [80, 160];
   section.resizeWithoutConstraints(contentW + m[0] * 2, contentH + m[0] * 2);
   const T = { x: section.x, y: section.y, r: section.x + section.width, b: section.y + section.height };
-  return figma.currentPage.children
+  return section.parent.children
     .filter(c => c.type === "SECTION" && c.id !== section.id)
     .filter(s => s.x < T.r && s.x + s.width > T.x && s.y < T.b && s.y + s.height > T.y)
     .map(s => s.name);          // safe only when empty
 }
 
 /** Renumbering — reassigns NN. in canvas order (row-major).
- *  Protected ranges (numbers slated for deprecation, say) are left alone. */
+ *  Protected ranges (numbers slated for deprecation, say) are left alone.
+ *  Top-level sections only, on purpose: the NN. number is a page-level convention, one sequence
+ *  down the canvas, and a section nested inside one is part of that feature, not a new number. */
 function renumber() {
   const BUCKET = LO.row_bucket || 1000;
   const PROT = PG.protected_numbers || [];

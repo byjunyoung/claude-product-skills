@@ -110,6 +110,17 @@ test("a top-level section name that misses section_pattern is still reported", a
   assert.ok(!out.findings.some((i) => /section Work/.test(i.msg)), JSON.stringify(out));
 });
 
+test("struct, flow and component see a frame three sections deep", async () => {
+  const out = await run([
+    section("L1", 0, 0, 4000, 4000, [section("L2", 50, 50, 3000, 3000, [section("L3", 50, 50, 500, 300, [
+      frame("A-Default", 0, 0), frame("C-Default", 5000, 5000),
+    ])])]),
+  ]);
+  const f = out.findings.find((i) => i.tag === "[bounds]");
+  assert.ok(f, JSON.stringify(out));
+  assert.strictEqual(f.node, "id:C-Default");
+});
+
 test("a nested section inside its parent is not a section overlap", async () => {
   const out = await run([section("Outer", 0, 0, 2000, 2000, [section("Inner", 50, 50, 500, 300, [frame("A-Default", 0, 0)])])]);
   assert.strictEqual(out.pass, true);

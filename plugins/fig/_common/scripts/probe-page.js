@@ -5,7 +5,8 @@
  * It decides no rules and emits **observations only** — what counts as a convention is aggregated on the host.
  *
  * What to prepend: `const PAGE_ID = "<page id>";`
- * Returns: an observation object of the shape below
+ * Returns: an observation object of the shape below. `sections` lists every section at any depth,
+ * each with a `depth` (0 = directly on the page) and an absolute x/y.
  *
  * Why it decides nothing — with one page as the sample, coincidence hardens into convention.
  * Only after running several pages in parallel and summing them does the mode count as a convention.
@@ -22,7 +23,26 @@ const paint = arr => (Array.isArray(arr) && arr[0] && arr[0].type === "SOLID")
   : null;
 const g = (n, k) => { try { return n[k]; } catch (e) { return undefined; } };
 
-const secs = page.children.filter(c => c.type === "SECTION");
+// <sections-deep>
+// Every SECTION at any depth with its absolute origin. A section's children carry x/y relative to
+// it and nested sections compose, so a loop over page.children alone never reaches a frame that
+// sits one section deeper. `skipped` is inherited: a section inside an excluded one is excluded.
+const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
+  const out = [];
+  for (const s of nodes) {
+    if (s.type !== "SECTION") continue;
+    const ax = ox + s.x, ay = oy + s.y, skipped = inherited || !!skip(s);
+    out.push({ s, ax, ay, skipped }, ...sectionsDeep(s.children, skip, ax, ay, skipped));
+  }
+  return out;
+};
+// </sections-deep>
+
+// The probe observes every section, scaffolding included: what counts as scaffolding is a
+// convention the host is still working out, so nothing is skipped here.
+const walked = sectionsDeep(page.children, () => false);
+const secs = walked.map(d => d.s);
+const depthOf = s => { let d = 0; for (let p = s.parent; p && p.type === "SECTION"; p = p.parent) d++; return d; };
 const out = {
   page: page.name,
   sectionCount: secs.length,
@@ -40,9 +60,10 @@ const out = {
 
 for (const f of page.children) if (f.type === "FRAME") out.pageDirectFrames++;
 
-for (const s of secs) {
+for (const { s, ax, ay } of walked) {
   out.sections.push({
-    name: s.name, x: Math.round(s.x), y: Math.round(s.y),
+    name: s.name, x: Math.round(ax), y: Math.round(ay),     // absolute, so nested sections compare with top-level ones
+    depth: depthOf(s),                                      // 0 = directly on the page
     w: Math.round(s.width), h: Math.round(s.height),
     fill: paint(g(s, "fills")), stroke: paint(g(s, "strokes")),
     strokeWeight: g(s, "strokeWeight"), strokeAlign: g(s, "strokeAlign"),
@@ -120,10 +141,16 @@ for (const s of secs) {
   }
 }
 
-// Gaps between sections — adjacent pairs only, for the same reason as frames
+// Gaps between sections — adjacent pairs only, for the same reason as frames. Only sections that
+// share a parent are neighbours: their x/y are in the same coordinate space, and a nested section
+// beside a top-level one is not a gap anyone drew.
 const sbucket = (key) => {
   const m = {};
-  for (const s of secs) { const k = Math.round(s[key] / 40); (m[k] = m[k] || []).push(s); }
+  secs.forEach(s => {
+    const pid = s.parent ? s.parent.id : "";
+    const k = pid + "|" + Math.round(s[key] / 40);
+    (m[k] = m[k] || []).push(s);
+  });
   return Object.values(m);
 };
 for (const row of sbucket("y")) {

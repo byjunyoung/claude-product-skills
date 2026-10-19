@@ -9,7 +9,8 @@
  * A property whose value also varies across production screens is a per-use choice, not a violation, and is not reported.
  *
  * Two stages. setCurrentPageAsync runs once per call, so a different page means a different call.
- *   MODE="collect" : gather the boolean property distribution per component from a reference page → return STAT
+ *   MODE="collect" : gather the boolean property distribution per component from a reference page → return STAT.
+ *                    Sections that pages.exclude_sections names are left out, as in compare.
  *   MODE="compare" : compare the working page against STAT → return { pass, findings }; each finding
  *                    is { tag, grade, node, msg }. A property the collect pass never saw is listed
  *                    in a separate `unknown: string[]` — undecidable, not a violation, never part of `pass`.
@@ -66,6 +67,11 @@ const scopeOf = all => {
   return { ids };
 };
 // </scope-of>
+// Sections that pages.exclude_sections names are scaffolding in both modes: collect does not count
+// their instances into the reference statistics, compare does not audit them.
+const exclude = (C.pages || {}).exclude_sections;
+const EXCL = exclude && exclude.length ? new RegExp(exclude.join("|")) : null;
+const isExcluded = s => !!(EXCL && EXCL.test(s.name));
 const page = figma.root.children.find(p => p.name.indexOf(PAGE) !== -1);
 if (!page) throw new Error(`page not found: ${PAGE}`);
 await figma.setCurrentPageAsync(page);
@@ -82,7 +88,13 @@ const propName = k => k.split("#")[0];        // property ids differ per file, s
 
 if (MODE === "collect") {
   const stat = {};
-  for (const n of page.findAll(x => x.type === "INSTANCE" && x.componentProperties)) {
+  // The children of every kept section (a nested section is walked on its own, so findAll never
+  // reaches into one twice), plus whatever sits loose on the page.
+  const isInst = x => x.type === "INSTANCE" && x.componentProperties;
+  const holders = [page.children, ...sectionsDeep(page.children, isExcluded).filter(d => !d.skipped).map(d => d.s.children)];
+  const found = holders.flat().filter(c => c.type !== "SECTION")
+    .flatMap(c => (isInst(c) ? [c] : []).concat(c.findAll ? c.findAll(isInst) : []));
+  for (const n of found) {
     const p = n.componentProperties, keys = boolKeys(p);
     if (!keys.length) continue;
     const cname = await masterName(n);
@@ -105,15 +117,12 @@ if (MODE === "collect") {
 const S = typeof STAT !== "undefined" ? STAT : {};
 const isPatternPage = !!(PATTERN_PAGE && new RegExp(PATTERN_PAGE).test(page.name));
 const issues = [], unknown = {};
-// Without SECTION nothing is excluded here (as before); with it, the exclusion decides the note.
-const exclude = (C.pages || {}).exclude_sections;
-const EXCL = exclude && exclude.length ? new RegExp(exclude.join("|")) : null;
-const walked = sectionsDeep(page.children, SEC ? s => !!(EXCL && EXCL.test(s.name)) : () => false);
+const walked = sectionsDeep(page.children, isExcluded);
 const scope = SEC ? scopeOf(walked) : null;
 const add = (tag, grade, node, msg) => ({ tag, grade, node, msg });
 if (scope && scope.missing) return { pass: false, findings: [add("[section]", "blocking", null, `section ${SEC} is not on this page`)], unknown: [] };
 if (scope && scope.excluded) return { pass: true, findings: [], note: `section ${SEC} is excluded by pages.exclude_sections; nothing audited`, unknown: [] };
-for (const { s } of walked.filter(d => !SEC || (scope.ids.has(d.s.id) && !d.skipped))) {
+for (const { s } of walked.filter(d => !d.skipped && (!SEC || scope.ids.has(d.s.id)))) {
   for (const f of s.children.filter(c => c.type === "FRAME" && !c.name.startsWith(LABEL))) {
     const fb = f.absoluteBoundingBox;
     if (!fb) continue;

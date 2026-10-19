@@ -57,6 +57,30 @@ test("a frame in a nested section yields the same findings as in a top-level sec
   assert.deepStrictEqual(deep, flat);
 });
 
+test("struct, flow and component see a frame three sections deep", async () => {
+  const r = await run([sec("L1", [sec("L2", [sec("L3", [screen()])])])]);
+  assert.strictEqual(r.findings.length, 1);
+  assert.strictEqual(r.findings[0].node, "I:1");
+});
+
+// ── pages.exclude_sections — both modes, SECTION or not ──
+const runCollect = (pageChildren, pages = {}) => {
+  const page = { name: "[UI] Fixture", children: pageChildren };
+  return new AsyncFunction("CFG", "MODE", "PAGE", "figma", SRC)(
+    { pages, component_audit: {} }, "collect", "Fixture",
+    { root: { children: [page] }, setCurrentPageAsync: async () => {} }
+  );
+};
+
+test("component compare and collect skip pages.exclude_sections", async () => {
+  const pages = { exclude_sections: ["^Scratch$"] };
+  const tree = () => [sec("Live", [screen()]), sec("Scratch", [screen(), sec("Inner", [screen()])])];
+  const cmp = await run(tree(), undefined, undefined, pages);
+  assert.strictEqual(cmp.findings.length, 1, JSON.stringify(cmp));
+  assert.deepStrictEqual(await runCollect(tree(), pages), { "Button|Icon": { t: 0, f: 1 } });
+  assert.deepStrictEqual(await runCollect(tree()), { "Button|Icon": { t: 0, f: 3 } });
+});
+
 test("body_offset null examines the whole frame", async () => {
   const r = await run([section("S1", [screen()])], null);
   assert.strictEqual(r.findings.length, 1);

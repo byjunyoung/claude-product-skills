@@ -172,6 +172,17 @@ check("non-ASCII names → the draft still runs and writes no pair patterns",
 bad = unvouched(out) if rc == 0 else [f"no draft — {err[:200]}"]
 check("non-ASCII names → every leaf is still observed or an interview key", not bad, "; ".join(bad))
 
+# probe-page.js now reports nested sections too, with a depth. Their names are not held to the
+# section naming rule (audit-struct checks top-level names only), so they must not dilute it.
+nested = [probe("Page", [f"Screen{j}-Default" for j in range(6)]) for _ in range(3)]
+for p in nested:
+    p["sections"] += [{"name": n, "depth": 1, "w": 900, "fill": None, "stroke": None, "dash": None, "radius": 0,
+                       "strokeWeight": 1, "strokeAlign": "INSIDE"} for n in ("Work", "Personal", "Shared", "Admin")]
+rc, out, err = run(nested)
+cfg = yaml.safe_load(out) if rc == 0 else {}
+check("nested sections do not dilute the section naming evidence",
+      rc == 0 and (cfg.get("naming") or {}).get("section_pattern") is not None, err[:200] + out[:200])
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)

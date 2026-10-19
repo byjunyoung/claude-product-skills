@@ -161,6 +161,17 @@ test("an arrow inside a nested section is audited", () => {
   assert.ok(tagged(out, "[arrow]").some((i) => /target gap 30px/.test(i.msg)), JSON.stringify(out));
 });
 
+test("struct, flow and component see a frame three sections deep", () => {
+  const out = new Function("CFG", "figma", SRC)(CFG, {
+    currentPage: { name: "[UI] Fixture", children: [
+      { type: "SECTION", name: "L1", x: 0, y: 0, children: [
+        { type: "SECTION", name: "L2", x: 10, y: 10, children: [
+          { type: "SECTION", name: "L3", x: 10, y: 10, children: [A, B, arrow("a_default --> b_default", [100, 50], [150, 50], [170, 50])] } ] } ] },
+    ] },
+  });
+  assert.ok(tagged(out, "[arrow]").some((i) => /target gap 30px/.test(i.msg)), JSON.stringify(out));
+});
+
 test("a well-formed arrow inside a nested section passes", () => {
   assert.deepStrictEqual(runNested([A, B, arrow(...GOOD)]), PASS);
 });

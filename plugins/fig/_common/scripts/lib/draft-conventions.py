@@ -95,7 +95,8 @@ def main():
 
     # ── Naming ────────────────────────────────────────────────
     frames = [n for p in probes for n in p.get("frameNames", [])]
-    secnames = [s["name"] for p in probes for s in p.get("sections", [])]
+    # Top-level sections only: a nested one (depth > 0) is not held to the section naming rule.
+    secnames = [s["name"] for p in probes for s in p.get("sections", []) if s.get("depth", 0) == 0]
     fr_re = r'^.+-[^-\s]+$'        # restricting the suffix to Latin characters false-positives every non-Latin state name
     fr_hit = sum(1 for n in frames if re.match(fr_re, n))
     fr_ok = frames and fr_hit / len(frames) >= DOMINANCE
