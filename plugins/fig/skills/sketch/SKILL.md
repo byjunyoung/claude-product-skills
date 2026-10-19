@@ -1,7 +1,7 @@
 ---
 name: sketch
-description: Agrees the direction of a screen in the conversation before anything is drawn — the list of what has to be decided, one question at a time with a recommendation, a table of what was settled, a rough text wireframe of each moment the screen changes, a tree of which state follows which, and what differs from today. It writes nothing, to Figma or to disk; the sketch is how a direction gets agreed, and once it is, each part of it already has a home elsewhere. Use it on its own to settle a direction before a spec or a conversation with engineering, or let `/fig:draw` pick it up in the same conversation. Triggers - "/fig:sketch", "sketch this screen first", "wireframe this", "agree the layout before drawing", "와이어프레임 먼저", "스케치부터 해줘", "방향부터 맞추자".
-allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_design_context, mcp__claude_ai_Notion__notion-fetch
+description: Agrees the direction of a screen in the conversation before anything is drawn — the decisions, one question at a time with a recommendation, a table of what was settled, a rough text wireframe of each state, a state tree, and what differs from today. Writes nothing, to Figma or disk. Reads the PRD (markdown, Notion, or pm's) when there is one. Triggers - "/fig:sketch", "sketch this screen first", "wireframe this", "와이어프레임 먼저", "스케치부터 해줘", "방향부터 맞추자".
+allowed-tools: AskUserQuestion, Bash, Read, Glob, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_design_context, mcp__claude_ai_Notion__notion-fetch
 ---
 
 # fig:sketch — agree the direction before the file
@@ -28,13 +28,26 @@ That step used to live inside `/fig:draw`. It turned out to be useful well befor
 ## Inputs
 
 - `target` (required): the screen or the change, in words — or a stub's URL, or a canonical screen's URL to start from
-- `spec_url` (optional): what the direction has to fit. **Omitted, `qa.baseline.prd` from the config is used**, the same default `/fig:draw` reads. Where that is `null` too, go on without one and say so
+- `spec_url` (optional): what the direction has to fit. **Omitted, the lookup decides**: the config, then pm's PRD where pm is installed — the same default `/fig:draw` reads. Where the lookup finds none, go on without one and say so
 
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --js <fileKey>
 ```
 
-Only `qa.baseline.prd` is read here. The rest of the config governs what is drawn, and nothing is drawn here.
+Only `qa.baseline.prd` is read here, and through this lookup rather than directly. The rest of the config governs what is drawn, and nothing is drawn here.
+
+```
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/borrow-pm.py prd [--spec-url {spec_url}] {fileKey}
+```
+
+The script answers `{type, ref, from, split, candidates, note}`; act on it, do not re-derive it.
+
+- `markdown`, one candidate → `Read` it. Several → ask which, offering the products. Split `domain` → `Read` `index.md` and the domain file the screen belongs to
+- `markdown`, no candidates → pm's PRD folder exists but holds no document yet. Go on without one and say so
+- `notion` → `notion-fetch` the `ref`
+- `none` → go on without one and say so. A `note` is shown in one line
+- Exit 6 (the `--spec-url` is a Figma link or a kind the script cannot tell) → say what it printed and ask for another source
+- Exit 1 (fig's own config cannot be read) → say what it printed and stop; the config needs fixing first
 
 ## Read today before sketching tomorrow
 
