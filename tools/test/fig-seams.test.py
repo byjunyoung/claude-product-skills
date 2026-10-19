@@ -86,6 +86,24 @@ check("prep's batching states retry safety, not a count",
       bool(bat) and "orphan" in bat and "absorb" in bat and "rename" in bat.lower()
       and "ten operations" not in prep and not re.search(r"≤\s*10|no more than ten", prep, re.I), bat[:120])
 
+# ---- Task 3: code, proto and deck obey the official skills' MUST lines ----------------------------------
+code = read(SK + "code/SKILL.md")
+check("code pulls assets through get_design_context",
+      "download_assets" not in code and "get_design_context` response" in code)
+proto = read(SK + "proto/SKILL.md")
+dtc = proto.find("figma:figma-design-to-code")
+gdc = proto.find("get_design_context", proto.find("## Procedure"))
+check("proto loads design-to-code before get_design_context",
+      "Skill" in [x.strip() for x in tools_line(proto).split(",")] and 0 <= dtc < gdc, f"{dtc} vs {gdc}")
+deck = read(SK + "deck/SKILL.md")
+setup = read(SK + "deck/setup.md")
+check("deck lists Skill", "Skill" in [x.strip() for x in tools_line(deck).split(",")])
+for name, text in (("SKILL.md", deck), ("setup.md", setup)):
+    calls = [m.start() for m in re.finditer(r"`create_new_file`(?:, editorType| \(editorType)", text)]
+    skill = text.find("figma:figma-create-new-file")
+    check(f"deck {name} loads create-new-file before create_new_file",
+          bool(calls) and 0 <= skill < calls[0] and "default light theme" in text, f"{skill} vs {calls}")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

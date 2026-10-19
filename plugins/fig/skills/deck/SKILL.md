@@ -1,7 +1,7 @@
 ---
 name: deck
 description: Builds a Figma Slides deck from a document, a dataset or a spoken brief when a presentation is needed, using the archetypes of the team template, which it measures into local assets on first use or after a revision. Triggers - "/fig:deck", "make this into a deck", "turn this doc into slides", "extract the slide template", "set up the deck assets", "슬라이드로 만들어줘", "발표 자료 만들어줘", "덱 만들어줘", "덱 템플릿 뽑아줘", "발표 템플릿 추출", "템플릿 다시 추출".
-allowed-tools: Read, Write, Bash, AskUserQuestion, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__create_new_file, mcp__plugin_figma_figma__upload_assets, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__whoami
+allowed-tools: Read, Write, Bash, AskUserQuestion, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__create_new_file, mcp__plugin_figma_figma__upload_assets, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__whoami
 ---
 
 # deck — building a presentation deck (Figma Slides)
@@ -78,7 +78,7 @@ The order is **create the file → apply the team template (the user does this) 
    `${CLAUDE_PLUGIN_ROOT}/_common/scripts/deck-base.js` **→** `template.js`.
    Generic helpers first, team constants and builders second (helpers are declarations and hoist; constants are read at call time).
    **Pick from the spec's archetype catalog first.** Where nothing fits the shape of the content, do not improvise a layout — cut the content to the nearest archetype, or split the slide. An invented layout always leaves the type scale
-3. **A new file** — check the planKey and the seat with `whoami`. A plan listed with `seat: View` cannot take the `use_figma` writes the build is made of, so a file created there could not be built; stop and say so rather than trying. Then `create_new_file` (editorType `slides`)
+3. **A new file** — check the planKey and the seat with `whoami`. A plan listed with `seat: View` cannot take the `use_figma` writes the build is made of, so a file created there could not be built; stop and say so rather than trying. Load `figma:figma-create-new-file` before every `create_new_file` call, then `create_new_file` (editorType `slides`). The file starts with Figma's default light theme, which is scaffolding only (`figma-use-slides`): take no colour or type from it, since the team template applied next is the source
 4. **MCP cannot apply the team template.** Once the file exists, ask the user to apply the team's shared template from the Templates panel, and wait. Applying it is what brings in the team fonts, colours, and named text styles. Without it, everything breaks into substitute fonts and 'Pick a style'
 5. **Confirm what applying it did** — it can pull in the sample slides wholesale. Take one of them as the theme reference (`REF_SLIDE`) and `clone` it to make new slides, then **delete the samples once the build is done**
 6. **Upload the images** — get hashes with `upload_assets`. Uploading leaves frames on the page, so clear them along with everything else after the build
