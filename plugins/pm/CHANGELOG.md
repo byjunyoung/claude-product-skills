@@ -1,5 +1,10 @@
 # pm
 
+## 0.37.1 — 2026-10-19
+
+- **`/pm:setup` and the other config lookups read your `pm-conventions.yaml`, not `figma-conventions.yaml`.** The shared config reader worked out which plugin it belonged to from its folder path, and a call without `--name` (the one `/pm:setup` makes with `resolve-config.py --need task.record.ref`) took the default file name for `fig`. It now reads the `name` in the nearest `plugin.json`, so the default is `pm-conventions.yaml` on this side; a path with a `pm/` or `fig/` folder in it no longer decides it, and a renamed fork falls back to the old path rule instead of failing
+- **The `SessionStart` hook that fetches a shared config can no longer fail or stall a session.** It exited with an error when PyYAML was missing, and the fetch could wait out the whole timeout for a credential or host key there is no terminal to answer. It now fails quietly and tells it not to prompt: `BatchMode` is added to your own SSH command (from `GIT_SSH_COMMAND` or `core.sshCommand`) rather than replacing it, and when only `GIT_SSH` is set the hook leaves the SSH command alone
+
 ## 0.37.0 — 2026-10-12
 
 - **A team kept its own table of which fields each task status must carry, and only its own scripts read it.** A daily check and a session hook flagged a task in progress with no start date or a finished one at 80%, from a table in the team config the skills never looked at. The table sat outside the schema, so the repository check failed on it on every push, and the drift it caught never reached `/pm:task-sync`, the one place that reconciles a list

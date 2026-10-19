@@ -16,7 +16,7 @@ works — it is finished when the sentences that describe it are still true.
    | What a skill does | its row in `plugins/<p>/README.md`, and in both root READMEs — the skills table **and** the paragraph that describes it |
    | What a skill needs — a tool, a token, a connector | root READMEs: *Prerequisites* and *What each skill needs* |
    | A check `/fig:lint` runs | root READMEs: *What `/fig:lint` looks at* |
-   | Anything crossing `fig` ↔ `pm` | root READMEs: *Where the two meet*, and `.github/two-plugins.html` if the picture names it |
+   | Anything crossing `fig` ↔ `pm` | root READMEs: *Where the two meet*, and `.github/two-plugins.html` if the picture names it; re-render a changed picture with `bash tools/render-images.sh <name>` |
    | A default that ships on or off | wherever a README states that default — a promise turned off in code stays a promise in prose |
    | A config key a document names | `_common/conventions.example.yaml`, whose comments are the schema's own guide |
 
@@ -38,8 +38,13 @@ works — it is finished when the sentences that describe it are still true.
 
 `tools/verify.py` catches the mechanical half: a skill missing from a README's skills table, a
 command in one language's README and not the other, a section count that has drifted apart, a config
-key or a skill reference that does not exist, a version with no changelog entry, a team's own value
-left in a shipped file.
+key that does not exist (in every document under a skill folder and every document under
+`_common`), a skill reference that does not exist (in those documents, in `_common` scripts and in
+the example configs, including a reference to the other plugin's skills), a version with no
+changelog entry, a team's own value left in a shipped file (the same documents, plus the scripts),
+a plugin description that differs between
+`plugin.json` and the marketplace, and the copies of the nested-section helper that the audit scripts
+must keep identical (`sections-deep`). A description that runs long is reported as a warning.
 
 It cannot read a sentence and tell whether it is still true. Every drift found by hand on
 2026-09-01 was of that kind — a README still promising a Figma write that had turned out to be

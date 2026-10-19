@@ -23,6 +23,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 MARKET = REPO / ".claude-plugin" / "marketplace.json"
 
+# A skill's description is loaded into every session that has the plugin installed, so its length is
+# a standing cost. Over the limit is reported as a warning for now; Phase 3 turns it into a failure.
+DESC_LIMIT = 500
+DESC_LIMIT_OVERRIDE = {("fig", "deck"): 700, ("pm", "task"): 700}
+
 # The team config filename differs per plugin. Only fig keeps the older name (it is a file already in use)
 TEAM_FILE = {"fig": "figma-conventions.yaml"}
 
@@ -168,6 +173,8 @@ def check_plugin(name, root, yaml):
     elif not team.exists():
         warns.append(f"[{name}] no team config ({team.name}) — running on bundled defaults")
 
+    cfg_ref = re.compile(r"`([a-z_]+(?:\.[a-z_]+)+)`")
+
     # Team values leak into the scripts too. Watching SKILL.md alone once shipped a team font
     # name left in a comment — because the check only covered the documents.
     if (common / "scripts").is_dir():
@@ -179,6 +186,18 @@ def check_plugin(name, root, yaml):
                 if w in t:
                     fails.append(f"[{name}] {f.name}: team value '{w}'")
 
+    # The documents under _common are read like the ones under a skill: a config key they name has
+    # to exist and a team's own value must not ship in them.
+    for f in sorted(common.rglob("*.md")):
+        s = f.read_text(errors="ignore")
+        rel = f.relative_to(REPO)
+        for ref in sorted(set(cfg_ref.findall(s))):
+            if ref.split(".")[0] in schema and ref not in known:
+                fails.append(f"[{name}] {rel}: `{ref}` is not in the schema")
+        for w in TEAM_STRINGS:
+            if w in s:
+                fails.append(f"[{name}] {rel}: team value '{w}'")
+
     # Script syntax
     chk = common / "scripts" / "lib" / "check.sh"
     if chk.exists():
@@ -188,13 +207,13 @@ def check_plugin(name, root, yaml):
         if r.returncode != 0:
             fails.append(f"[{name}] check.sh failed:\n" + r.stdout + r.stderr)
 
-    cfg_ref = re.compile(r"`([a-z_]+(?:\.[a-z_]+)+)`")
-    skill_ref = re.compile(rf"/{name}:([a-z-]+)")
     legacy_ref = re.compile(r"(?<![\w-])figma-([a-z-]+)")
 
+    # A skill is a folder, not one file: later phases move bodies out of SKILL.md into sibling mode
+    # files, so every check that reads prose reads every *.md under the skill. Only the frontmatter
+    # belongs to SKILL.md alone. Skill references are checked repo-wide in check_references().
     for sk in names:
-        f = skills / sk / "SKILL.md"
-        s = f.read_text()
+        s = (skills / sk / "SKILL.md").read_text()
 
         m = re.search(r"^---\n(.*?)\n---", s, re.S)
         if not m:
@@ -211,7 +230,12 @@ def check_plugin(name, root, yaml):
             # bare `: ` — a colon and a space start a mapping in YAML, so the value stopped being a
             # string. Skipped, not failed: the skill simply was not there, and nothing said why.
             try:
-                yaml.safe_load(fm)
+                parsed = yaml.safe_load(fm)
+                desc = parsed.get("description") if isinstance(parsed, dict) else None
+                if isinstance(desc, str):
+                    limit = DESC_LIMIT_OVERRIDE.get((name, sk), DESC_LIMIT)
+                    if len(desc) > limit:
+                        warns.append(f"[{name}:{sk}] description is {len(desc)} characters (limit {limit})")
             except yaml.YAMLError as e:
                 where = getattr(e, "problem_mark", None)
                 spot = f" (line {where.line + 1}, column {where.column + 1})" if where else ""
@@ -219,23 +243,23 @@ def check_plugin(name, root, yaml):
                              " — a strict parser drops the skill instead of reading it."
                              " Usually a `: ` inside the description")
 
-        for ref in set(cfg_ref.findall(s)):
-            if ref.split(".")[0] not in schema:   # skip code expressions that are not config paths
-                continue
-            if ref not in known:
-                fails.append(f"[{name}:{sk}] `{ref}` is not in the schema")
+        for f in sorted((skills / sk).rglob("*.md")):
+            s = f.read_text()
+            rel = f.relative_to(REPO)
 
-        for ref in set(skill_ref.findall(s)):
-            if ref != sk and not (skills / ref / "SKILL.md").exists():
-                fails.append(f"[{name}:{sk}] → /{name}:{ref} does not exist")
+            for ref in sorted(set(cfg_ref.findall(s))):
+                if ref.split(".")[0] not in schema:   # skip code expressions that are not config paths
+                    continue
+                if ref not in known:
+                    fails.append(f"[{name}:{sk}] {rel}: `{ref}` is not in the schema")
 
-        # Script paths must use the plugin root variable — an absolute path breaks when the install location changes
-        if "~/.claude/skills/" in s:
-            fails.append(f"[{name}:{sk}] an absolute path is left in (replace with ${{CLAUDE_PLUGIN_ROOT}})")
+            # Script paths must use the plugin root variable — an absolute path breaks when the install location changes
+            if "~/.claude/skills/" in s:
+                fails.append(f"[{name}:{sk}] {rel}: an absolute path is left in (replace with ${{CLAUDE_PLUGIN_ROOT}})")
 
-        for w in TEAM_STRINGS:
-            if w in s:
-                fails.append(f"[{name}:{sk}] team value '{w}'")
+            for w in TEAM_STRINGS:
+                if w in s:
+                    fails.append(f"[{name}:{sk}] {rel}: team value '{w}'")
 
     # Every ${CLAUDE_PLUGIN_ROOT}/… a document points at must exist. A renamed script and a
     # skill still naming the old path fail only at run time, in someone else's install.
@@ -328,8 +352,8 @@ def check_plugin(name, root, yaml):
         for m in re.finditer(rf"\b{COUNT_WORDS} (skills|in all)\b|스킬 (\d+|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열\S*) *개|(\d+) *개의? 스킬", t, re.I):
             fails.append(f"[{name}] {f.name}: a skill count in prose — '{m.group(0)}' goes stale; list the skills or say 'the skills'")
 
-    # Skill-name references leak outside SKILL.md too. A comment in the example config once shipped
-    # still carrying a pre-rename name — because the check was only looking at SKILL.md.
+    # Identifiers leak outside SKILL.md too, so these files are read for them. (Skill-name references
+    # in the same files are check_references()'s job.)
     for f in (example, root / "README.md", REPO / "README.md", REPO / "README.ko.md"):
         if not f.exists():
             continue
@@ -337,9 +361,7 @@ def check_plugin(name, root, yaml):
         for w in IDENTITY_STRINGS:
             if w in t:
                 fails.append(f"[{name}] {f.name}: identifier '{w}' — the shipped copy points at someone else's company")
-        for ref in sorted(set(skill_ref.findall(t))):
-            if not (skills / ref / "SKILL.md").exists():
-                fails.append(f"[{name}] {f.name} → /{name}:{ref} does not exist")
+        # (skill references in these files are checked by check_references())
         if f.parent == REPO:
             continue                              # the root READMEs name the official figma-* skills on purpose
         for ref in sorted(set(legacy_ref.findall(t))):
@@ -348,6 +370,36 @@ def check_plugin(name, root, yaml):
             fails.append(f"[{name}] {f.name}: old name 'figma-{ref}'")
 
     counts.append(f"{name} {len(names)} skills / {len(known)} keys")
+
+
+# A reference to a skill can sit in any document and name either plugin. The lookbehind keeps a URL
+# or a path (`example.com/a/pm:b`) from reading as a command. CHANGELOGs are never scanned — they
+# name skills that no longer exist, on purpose.
+SKILL_REF = re.compile(r"(?<![\w/.-])/(fig|pm):([a-z][a-z-]*)")
+
+
+def check_references(plugins: dict[str, set[str]]) -> None:
+    """Every /plugin:skill a shipped document names must be a skill that exists, in either plugin."""
+    targets = []                                   # (file, tag)
+    for p in sorted(plugins):
+        root = REPO / "plugins" / p
+        for f in sorted((root / "skills").rglob("*.md")):
+            sk = f.relative_to(root / "skills").parts[0]
+            targets.append((f, f"{p}:{sk}"))
+        for pat in ("*.md", "*.py", "*.js"):
+            targets += [(f, p) for f in sorted((root / "_common").rglob(pat))]
+        targets += [(root / "README.md", p),
+                    (root / "_common" / "conventions.example.yaml", p)]   # a comment there once kept a pre-rename name
+    targets += [(REPO / "README.md", "repo"), (REPO / "README.ko.md", "repo")]
+    targets += [(f, "repo") for f in sorted((REPO / ".github").glob("*.html"))]
+
+    for f, tag in targets:
+        if not f.is_file():
+            continue
+        text = f.read_text(errors="ignore")
+        for plug, ref in sorted(set(SKILL_REF.findall(text))):
+            if ref not in plugins.get(plug, set()):
+                fails.append(f"[{tag}] {f.relative_to(REPO)} → /{plug}:{ref} does not exist")
 
 
 def main():
@@ -375,6 +427,15 @@ def main():
             continue
         roots[name] = root
         check_plugin(name, root, yaml)
+
+        # One description per plugin: plugin.json is the source, the marketplace entry repeats it.
+        pj = root / ".claude-plugin" / "plugin.json"
+        if pj.exists() and json.loads(pj.read_text()).get("description") != e.get("description"):
+            fails.append(f"[{name}] plugin.json and marketplace.json descriptions differ")
+
+    # After every plugin is known: a reference may name the other plugin's skills
+    check_references({n: {d.name for d in (r / "skills").iterdir() if (d / "SKILL.md").exists()}
+                      for n, r in roots.items()})
 
     # Files outside plugins/ ship too — the repository is public, so a diagram, a dev checklist or a
     # tool carries a team's name just as far as a SKILL.md does. The per-plugin check never looked
@@ -428,6 +489,19 @@ def main():
         if len(seen) > 1:
             groups = " vs ".join("+".join(v) for v in seen.values())
             fails.append(f"[shared] copies of {rel} have diverged: {groups}")
+
+    # The audit scripts are sent to the Figma sandbox one file at a time and cannot import a helper,
+    # so the section walker is pasted into each between markers. Compare the marked blocks.
+    for root in roots.values():
+        blocks = {}
+        for f in sorted((root / "_common" / "scripts").glob("audit-*.js")):
+            m = re.search(r"// <sections-deep>\n.*?// </sections-deep>", f.read_text(encoding="utf-8"), re.S)
+            blocks[f.name] = m.group(0) if m else None   # a deleted marker must not pass as "no copy"
+        if any(blocks.values()):
+            ref = next(b for b in blocks.values() if b)
+            for name, b in blocks.items():
+                if b != ref:
+                    fails.append(f"[fig] sections-deep copies differ: {name}")
 
     print("=" * 60)
     for x in warns:

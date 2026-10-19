@@ -66,6 +66,13 @@ test("a start that is off the source edge is reported", () => {
   assert.ok(out.some((i) => /start off the edge by 20px/.test(i)), out);
 });
 
+test("a start far along the edge's line is off the edge", () => {
+  // Sits on A's top line (y = 0) but 5000px to the right of the frame. The infinite line passes
+  // it, so a line-based distance reports 0; the frame's boundary is 4900px away.
+  const out = run([A, B, arrow("a_default --> b_default", [5000, 0], [5000, 50], [190, 50])]);
+  assert.ok(out.some((i) => /start off the edge by/.test(i)), out);
+});
+
 test("an arrowhead 10px away still fails when its last segment runs parallel to the edge", () => {
   // This is the case distance alone cannot catch: the head sits inside gap_range, but the
   // final segment is vertical against a vertical edge, so it points at empty space beside B.
@@ -101,4 +108,48 @@ test("a straight [state] link between the same two frames reports nothing", () =
     run([A, B, D, arrow(...GOOD), arrow("[state] a_default ~ a_empty", [50, 100], [50, 200])]),
     "FLOW PASS"
   );
+});
+
+// ── Nested sections ────────────────────────────────────────────────────────────
+// A section's children are relative to it and nested sections compose: the frames below sit at
+// abs (150, 100) and (350, 100), and the arrow's own x/y are relative to the inner section too.
+const runNested = (children, cfg = CFG) =>
+  new Function("CFG", "figma", SRC)(cfg, {
+    currentPage: {
+      name: "[UI] Fixture",
+      children: [{
+        type: "SECTION", name: "Outer", x: 100, y: 100, children: [
+          { type: "SECTION", name: "Inner", x: 50, y: 0, children },
+        ],
+      }],
+    },
+  });
+
+test("an arrow inside a nested section is audited", () => {
+  const out = runNested([A, B, arrow("a_default --> b_default", [100, 50], [150, 50], [170, 50])]);
+  assert.ok(out.some((i) => /target gap 30px/.test(i)), out);
+});
+
+test("a well-formed arrow inside a nested section passes", () => {
+  assert.strictEqual(runNested([A, B, arrow(...GOOD)]), "FLOW PASS");
+});
+
+test("an arrow inside an excluded parent is not audited, at any depth", () => {
+  const cfg = { ...CFG, pages: { exclude_sections: ["^Outer$"] } };
+  const out = runNested([A, B, arrow("a_default --> b_default", [100, 50], [150, 50], [170, 50])], cfg);
+  assert.strictEqual(out, "FLOW PASS");
+});
+
+test("a frame inside an excluded section still blocks a line passing through it", () => {
+  // Outer is excluded; the live arrow in S2 crosses the excluded frame, which stays in the dictionary.
+  const cfg = { ...CFG, pages: { exclude_sections: ["^Outer$"] } };
+  const X = frame("x_default", 130, 30); X.width = 40; X.height = 40;
+  const out = new Function("CFG", "figma", SRC)(cfg, {
+    currentPage: { name: "[UI] Fixture", children: [
+      { type: "SECTION", name: "Outer", x: 0, y: 1000, children: [
+        { type: "SECTION", name: "Inner", x: 0, y: 0, children: [X] } ] },
+      { type: "SECTION", name: "S2", x: 0, y: 1000, children: [A, B, arrow(...GOOD)] },
+    ] },
+  });
+  assert.ok(out.some((i) => /passes through x_default/.test(i)), out);
 });

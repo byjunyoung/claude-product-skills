@@ -5,7 +5,7 @@ lines that do not are asserted: the `required by` line and the verdict's first w
 
     python3 tools/test/preflight.test.py
 """
-import os, site, subprocess, sys, tempfile
+import os, shutil, site, subprocess, sys, tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -67,6 +67,19 @@ with tempfile.TemporaryDirectory() as tmp:
     (proj / "pm-adapters" / "trackers" / "gsheet.md").unlink()
     out = run(proj, home)
     check("unknown type, no adapter → the type name itself", "task.record.type: gsheet" in line(out, "needed because") and "→" not in line(out, "needed because"), line(out, "needed because"))
+
+# A renamed fork (manifest name is neither fig nor pm) must not die on a table lookup
+with tempfile.TemporaryDirectory() as tmp2:
+    fork = Path(tmp2) / "forked"
+    shutil.copytree(REPO / "plugins" / "pm" / "_common", fork / "_common", ignore=shutil.ignore_patterns("__pycache__"))
+    (fork / ".claude-plugin").mkdir()
+    (fork / ".claude-plugin" / "plugin.json").write_text('{"name": "forked-fig"}')
+    home2, proj2 = Path(tmp2) / "home", Path(tmp2) / "proj"
+    (home2 / ".claude").mkdir(parents=True); proj2.mkdir()
+    env2 = dict(os.environ, HOME=str(home2), PYTHONUSERBASE=site.getuserbase())
+    r = subprocess.run([sys.executable, str(fork / "_common" / "scripts" / "lib" / "preflight.py")],
+                       cwd=proj2, env=env2, capture_output=True, text=True, timeout=300)
+    check("renamed fork → no traceback", "Traceback" not in r.stderr and r.stdout.strip() != "", r.stderr[-400:])
 
 print()
 if failures:

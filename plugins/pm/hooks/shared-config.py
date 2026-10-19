@@ -24,10 +24,33 @@ It says nothing when the copy is current. A hook that prints on every session st
 wallpaper by the third day, and the run it needed to be read on is the one it is skipped on.
 Two plugins sharing one work tree do not fetch it twice: the stamp is keyed by that tree.
 """
-import hashlib, importlib.util, os, subprocess, sys, tempfile, time
+import hashlib, importlib.util, json, os, subprocess, sys, tempfile, time
+
+def plugin_name(here):
+    """The plugin these scripts ship in, read from the nearest .claude-plugin/plugin.json above
+    `here`. A checkout that happens to sit under a directory called pm/ is still the fig plugin.
+    Falls back to the path rule when no manifest is found or it names neither plugin (a renamed
+    fork); never raises."""
+    try:
+        d = os.path.abspath(here)
+        while True:
+            manifest = os.path.join(d, ".claude-plugin", "plugin.json")
+            if os.path.isfile(manifest):
+                with open(manifest, encoding="utf-8") as f:
+                    name = json.load(f).get("name")
+                if name in ("fig", "pm"):
+                    return name
+            parent = os.path.dirname(d)
+            if parent == d:
+                break
+            d = parent
+    except (OSError, ValueError, AttributeError):
+        pass
+    return "pm" if f"{os.sep}pm{os.sep}" in here else "fig"
+
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PLUGIN = "pm" if f"{os.sep}pm{os.sep}" in HERE else "fig"
+PLUGIN = plugin_name(HERE)
 NAME = "pm-conventions.yaml" if PLUGIN == "pm" else "figma-conventions.yaml"
 TTL = 6 * 3600            # a work tree looked at this recently is not looked at again
 
@@ -70,7 +93,24 @@ def main():
     if due(root):
         cmd = ["fetch", "--quiet"] if mode != "pull" or st["dirty"] else ["pull", "--ff-only", "--quiet"]
         try:
-            subprocess.run(["git", "-C", root, *cmd], capture_output=True, timeout=20)
+            # A hook has no terminal: a credential or host-key prompt would sit there until the
+            # timeout, on every session start. Make git fail fast instead of asking.
+            # Extend, never replace: the variable outranks core.sshCommand, so a bare value
+            # would silently drop a user's own key or options and the fetch would just fail.
+            ssh = os.environ.get("GIT_SSH_COMMAND", "").strip()
+            if not ssh:
+                try:                             # local lookup, no network
+                    r = subprocess.run(["git", "-C", root, "config", "--get", "core.sshCommand"],
+                                       capture_output=True, text=True, timeout=5)
+                    ssh = r.stdout.strip() if r.returncode == 0 else ""
+                except (OSError, subprocess.SubprocessError):
+                    ssh = ""
+            env = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+            # GIT_SSH names a whole ssh replacement, and GIT_SSH_COMMAND would outrank it: with
+            # only GIT_SSH set, setting the command would silently swap the user's program for ssh.
+            if ssh or not os.environ.get("GIT_SSH"):
+                env["GIT_SSH_COMMAND"] = (ssh or "ssh") + " -o BatchMode=yes"
+            subprocess.run(["git", "-C", root, *cmd], capture_output=True, timeout=20, env=env)
         except (OSError, subprocess.SubprocessError):
             pass                                 # offline is not an error worth a session's attention
         st = mod.origin_state(NAME)
@@ -86,5 +126,6 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except Exception:
-        pass                                     # a session must not fail to start over this
+    except BaseException:
+        pass        # a session must not fail to start over this — including the resolver's
+                    # sys.exit() when PyYAML is missing, which Exception does not catch
