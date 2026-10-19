@@ -1,6 +1,6 @@
 ---
 name: lint
-description: Audits a Figma design page read-only against figma-conventions.yaml and grades each violation blocking or warning, which decides whether a section can be handed to engineering. Triggers - "/fig:lint", "lint this page", "audit the design", "검증해줘", "규칙 위반 검사해줘", "피그마 검수", "화면 복제 후 검수".
+description: Audits a Figma design page read-only against figma-conventions.yaml before a handoff or right after another skill writes, grading each violation blocking or warning, which decides whether a section can be handed to engineering. Triggers - "/fig:lint", "lint this page", "audit the design", "검증해줘", "규칙 위반 검사해줘", "피그마 검수", "화면 복제 후 검수".
 allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
 ---
 

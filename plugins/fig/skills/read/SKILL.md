@@ -1,6 +1,6 @@
 ---
 name: read
-description: Takes a Figma file URL, lists its pages, and collects every top-level frame on the page you pick, reading metadata and screenshots in parallel into a markdown tree so the whole structure comes from a URL alone. Triggers - "/fig:read", "read this Figma file", "list every frame", "피그마 파일 읽어줘", "프레임 전부 뽑아줘", "전체 구조 보여줘".
+description: Lists every page of a Figma file and every top-level frame on the page you pick as a markdown tree built from the URL alone, when you need a file's structure before working in it. Triggers - "/fig:read", "read this Figma file", "list every frame", "피그마 파일 읽어줘", "프레임 전부 뽑아줘", "전체 구조 보여줘".
 allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__use_figma
 ---
 

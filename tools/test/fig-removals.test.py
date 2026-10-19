@@ -238,6 +238,11 @@ check("deck description carries setup's triggers and stays under 700",
       bool(dm) and len(dm.group(1)) <= 700 and "덱 템플릿 뽑아줘" in dm.group(1)
       and "extract the slide template" in dm.group(1))
 check("deck's structural step reads margins from the spec", "1792" not in deck and "128 /" not in deck)
+# Every trigger deck-setup answered to (as of 3daf4d6), except its own retired name, now reaches deck
+SETUP_TRIGGERS = ("extract the slide template", "set up the deck assets", "덱 템플릿 뽑아줘",
+                  "발표 템플릿 추출", "템플릿 다시 추출")
+lost = [t for t in SETUP_TRIGGERS if dm and f'"{t}"' not in dm.group(1)]
+check("deck's description carries every deck-setup trigger", not lost, ", ".join(lost))
 
 pit = read(deck_dir + "pitfalls.md") if (REPO / (deck_dir + "pitfalls.md")).exists() else ""
 check("pitfalls read from the template", bool(pit) and not any(x in pit for x in ("1920", "1792", "128 /")))
@@ -283,6 +288,11 @@ for f in sorted(glob.glob(str(REPO / "plugins/fig/skills/*/SKILL.md"))):
         and rest.startswith('"/fig:' + sk + '"')
     check(f"fig descriptions in one shape: {sk}", ok,
           f"{len(desc)} chars (limit {limit}), {len(sentences)} sentences before Triggers")
+    if sk in ("lint", "read", "tokens", "sync"):
+        check(f"{sk}'s description says when, not only what",
+              bool(re.search(r"\b(when|whenever|before|after|once)\b", head)), head)
+    if sk == "deck":
+        check("deck's description does not glue setup's job on with ', and'", ", and it measures" not in head, head)
 
 print()
 if failures:

@@ -1,6 +1,6 @@
 ---
 name: qa
-description: Audits a feature shipped to a dev or staging server against the plan of record — the PRD (markdown, Notion, or pm's) and the Figma design — either stopping at the checklist or clicking through the browser to file a defect report with reproduction steps, expected, actual and evidence. Triggers - "/fig:qa", "QA this", "check what is on the dev server", "file the defects", "QA 해줘", "개발서버 확인해줘", "결함 정리해줘".
+description: Checks a feature against its PRD and Figma design once it has shipped to a dev or staging server, stopping at a checklist or clicking through it in the browser to write up each defect with reproduction steps, expected, actual and evidence. Triggers - "/fig:qa", "QA this", "check what is on the dev server", "file the defects", "QA 해줘", "개발서버 확인해줘", "결함 정리해줘".
 allowed-tools: AskUserQuestion, Bash, Read, Glob, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__read_console_messages, mcp__claude-in-chrome__read_network_requests
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: deck
-description: Turns a document, a dataset, or a spoken brief into a Figma Slides deck by agreeing an outline first, then building from the team template's archetypes and auditing overlap and wording, and it measures that template into local assets the first time or after the template is revised. Triggers - "/fig:deck", "make this into a deck", "turn this doc into slides", "extract the slide template", "set up the deck assets", "슬라이드로 만들어줘", "발표 자료 만들어줘", "덱 만들어줘", "덱 템플릿 뽑아줘", "템플릿 다시 추출".
+description: Builds a Figma Slides deck from a document, a dataset or a spoken brief when a presentation is needed, using the archetypes of the team template, which it measures into local assets on first use or after a revision. Triggers - "/fig:deck", "make this into a deck", "turn this doc into slides", "extract the slide template", "set up the deck assets", "슬라이드로 만들어줘", "발표 자료 만들어줘", "덱 만들어줘", "덱 템플릿 뽑아줘", "발표 템플릿 추출", "템플릿 다시 추출".
 allowed-tools: Read, Write, Bash, AskUserQuestion, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__create_new_file, mcp__plugin_figma_figma__upload_assets, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__whoami
 ---
 
