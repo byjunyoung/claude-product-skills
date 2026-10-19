@@ -67,9 +67,10 @@ claude plugin install fig@byjunyoung
                          → neither: stop and ask, rather than invent one
 3  Clone and change      the nearest canonical screen, changing only what differs
                          an undecided fact is pinned on its node, not left as a blank frame
-4  Check                 lint on every drawn frame, colours included,
-                         then all of them in one image — a dark screen among light
-                         ones looks fine on its own
+4  Check                 lint on every drawn frame, colours included, and on the
+                         page of any draft component they use, where its colours
+                         are checked; then all of them in one image — a dark
+                         screen among light ones looks fine on its own
 ```
 
 ## What lint catches
