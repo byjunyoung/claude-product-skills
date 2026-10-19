@@ -340,6 +340,10 @@ check("tokens builds its preview from a dry run, and accept names its nodes",
       "DRY_RUN" in tokens and "nodes" in tokens and "every remaining node" not in tokens
       and "unchecked" in tokens and "never imports" in tokens
       and "reruns the bind for that colour with `accept: true`" not in tokens)
+check("tokens runs the mapping its dry run returned, every entry naming its nodes",
+      "`mapping`" in tokens and "`paints`" in tokens and "plain ones too" in tokens
+      and "skipped and reported, not bound" not in tokens and "`[{ node, reason }]`" not in tokens
+      and "Run the same `MAPPING`" not in tokens)
 check("no fig document says an instance's colours are fixed at the component's source",
       not [rel for rel, text in tracked_text_files() if rel.startswith("plugins/fig") and "fixed at the component" in text])
 t_head = fm_of_text(tokens)["description"].partition(" Triggers - ")[0]
