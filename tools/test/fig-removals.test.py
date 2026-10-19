@@ -71,6 +71,27 @@ for rel, marker in (("README.md", "/fig:diff` → (removed"), ("README.ko.md", "
     lines = [l for l in read(rel).splitlines() if marker in l]
     check(f"{rel} maps the removed /fig:diff", bool(lines) and all("Compare changes" in l for l in lines))
 
+# ---- sync judges by name, not by pair -------------------------------------------------------------
+RETIRED = "pair_" + "patterns"
+sync = read("plugins/fig/skills/sync/SKILL.md")
+sig1 = sync.split("**Signal 1", 1)[1].split("**Signal 2", 1)[0] if "**Signal 1" in sync else ""
+check("sync compares by name, not by pair",
+      "[screen]-[state]" in sig1 and RETIRED not in sync and "canonical" in sig1.lower()
+      and "not on the canonical page" in sync)
+
+holders = [f"{rel}:{n}" for rel, text in tracked_text_files()
+           for n, line in enumerate(text.splitlines(), 1) if RETIRED in line]
+check("the retired pair key is named nowhere", not holders, ", ".join(holders))
+
+step16 = sync.split("Record the confirmed convention", 1)[1].split("### Step 2", 1)[0] if "Record the confirmed convention" in sync else ""
+check("sync previews its config write",
+      "preview" in step16.lower() and "~/.claude/figma-conventions.yaml" in step16
+      and "./figma-conventions.yaml" in step16 and "symlink" in step16.lower())
+
+draw = read("plugins/fig/skills/draw/SKILL.md")
+check("draw no longer sends before-and-after to the AS-IS section",
+      "AS-IS" not in draw and "canonical page and the working page" in draw)
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

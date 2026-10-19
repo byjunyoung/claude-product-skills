@@ -34,7 +34,7 @@ The canonical page is supposed to be "what is running right now", but shipping a
 
 The rules are set by **`figma-conventions.yaml`**, read through `resolve-config.py --js <fileKey>`.
 
-Sections read: `pages` (the three axes, excluded sections) · `sync` (comparison-pair patterns, diff length limit, version pages) · `naming`.
+Sections read: `pages` (the three axes, excluded sections) · `sync` (diff length limit, version pages) · `naming`.
 
 **There are two ways to apply a change, and a structure comparison decides which.** Moving the frame is the default, but when the layer composition is identical and only values differ, edit the values instead — node ids have to survive or the deep links in specs and tickets break. Step 3 executes that decision, and the report says which was used and why.
 
@@ -63,7 +63,7 @@ Conventions differ per file. Some group by version, some by period, some split p
 
 4. **Always sweep the groups split by dividers.** The pages in a band whose label means "done" are the un-applied candidates. Comparing only the archive pages found by name prefix misses real un-applied work — measured. This is exactly why the queue is usually not findable by name
 5. **Confirm the inference once** — list N canonical, M archive, K queue pages and ask whether that is right
-6. **Record the confirmed convention in `files.<fileKey>`** (the label and the three axes). The next run starts at point 1. If the page list stops matching the convention, confirm again
+6. **Record the confirmed convention in `files.<fileKey>`** (the label and the three axes) — behind a preview, not silently. The preview names the file it writes and the layer: the person's own `~/.claude/figma-conventions.yaml` or the project's `./figma-conventions.yaml`. Ask which. If the person's own config is a symlink into a shared team repository, say so plainly: writing there changes it for everyone who uses that repository. Write only after a go; on a no, carry the axes for this run only. The next run starts at point 1. If the page list stops matching the convention, confirm again
 
 ### Step 2 — audit (zero writes, three-signal judgement)
 
@@ -73,10 +73,11 @@ Check each piece of work in the archive and queue against canonical.
 
 **Signal 1 — text diff (the main one)**
 
-If the work contains a comparison pair (name patterns from `sync.pair_patterns`), take the text set of each side and difference them. That is the change keyword set for that piece. With no pair (a new screen, a single proposal), take the whole section's text as candidates.
+Compare each finished working frame directly with the canonical frame of the same `[screen]-[state]` name: take the text set of each and difference them. Identical text means applied. Any difference is shown as it stands, never summarised.
 
-- A string only in the new version → it **must be present** in canonical to count as applied
-- A string only in the current version → it **must be absent** from canonical to count as applied (this is what catches rewording and removals)
+- A string only in the working frame → it **must be present** on the canonical page to count as applied
+- A string only in the canonical frame → it **must be absent** once applied (this is what catches rewording and removals)
+- A working frame with no canonical twin of that name is reported as "new — not on the canonical page", with its whole text as candidates
 
 **Signal 2 — frame height**
 
@@ -92,9 +93,9 @@ Component-level changes (a state added, hierarchy tidied) do not show up in fram
 |---|---|
 | Applied | At least one signal clearly supports it, with no signal against |
 | Not applied | A new-version keyword is missing from canonical, or a current-version keyword is still there |
-| Needs checking | All three signals are silent — a purely visual change where the pair's text is identical and heights match |
+| Needs checking | All three signals are silent — a purely visual change where the two frames' text is identical and heights match |
 
-**Never decide the needs-checking cases.** Collect them, report them, and ask whether to run a screenshot comparison — it costs per item, so it does not run automatically. Cases where the pair's "current" side was overwritten after the work and now matches the new version land here too; note that those cannot be used as comparison material at all.
+**Never decide the needs-checking cases.** Collect them, report them, and ask whether to run a screenshot comparison — it costs per item, so it does not run automatically. A working frame edited after the release so that it now matches canonical lands here too, and says nothing about whether the work was applied.
 
 ### Step 3 — apply (structure comparison decides the method)
 
@@ -159,25 +160,26 @@ If nothing was un-applied, report just that, briefly.
 
 ## Implementation snippets
 
-**Comparison-pair text diff (one whole archive page)**
+**Name-matched text comparison (one whole archive page)**
 
 ```js
 const page = await figma.getNodeByIdAsync(PAGE_ID);
 await figma.setCurrentPageAsync(page);
 const texts = n => [...new Set(n.findAll(x => x.type === 'TEXT').map(t => t.characters.trim()).filter(s => s && s.length < CFG.sync.text_diff_max_len))];
-const sub = (sec, re) => sec.children.filter(c => c.type === 'SECTION' && re.test(c.name));
 const out = [];
-for (const grp of page.children.filter(c => c.type === 'SECTION')) {
-  for (const task of grp.children.filter(c => c.type === 'SECTION')) {
-    const tb = sub(task, new RegExp(CFG.sync.pair_patterns.to_be, 'i')), ai = sub(task, new RegExp(CFG.sync.pair_patterns.as_is, 'i'));
-    if (tb.length && ai.length) {
-      const T = new Set(tb.flatMap(texts)), A = new Set(ai.flatMap(texts));
-      out.push({ grp: grp.name, task: task.name, mode: 'diff',
-        onlyToBe: [...T].filter(x => !A.has(x)), onlyAsIs: [...A].filter(x => !T.has(x)) });
-    } else {
-      out.push({ grp: grp.name, task: task.name, mode: 'flat', all: texts(task).slice(0, 70) });
-    }
+const canon = {};   // [screen]-[state] name -> text set, from the canonical page (load it the same way first)
+for (const f of CANON_FRAMES) canon[f.name] = new Set(texts(f));
+function frames(n, acc) {   // dig through the section hierarchy, collect screen frames only
+  for (const c of n.children || []) {
+    if (c.type === 'FRAME') acc.push(c); else if (c.type === 'SECTION') frames(c, acc);
   }
+  return acc;
+}
+for (const f of frames(page, [])) {
+  const W = new Set(texts(f)), C = canon[f.name];
+  if (!C) { out.push({ frame: f.name, mode: 'new', note: 'new — not on the canonical page', all: [...W].slice(0, 70) }); continue; }
+  const onlyWorking = [...W].filter(x => !C.has(x)), onlyCanonical = [...C].filter(x => !W.has(x));
+  out.push({ frame: f.name, mode: onlyWorking.length || onlyCanonical.length ? 'differs' : 'applied', onlyWorking, onlyCanonical });
 }
 return out;
 ```
@@ -240,7 +242,7 @@ return figma.currentPage.children.filter(c => c.type === 'SECTION' && c.id !== t
 |---|---|
 | Identical frame names make every name comparison say "match" | Judge on the three content signals. Names are only for pairing |
 | Comparing archive pages and stopping there | The "done" band under a divider is where un-applied work actually hides — always include the `match: divider` axis |
-| The pair's current side was overwritten after the work and now matches the new version | Classify it as un-comparable and inspect canonical's structure directly |
+| The working frame was edited after the release and now matches canonical | Classify it as needs checking and inspect canonical's structure directly |
 | Replacing a whole frame breaks external deep links | When the structure matches, edit values only. If a move is unavoidable, report which links will break |
 | A stretched section invades its neighbour | Compute the four-edge intersection with post-stretch coordinates. Do not check vertically alone |
 | Mistaking a section child's coordinates for absolute | A section child's x/y are relative to the parent section |

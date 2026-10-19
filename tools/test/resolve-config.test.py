@@ -273,6 +273,14 @@ with tempfile.TemporaryDirectory() as tmp:
           r.returncode == 3 and "task_tracker.type is not set in figma-conventions.yaml, while "
           "task_tracker.ref is" in r.stderr, f"rc={r.returncode} {r.stderr.strip()}")
 
+    # 12. Keys a shipped config may still hold after they retire must not break the read.
+    old_proj = Path(tmp) / "old-proj"
+    old_proj.mkdir()
+    (old_proj / FIG_NAME).write_text("sync:\n  " + "pair_" + "patterns" + ":\n    to_be: x\n"
+                                     "task_tracker:\n  annotation_category: y\n  scope_tags: [z]\n")
+    r = run_script(FIG, old_proj, bare, "--name", FIG_NAME)
+    check("retired keys are tolerated", r.returncode == 0 and parse(r) is not None, f"rc={r.returncode} {r.stderr.strip()}")
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures))

@@ -225,21 +225,6 @@ def main():
     line("gap_range", [hg - 3, hg + 3] if hg else None, f"head_gap ±3 — {hgw}", 4)
     L.append("")
 
-    # ── Sync ──────────────────────────────────────────────────
-    # AS-IS / TO-BE section names are written in whatever language the team works in.
-    # Widen the alternation only when this file actually contains non-ASCII names —
-    # otherwise a team that never sees those words gets them baked into their config, and the
-    # bundled patterns stand.
-    names = [s_["name"] for s_ in S] + [p_.get("page") or "" for p_ in probes]
-    # Letters only — an em-dash or a curly quote is non-ASCII but not another language.
-    wide = [n for n in names if any(ord(ch) > 127 and ch.isalpha() for ch in n)]
-    if wide:
-        L.append("sync:")
-        L.append(f"  pair_patterns:   # non-ASCII names observed ({len(wide)}/{len(names)}) — widen these to your own wording")
-        L.append("    to_be: 'to.?be|개선|after'")
-        L.append("    as_is: 'as.?is|현행|before'")
-        L.append("")
-
     # ── This file's pages ─────────────────────────────────────
     # Which page is canonical, strict or read-only is not on the canvas; /fig:setup asks and
     # writes the answers beside these. Only sections that look like scaffolding are observed.

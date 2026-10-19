@@ -183,9 +183,6 @@ references:
 
 # --- Canonical sync ------------------------------------------------------------
 sync:
-  pair_patterns:                              # section names that form a comparison pair
-    to_be: 'to.?be|after'
-    as_is: 'as.?is|before|current'
   text_diff_max_len: 40                       # strings longer than this are not used as diff keys
   version_page_pattern: null                  # e.g. '^\[Update\] v[\d.]+'
   named_version: null                         # title of the version saved after apply. null saves none — the default,
