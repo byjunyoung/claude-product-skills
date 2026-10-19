@@ -346,6 +346,7 @@ Template     : {task.template.task or .parent}   (or "none published")
 Drafted from : {spec entry} · {design, or "no design"}
 Design section : {heading}
                (task.design_heading "{x}" not found — read by role)   ← only where step 1 fell back
+Referenced ver.: {label} — from the last of {N} handover lines   ← only where N > 1
 Coverage     : behaviour {n}/{n} · states {n}/{n} · rules {n}/{n} · round trip {n}
                covered elsewhere: {row} — {which line}
 Materials    : {entry name} ({entry kind})

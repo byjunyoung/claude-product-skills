@@ -2,7 +2,7 @@
 
 ## 0.40.0 — 2026-10-19
 
-- **`/pm:task publish` reads the last handover line under the design heading as the referenced version, and says so when there is more than one.** `fig` appends a line each time it hands a section over, oldest to newest, in all three trackers; publish had said "the handover line" as if there were one, so a second handover left it with nothing to choose by. Now the referenced-version row is built from the last line verbatim, and with more than one the preview reads "referenced version: from the last of N handover lines", so an older pin is not mistaken for the current one. No config key, script or adapter changes; `resolve-config.py` and `preflight.py` are untouched and still identical with `fig`'s
+- **`/pm:task publish` reads the last handover line under the design heading as the referenced version, and says so when there is more than one.** `fig` appends a line in each handoff run, oldest to newest, in all three trackers; publish had said "the handover line" as if there were one, so a second handover left it with nothing to choose by. Now the referenced-version row is built from the last line verbatim, and with more than one the preview reads "referenced version: from the last of N handover lines", so an older pin is not mistaken for the current one. No config key, script or adapter changes; `resolve-config.py` and `preflight.py` are untouched and still identical with `fig`'s
 
 ## 0.39.1 — 2026-10-19
 

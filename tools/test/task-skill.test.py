@@ -202,6 +202,9 @@ check("publish reads the last handover line",
       "the last handover line" in pub and "from the last of N handover lines" in pub
       and "oldest to newest" in pub and not re.search(r"\b(a|the|record's) handover line\b", pub, re.I),
       str(re.findall(r"(?i)\b(?:a|the|record's) handover line", pub)))
+block = pub.split("[ticket preview]", 1)[1].split("shall I proceed?", 1)[0]
+check("the ticket preview block has a slot for the last-of-N referenced version",
+      "Referenced ver." in block and "from the last of {N} handover lines" in block and "N > 1" in block)
 
 print()
 if failures:
