@@ -10,7 +10,9 @@
  *
  * Two stages. setCurrentPageAsync runs once per call, so a different page means a different call.
  *   MODE="collect" : gather the boolean property distribution per component from a reference page → return STAT
- *   MODE="compare" : compare the working page against STAT → return violations + undecidable
+ *   MODE="compare" : compare the working page against STAT → return { pass, findings }; each finding
+ *                    is { tag, grade, node, msg }. A property the collect pass never saw comes back as an
+ *                    "[unknown]" warning (undecidable, not a violation).
  *
  * What to prepend
  *   const CFG  = {...};                      resolve-config.py --js
@@ -46,7 +48,7 @@ const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
 // </sections-deep>
 
 const page = figma.root.children.find(p => p.name.indexOf(PAGE) !== -1);
-if (!page) return `page not found: ${PAGE}`;
+if (!page) throw new Error(`page not found: ${PAGE}`);
 await figma.setCurrentPageAsync(page);
 
 // An instance is keyed by its master's name, not its own.
@@ -103,14 +105,14 @@ for (const { s } of sectionsDeep(page.children, () => false)) {
         if (tot < MIN_N) continue;
         const norm = st.t / tot >= DOMINANCE ? true : (st.f / tot >= DOMINANCE ? false : null);
         if (norm === null || p[k].value === norm) continue;   // a split convention is a per-use choice
-        issues.push(`[default] ${f.name} / ${n.name === cname ? cname : n.name + "(" + cname + ")"}` +
-                    ` ${propName(k)}=${p[k].value} (convention ${norm}, samples ${tot})`);
+        issues.push({ tag: "[default]", grade: "blocking", node: n.id == null ? null : n.id,
+                      msg: `${f.name} / ${n.name === cname ? cname : n.name + "(" + cname + ")"}` +
+                           ` ${propName(k)}=${p[k].value} (convention ${norm}, samples ${tot})` });
       }
     }
   }
 }
 // unknown is undecidable rather than a violation — a signal that more reference pages are needed
-return {
-  component: issues.length ? issues : "COMPONENT PASS",
-  unknown: Object.keys(unknown).map(k => k + " x" + unknown[k])
-};
+for (const k of Object.keys(unknown))
+  issues.push({ tag: "[unknown]", grade: "warning", node: null, msg: k + " x" + unknown[k] });
+return { pass: issues.length === 0, findings: issues };

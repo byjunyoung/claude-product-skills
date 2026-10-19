@@ -165,7 +165,7 @@ Present the missing list as a table, including which clue each was inferred from
 
 ### 5. Verify and hand off
 
-**The mandatory last action of this step — call `/fig:lint` (via the Skill tool).** Once writing is done (creating, duplicating, moving, placing), **always** call `/fig:lint` and get `STRUCT PASS` and `FLOW PASS` — unconditionally if clone or move was involved. Fix what it reports and call again; **never report completion without a PASS.**
+**The mandatory last action of this step — call `/fig:lint` (via the Skill tool).** Once writing is done (creating, duplicating, moving, placing), **always** call `/fig:lint` and get a `PASS` from both the structure and the flow audit — unconditionally if clone or move was involved. Fix what it reports and call again; **never report completion without a PASS.**
 
 No inline self-check audit lives here. Holding the same check in two places means one gets fixed and they drift — the verdict always comes from `/fig:lint` alone.
 

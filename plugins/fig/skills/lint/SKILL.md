@@ -108,7 +108,7 @@ Every violation carries one of two grades. **The grade never changes what is aud
 - **blocking** — engineering reading the file as it stands would build the wrong thing. A screen that cannot be seen, a coordinate that left its section, a connection that points somewhere it does not go, a slot switched on with nothing in it
 - **warning** — the file reads correctly and is merely untidy. Names, numbering, a few pixels of tolerance
 
-The grade is read off the tag the script already emits, so it is a lookup and not a second judgement.
+**The scripts set the grades.** Each finding comes back with its `grade`, decided where the script emits it, so reading it is a lookup and not a second judgement. The table below explains those grades to the reader and has to name every tag a script can emit.
 
 | In the output | Grade | Why |
 |---|---|---|
@@ -127,6 +127,7 @@ The grade is read off the tag the script already emits, so it is a lookup and no
 | `[coverage] orphan frame` | blocking | A screen nothing reaches — engineering cannot tell how the user gets there |
 | `[default]` | blocking | The instance carries a library default this screen does not use, and it ships as an empty slot |
 | Missing required state ✋, **type settled** | blocking | A state nobody designed is a state engineering invents |
+| `[unknown]` | warning | The collect pass never saw this component property, so the compare pass cannot say what the file's convention is — more reference pages are needed, which is undecided rather than wrong |
 | `[naming]` · `[order]` | warning | Reads correctly, filed untidily |
 | `[layer name]` | warning | Reads fine to whoever drew it, and to nobody else |
 | `[annotation]` | warning | Pins that pile up stop being read, and a copied pin states a decision nobody made for this screen |
@@ -160,7 +161,7 @@ All three are called the same way.
 
 1. Get the single `const CFG = {...};` line from `resolve-config.py --js <fileKey>`
 2. Concatenate that line and the whole script, and hand it to `use_figma`. If the target page is not the first page, prepend one `setCurrentPageAsync` line (once per script)
-3. The return value is either an array of violations or `STRUCT PASS` · `FLOW PASS` · `COMPONENT PASS`
+3. The return value is an `AuditResult`: `{ pass, findings }`. Each finding is `{ tag, grade, node, msg }` — `tag` the bracketed tag (`"[arrow]"`), `grade` `"blocking"` or `"warning"`, `node` the offending node's id (or `null` where there is none), `msg` the message without its tag. `pass` is true exactly when `findings` is empty. Read the grade from `grade`; do not infer it from the message text. `pass` is the script's own verdict, so there is no string to look for. A page that does not exist makes the component script throw, which `use_figma` reports as an error
 
 For several pages, split the calls per page and **issue them in one message so they run in parallel**. One script never switches pages twice.
 
@@ -180,7 +181,7 @@ After editing a script, check its syntax with `scripts/lib/check.sh`. `use_figma
 - **States managed on a common page are not counted as per-screen omissions or orphans** (see fig:prep, "repeated common elements") — (1) a state present on the common page counts as covered for every screen that does not draw its own, (2) canonical state frames on a page matching `naming.common_page_pattern` are expected not to appear in per-screen flow, so they are dropped from coverage. If the setting is `null`, this exception does not apply
 - **A pattern page is dropped from coverage the same way** — the page `naming.pattern_page_pattern` matches holds arrangements rather than screens (how a row is built, where a badge sits in it), and nobody navigates to one, so requiring its frames to appear in the flow would report each of them as an orphan. `/fig:draw` writes and reads that page. With the setting `null` the exception does not apply, and the page's sections come back as orphans — which is the signal to record it
 - **File patterns in sections, the same as any other page.** Coverage collects frames from sections only, so a pattern sitting directly on the page escapes the exception above — and lands on `[membership]` instead, which the structure script applies to every page-level frame without reading page strictness. Neither is a reason to scatter patterns loose on the canvas: put them in a section, where the coverage exception is what carries them
-- **The component check cannot see a pattern page under a shell offset.** `component_audit.body_offset` skips the nav column and top bar of a full screen, and a pattern frame is narrower than that offset, so every instance on it is skipped and the page reports `COMPONENT PASS` having examined nothing. The offset is dropped on a pattern page for that reason — a clean report there means the instances were read, not that there were none
+- **The component check cannot see a pattern page under a shell offset.** `component_audit.body_offset` skips the nav column and top bar of a full screen, and a pattern frame is narrower than that offset, so every instance on it is skipped and the page reports `pass: true` having examined nothing. The offset is dropped on a pattern page for that reason — a clean report there means the instances were read, not that there were none
 
 ## Notes
 

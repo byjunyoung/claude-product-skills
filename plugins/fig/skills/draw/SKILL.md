@@ -186,7 +186,7 @@ Per "What's undecided stays inline" above. Draw first, annotate second, and neve
 
 ### 9. Verify
 
-**The mandatory last action — call `/fig:lint` (via the Skill tool).** A clone happened, so this is never optional: get `STRUCT PASS` and `FLOW PASS`, fix what comes back, call again. Its `[mode]` check is the one a clone trips most: a screen cloned off a page that set the colour mode lands in the collection default.
+**The mandatory last action — call `/fig:lint` (via the Skill tool).** A clone happened, so this is never optional: get a `PASS` from both the structure and the flow audit, fix what comes back, call again. Its `[mode]` check is the one a clone trips most: a screen cloned off a page that set the colour mode lands in the collection default.
 
 **Call `/fig:tokens` in its check-only mode on every frame drawn, cloned or not.** A clone copies whatever its source carried, and a source that is itself a draft built earlier in the work — a component nobody has handed over yet — carries its hand-typed colours into every screen that uses it. Those colours looked right in the mode they were typed for, and disappear in the other. "It was cloned, so it is clean" is only true of a canonical source.
 

@@ -10,7 +10,9 @@
  *   2) prepend that one line to this file and hand it to use_figma
  *   3) for another page, one setCurrentPageAsync line at the top (once per script)
  *
- * Returns: an array of violation strings, or "STRUCT PASS"
+ * Returns: { pass, findings } — each finding is { tag, grade, node, msg }. `grade` is "blocking" or
+ *          "warning", decided here at the emit site; `node` is the offending node's id or null;
+ *          `pass` is true exactly when `findings` is empty.
  *
  * A null pattern skips that check — it keeps a file with no convention from reporting everything.
  * Coordinate and parent checks always run regardless of config (geometry holds with or without a rule).
@@ -47,6 +49,7 @@ const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
 // </sections-deep>
 
 const issues = [];
+const add = (tag, grade, node, msg) => issues.push({ tag, grade, node: node == null ? null : node, msg });
 const secs = figma.currentPage.children.filter(c => c.type === "SECTION");   // top level: order and the page-level overlap
 const deep = sectionsDeep(figma.currentPage.children, skipSection);          // every depth: the per-section checks
 // Section -> the section holding it, built from the walk above (not from `.parent`). A variable
@@ -59,7 +62,7 @@ const chain = s => { const out = []; for (let n = s; n; n = parentOf.get(n)) out
 // clone() and createFrame default their parent to currentPage, so anything not absorbed leaks out here.
 for (const f of figma.currentPage.children)
   if (isScreen(f))
-    issues.push(`[membership] directly on page (not absorbed into a section): ${f.name} @abs ${r(f.x)},${r(f.y)}`);
+    add("[membership]", "blocking", f.id, `directly on page (not absorbed into a section): ${f.name} @abs ${r(f.x)},${r(f.y)}`);
 
 for (const { s, skipped } of deep) {
   if (skipped) continue;
@@ -69,22 +72,22 @@ for (const { s, skipped } of deep) {
     // Out of bounds — a section child's x/y is relative to the section.
     // Write an absolute coordinate there and the frame shoots outside the section.
     if (f.x < 0 || f.y < 0 || f.x + f.width > s.width || f.y + f.height > s.height)
-      issues.push(`[bounds] ${s.name} / ${f.name} outside (rel ${r(f.x)},${r(f.y)} ${r(f.width)}x${r(f.height)} vs section ${r(s.width)}x${r(s.height)})`);
+      add("[bounds]", "blocking", f.id, `${s.name} / ${f.name} outside (rel ${r(f.x)},${r(f.y)} ${r(f.width)}x${r(f.height)} vs section ${r(s.width)}x${r(s.height)})`);
     if (NAME_RE && !NAME_RE.test(f.name))
-      issues.push(`[naming] ${s.name} / ${f.name} (pattern mismatch)`);
+      add("[naming]", "warning", f.id, `${s.name} / ${f.name} (pattern mismatch)`);
   }
 
   for (let i = 0; i < frames.length; i++)
     for (let j = i + 1; j < frames.length; j++) {
       const a = frames[i], b = frames[j];
       if (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y)
-        issues.push(`[frame overlap] ${s.name}: ${a.name} ∩ ${b.name}`);
+        add("[frame overlap]", "blocking", a.id, `${s.name}: ${a.name} ∩ ${b.name}`);
     }
 
   // Top level only: a nested section is named by its parent's convention (a period holding work
   // sections), so the file's section pattern does not describe it.
   if (SEC_RE && secs.includes(s) && !SEC_RE.test(s.name))
-    issues.push(`[naming] section ${s.name} (pattern mismatch)`);
+    add("[naming]", "warning", s.id, `section ${s.name} (pattern mismatch)`);
 }
 
 // Section overlap — an excluded section on either side is dropped from the check.
@@ -97,7 +100,7 @@ for (const group of siblingGroups)
       const a = group[i], b = group[j];
       if (skipSection(a) || skipSection(b)) continue;
       if (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y)
-        issues.push(`[section overlap] ${a.name} ∩ ${b.name}`);
+        add("[section overlap]", "blocking", a.id, `${a.name} ∩ ${b.name}`);
     }
 
 // ── Ordering mismatch — does the NN. number agree with the canvas order (row-major) ──
@@ -110,7 +113,7 @@ const numbered = secs
 numbered.forEach((s, i) => {
   const want = String(i + 1).padStart(2, "0");
   const have = s.name.match(/^(\d+)\./)[1];
-  if (have !== want) issues.push(`[order] ${s.name} → ${want}. (${i + 1} on canvas)`);
+  if (have !== want) add("[order]", "warning", s.id, `${s.name} → ${want}. (${i + 1} on canvas)`);
 });
 
 // ── Split state variants — are one screen's variants broken apart within a column ──
@@ -134,7 +137,7 @@ for (const { s, skipped } of deep) {
       chained.add(a + "\n" + b); chained.add(b + "\n" + a);
     }
   const frames = s.children.filter(isScreen)
-    .map(f => ({ name: f.name, screen: screenOf(f.name), x: f.x, y: f.y, b: f.y + f.height }));
+    .map(f => ({ id: f.id, name: f.name, screen: screenOf(f.name), x: f.x, y: f.y, b: f.y + f.height }));
   const byScreen = {};
   for (const f of frames) (byScreen[f.screen] = byScreen[f.screen] || []).push(f);
   for (const [screen, group] of Object.entries(byScreen)) {
@@ -151,7 +154,7 @@ for (const { s, skipped } of deep) {
         const intruder = frames.find(o =>
           o.screen !== screen && Math.abs(o.x - col[i].x) < 8 && o.y >= top && o.y < bot);
         if (intruder)
-          issues.push(`[split state] ${s.name}: ${intruder.name} is wedged between ${col[i - 1].name} and ${col[i].name}`);
+          add("[split state]", "blocking", intruder.id, `${s.name}: ${intruder.name} is wedged between ${col[i - 1].name} and ${col[i].name}`);
       }
     }
   }
@@ -172,7 +175,7 @@ for (const cs of figma.currentPage.findAllWithCriteria({ types: ["COMPONENT_SET"
         hit = `${a.name} ∩ ${b.name}`;
     }
   if (hit)
-    issues.push(`[variant stack] ${cs.name}: ${hit}${cs.layoutMode === "NONE" ? " (set has no auto-layout)" : ""}`);
+    add("[variant stack]", "blocking", cs.id, `${cs.name}: ${hit}${cs.layoutMode === "NONE" ? " (set has no auto-layout)" : ""}`);
 }
 
 // ── Library sibling overlap — a set or component covering the one placed beside it ──
@@ -187,7 +190,7 @@ for (const { s, skipped } of deep) {
     for (let j = i + 1; j < kids.length; j++) {
       const a = kids[i], b = kids[j];
       if (a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y)
-        issues.push(`[library overlap] ${s.name}: ${a.name} ∩ ${b.name}`);
+        add("[library overlap]", "blocking", a.id, `${s.name}: ${a.name} ∩ ${b.name}`);
     }
 }
 
@@ -205,7 +208,7 @@ for (const { s, skipped } of deep) {
   for (const f of s.children.filter(isScreen)) {
     const hits = f.findAll(n => DEFAULT_NAME.test(n.name) && !inInstance(n));
     if (hits.length)
-      issues.push(`[layer name] ${s.name} / ${f.name}: ${hits.length} on Figma defaults (${hits.slice(0, 3).map(n => n.name).join(", ")}${hits.length > 3 ? ", \u2026" : ""})`);
+      add("[layer name]", "warning", f.id, `${s.name} / ${f.name}: ${hits.length} on Figma defaults (${hits.slice(0, 3).map(n => n.name).join(", ")}${hits.length > 3 ? ", \u2026" : ""})`);
   }
 }
 
@@ -223,7 +226,7 @@ for (const { s, skipped } of deep) {
     const pinned = [f, ...f.findAll(n => n.annotations && n.annotations.length)].filter(n => n.annotations && n.annotations.length);
     const labels = pinned.flatMap(n => n.annotations.map(a => (a.labelMarkdown || a.label || "").trim())).filter(Boolean);
     if (labels.length > PIN_MAX)
-      issues.push(`[annotation] ${s.name} / ${f.name}: ${labels.length} pins (more than ${PIN_MAX})`);
+      add("[annotation]", "warning", f.id, `${s.name} / ${f.name}: ${labels.length} pins (more than ${PIN_MAX})`);
     for (const l of new Set(labels)) {
       const k = l.slice(0, 80);
       if (!pinText.has(k)) pinText.set(k, []);
@@ -233,7 +236,7 @@ for (const { s, skipped } of deep) {
 }
 for (const [k, frames] of pinText)
   if (frames.length >= PIN_DUP)
-    issues.push(`[annotation] same pin on ${frames.length} screens (clone residue?): "${k.slice(0, 40)}\u2026" — ${frames.slice(0, 3).join(", ")}${frames.length > 3 ? ", \u2026" : ""}`);
+    add("[annotation]", "warning", null, `same pin on ${frames.length} screens (clone residue?): "${k.slice(0, 40)}\u2026" — ${frames.slice(0, 3).join(", ")}${frames.length > 3 ? ", \u2026" : ""}`);
 
 // ── Implicit variable mode — a screen whose colours resolve in a mode nobody chose ──
 // A screen bound to a collection with several modes (light/dark, brand A/B) renders in whatever
@@ -277,7 +280,7 @@ for (const { s, skipped } of deep) {
     }
     for (const { col, n } of Object.values(unset)) {
       const def = (col.modes.find(m => m.modeId === col.defaultModeId) || {}).name || "default";
-      issues.push(`[mode] ${s.name} / ${f.name}: ${n} colour(s) bound to "${col.name}" with no mode set on the screen, any section it sits in or the page — renders in the default (${def})`);
+      add("[mode]", "blocking", f.id, `${s.name} / ${f.name}: ${n} colour(s) bound to "${col.name}" with no mode set on the screen, any section it sits in or the page — renders in the default (${def})`);
     }
   }
 }
@@ -327,8 +330,8 @@ for (const { s, skipped } of deep) {
     };
     walk(f, false);
     if (hits.length)
-      issues.push(`[clip] ${s.name} / ${f.name}: ${hits.length} (${hits.slice(0, 3).join("; ")}${hits.length > 3 ? ", \u2026" : ""})`);
+      add("[clip]", "blocking", f.id, `${s.name} / ${f.name}: ${hits.length} (${hits.slice(0, 3).join("; ")}${hits.length > 3 ? ", \u2026" : ""})`);
   }
 }
 
-return issues.length ? issues : "STRUCT PASS";
+return { pass: issues.length === 0, findings: issues };
