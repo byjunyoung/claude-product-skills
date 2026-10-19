@@ -1,7 +1,7 @@
 ---
 name: sync
 description: Audits whether changes finished on working and update pages actually made it into the canonical page, applies whatever did not, then archives the working copies. This is the skill that executes the apply-after-release step — audit with zero writes, then apply, then archive, each behind its own preview and go gate. Frame names are identical on both sides so comparing names settles nothing; the call is made on three signals together — text diff, frame height, and component master. Triggers - "/fig:sync", "find what never made it into canonical", "bring the canonical page current", "정본 반영 안 된 것 찾아줘", "운영 페이지 최신화", "교체 안 된 화면 찾아줘".
-allowed-tools: AskUserQuestion, Bash, Read, Write, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
+allowed-tools: AskUserQuestion, Bash, Read, Write, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__select_browser, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find
 ---
 
 # fig:sync — bring canonical current (audit → apply → archive)
@@ -136,19 +136,22 @@ Move working pages whose changes are now in canonical into the archive.
 
 ### Step 6 — name the version
 
-Only after Step 5 passed, and only where `sync.named_version` is set: `sync.named_version` with `{date}` and `{n}` (screens applied) filled in. `use_figma` cannot save a version (`"saveVersionHistoryAsync" is not a supported API`, checked on a live file with an Edit seat, 2026-08-31), so it is saved through the web app — *File → Save to version history* — behind the same preview → go as everything else, or handed to the person to save under exactly that name. `null` saves none — and `null` is the default.
+Only after Step 5 passed, and only where `sync.named_version` is set — `null` saves none, and `null` is the default. Follow `${CLAUDE_PLUGIN_ROOT}/_common/version-pin.md` with `sync.named_version`, `{date}` and `{n}` (screens applied) filled in: saved behind its own preview → go, then read back.
 
 Dev Mode status (*Completed*) is not set and not offered: `use_figma` cannot write it and nothing else here can either (removed in 3.26.0).
 
 ## Reporting
 
 ```
-audited N  →  applied X · not applied Y · needs checking Z
+audited N  →  applied X · not applied Y · needs checking Z · unmatched by name — asked W
 
 [not applied — handled]
 · name (owner)
   before: what canonical looked like
   applied: what changed and how / method (value edit or move) and why
+
+[unmatched by name — asked]
+· name — not `[screen]-[state]`; run /fig:prep to normalise names first
 
 [needs checking]
 · name — which signals were silent, whether a screenshot comparison is needed

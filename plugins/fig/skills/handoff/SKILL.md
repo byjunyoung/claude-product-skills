@@ -91,34 +91,7 @@ Show the candidates as a table — name and warnings still open (`—` where non
 
 Only where `handoff.version.enabled`. With it off, skip to step 4 and the doc line carries the links and a date alone.
 
-**A handover names a moment in the file.** Without one, every later edit silently moves what "matches the design" means, and a ticket whose done conditions lean on that line is being checked against a target that shifted after it was written.
-
-Figma's named versions are that moment — a snapshot of the whole file, so every section going over in one run shares the label and differs only in the node. Nothing is copied, and no frozen duplicate of the file exists to fall out of date.
-
-**`use_figma` cannot save one** — its allowlist rejects the version API (`"saveVersionHistoryAsync" is not a supported API`). **The web app can**, so where browser automation is available this step does not have to be handed to a person:
-
-- In the design tool's web app, signed in on the profile that owns the file: main menu → *File → Save to version history*, then fill the name and description and save
-- Type the name through the clipboard rather than keystrokes where the label is not plain ASCII — synthesized typing mangles multi-byte text, and a mangled label is a pin nobody can match later
-- It is a write to a shared file, so it goes through the same preview → go as any other. What it writes is one entry in the history; the file's contents are untouched, and removing the entry's name undoes it
-- Where no browser is connected, or the account signed in there is the wrong one, hand it back: show the name and ask for it to be saved under exactly that name
-
-Either way:
-
-1. Ask which release this handover belongs to — a value the person has, never one inferred from the file
-2. Settle the name `handoff.version.name` produces, and save it — through the browser, or by asking
-3. Read it back, newest first, and take the first entry matching `handoff.version.match`:
-
-```bash
-curl -s -H "X-Figma-Token: $FIGMA_TOKEN" \
-  "https://api.figma.com/v1/files/{fileKey}/versions?page_size=10"
-```
-
-That entry carries the label, its `created_at` — **the date in `handoff.version.ref` is the version's, not today's** — and its `id`, which is what a deeplink pins with.
-
-- **No token, or an expired one** (`{"status": 401, "err": "Token has expired"}`) → say so, and ask for the version's link to be pasted instead; `version-id` is in its query string. Never carry on unpinned, and never substitute today's date for the version's
-- **Nothing matches** → it was not saved, or was saved under another name. Show what the newest few are actually called and stop, rather than pinning the wrong moment
-
-Every section link from here on carries the pin: `…/?node-id={id}&version-id={version id}`.
+Follow `${CLAUDE_PLUGIN_ROOT}/_common/version-pin.md`: ask which release this handover belongs to, settle the name `handoff.version.name` produces, save it behind its own preview → go, and read it back. Every section link from here on carries `&version-id={version id}`, and the date in `handoff.version.ref` is the version's own.
 
 ### 4. Preview → go
 

@@ -200,9 +200,8 @@ handoff:
   #
   # Figma's own named versions are that moment — a file-level snapshot a deeplink
   # pins with version-id — so nothing is copied and no frozen duplicate exists.
-  # Saving one is done by hand: use_figma's allowlist rejects the version API the
-  # (`saveVersionHistoryAsync` is not a supported API, 2026-08-31). The skill
-  # asks, the person saves, the skill reads it back.
+  # Saving one goes through Figma's web app, behind its own preview and go; the
+  # procedure is plugins/fig/_common/version-pin.md, shared with sync.named_version.
   version:
     enabled: false                            # true where your handovers pin a version
     name:  "{release} handover"               # what the person types into Figma's version history

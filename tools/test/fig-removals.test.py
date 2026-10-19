@@ -92,6 +92,18 @@ draw = read("plugins/fig/skills/draw/SKILL.md")
 check("draw no longer sends before-and-after to the AS-IS section",
       "AS-IS" not in draw and "canonical page and the working page" in draw)
 
+# ---- one version-pin procedure --------------------------------------------------------------------
+check("version-pin.md exists", (REPO / "plugins/fig/_common/version-pin.md").exists())
+check("handoff and sync name version-pin.md",
+      "version-pin.md" in handoff and "version-pin.md" in sync)
+holders = [rel for rel, text in tracked_text_files()
+           if rel.startswith("plugins/fig") and "api.figma.com/v1/files/{fileKey}/versions" in text]
+check("the versions call lives in exactly one file", holders == ["plugins/fig/_common/version-pin.md"], ", ".join(holders))
+sync_tools = sync.split("allowed-tools:", 1)[1].split("\n", 1)[0]
+check("sync lists the browser tools", "mcp__claude-in-chrome__navigate" in sync_tools)
+check("sync report counts unmatched-by-name items",
+      "unmatched" in sync.split("## Reporting", 1)[1].split("## Implementation", 1)[0])
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")
