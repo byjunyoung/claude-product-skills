@@ -14,8 +14,8 @@ SCRIPT = REPO / "plugins" / "pm" / "_common" / "scripts" / "lib" / "markdown-tra
 failures = []
 
 
-def run(cwd, *args):
-    env = dict(os.environ, PYTHONUSERBASE=site.getuserbase())
+def run(cwd, *args, env=None):
+    env = dict(os.environ, PYTHONUSERBASE=site.getuserbase(), **(env or {}))
     return subprocess.run([sys.executable, str(SCRIPT), *args], cwd=cwd, env=env,
                           capture_output=True, text=True)
 
@@ -160,6 +160,33 @@ with tempfile.TemporaryDirectory() as tmp:
     out = parse(run(repo, "moved", "--dir", "t", "--date", D, "--today", D2))
     check("moved on a past date is commits only",
           out.get("paths") == ["t/a.md"] and out.get("method") == "git", str(out))
+    # A non-Latin file name, which slug keeps. git quotes such a path by default (core.quotePath),
+    # so it prints as "t/\354...md" and ends in `.md"`. The developer's own git config is blanked
+    # and the default forced, so a machine that already switched quotePath off cannot hide this.
+    uni = tmp / "unirepo"
+    (uni / "t").mkdir(parents=True)
+    git(uni, "init", "-q")
+    git(uni, "config", "user.email", "t@example.com")
+    git(uni, "config", "user.name", "t")
+    (uni / "t/알림-설정.md").write_text("a\n", encoding="utf-8")
+    git(uni, "add", ".")
+    git(uni, "commit", "-q", "-m", "add", date=D)
+    quoted = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null", "GIT_CONFIG_COUNT": "1",
+              "GIT_CONFIG_KEY_0": "core.quotePath", "GIT_CONFIG_VALUE_0": "true"}
+    out = parse(run(uni, "moved", "--dir", "t", "--date", D, "--today", D2, env=quoted))
+    check("moved keeps a committed non-Latin file name",
+          out.get("paths") == ["t/알림-설정.md"] and out.get("method") == "git", str(out))
+    # No git on PATH: outside git the answer is modification times (trackers/markdown.md), never
+    # a traceback.
+    # The script runs by absolute path; PATH holds python3 and nothing else.
+    nogit = tmp / "nogit-bin"
+    nogit.mkdir()
+    os.symlink(sys.executable, nogit / "python3")
+    r = run(repo, "moved", "--dir", "t", "--date", D, "--today", D2, env={"PATH": str(nogit)})
+    out = parse(r) if r.returncode == 0 else {}
+    check("moved with no git on PATH → mtime",
+          r.returncode == 0 and "Traceback" not in r.stderr and out.get("method") == "mtime"
+          and out.get("paths") == ["t/b.md"], f"rc={r.returncode} {r.stdout}{r.stderr}")
     plain = tmp / "plainrepo"
     (plain / "t").mkdir(parents=True)
     (plain / "t/x.md").write_text("x\n")

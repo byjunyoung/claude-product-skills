@@ -222,7 +222,15 @@ def local_date(ts):
 
 
 def git_out(d, *args):
-    return subprocess.run(["git", "-C", d, *args], capture_output=True, text=True)
+    """git in `d`. Paths print as they are: under git's default core.quotePath a non-ASCII name
+    comes back quoted with octal escapes, ends in `.md"`, and drops out of the `.md` filter —
+    every task with a Hangul or CJK title. No git on the machine reads as "not a work tree", so
+    `moved` falls through to modification times instead of a traceback."""
+    cmd = ["git", "-c", "core.quotePath=false", "-C", d, *args]
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
+    except OSError:
+        return subprocess.CompletedProcess(cmd, 127, "", "")
 
 
 def op_moved(a):

@@ -68,14 +68,32 @@ PLUGIN = plugin_name(HERE)
 DEFAULT_NAME = {"pm": "pm-conventions.yaml"}.get(PLUGIN, "figma-conventions.yaml")
 
 # Keys that must be written beside another. (key, trigger, trigger values that exempt it.)
-# A written trigger whose key is absent used to be completed by the bundled default; once that
-# default changes, the same ref would silently mean something else, so the pair is written
-# together. A key listed here is checked by --authored only while its trigger is written
-# without it — a config that writes neither is not asking anything of it.
+# A written trigger whose key is absent is completed by the bundled default, and that default
+# was chosen for some other case — a ref read against a type that has since changed, a tracker
+# handed the floor's local folder — so the pair is written together. A key listed here is
+# checked by --authored only while its trigger is written without it — a config that writes
+# neither is not asking anything of it.
 AUTHORED_WITH = (
     ("task.record.type", "task.record.ref", frozenset()),
     ("task.link_property", "task.record.type", frozenset({"markdown"})),
+    ("task.record.ref", "task.record.type", frozenset({"markdown", "none"})),
 )
+
+# Why each pair stops, said after `{key} is not set in {name}, while {trigger} is —`. {value} is
+# what the trigger says. A pair with no entry here gets the rule itself rather than a reason
+# that belongs to another pair.
+AUTHORED_WHY = {
+    ("task.record.type", "task.record.ref"):
+        "{key} used to come from the plugin's own defaults, and that default has changed, so the "
+        "value you wrote would now be read some other way",
+    ("task.link_property", "task.record.type"):
+        "the record's tracker has to say which of its properties holds the ticket's link, and the "
+        "plugin's own default names the key a markdown file carries, not one of yours",
+    ("task.record.ref", "task.record.type"):
+        "a record kept in {value} has to say which database or repository it points at, and the "
+        "plugin's own default is a local folder",
+}
+AUTHORED_RULE = "{key} is read together with {trigger}, so the two are written together"
 
 
 def candidates(name):
@@ -314,12 +332,13 @@ def main():
         sys.exit(2)
     borrowed = inherited(owned, name)
     if borrowed:
-        trigger_of = dict(unpaired(user_layers(name)[0]))
+        user = user_layers(name)[0]
+        trigger_of = dict(unpaired(user))
         for k in borrowed:
             if k in trigger_of:
-                print(f"{k} is not set in {name}, while {trigger_of[k]} is — {k} used to come from "
-                      f"the plugin's own defaults, and that default has changed, so the value you "
-                      f"wrote would now be read some other way. Write {k} beside {trigger_of[k]} "
+                t = trigger_of[k]
+                why = AUTHORED_WHY.get((k, t), AUTHORED_RULE).format(key=k, trigger=t, value=lookup(user, t))
+                print(f"{k} is not set in {name}, while {t} is — {why}. Write {k} beside {t} "
                       f"— the schema and what each value governs are in _common/conventions.example.yaml "
                       f"— and run again.", file=sys.stderr)
                 continue

@@ -177,6 +177,41 @@ with tempfile.TemporaryDirectory() as tmp:
     r = run(pair_proj, pair_home, "--authored", "task.link_property")
     check("paired: a markdown type exempts the link property", r.returncode == 0, r.stderr)
 
+    # 8c. The reverse pair: a tracker type written without its ref. The floor's ref is a local
+    #     folder, so a Notion or GitHub record would be handed ./tasks. markdown and none have no
+    #     database to name, so the floor's folder is theirs to take.
+    both = "task.record.type,task.record.ref"
+    pf.write_text("task:\n  record:\n    type: notion\n")
+    r = run(pair_proj, pair_home, "--authored", both)
+    check("paired: a tracker type without its ref → --authored stops", r.returncode == 3, f"rc={r.returncode}")
+    check("paired: a tracker type without its ref → message names both keys",
+          f"task.record.ref is not set in {NAME}, while task.record.type is —" in r.stderr, r.stderr)
+    pf.write_text("task:\n  record:\n    type: markdown\n")
+    r = run(pair_proj, pair_home, "--authored", both)
+    check("paired: markdown without a ref → passes", r.returncode == 0, r.stderr)
+    pf.write_text("task:\n  record:\n    type: none\n")
+    r = run(pair_proj, pair_home, "--authored", both)
+    check("paired: none without a ref → passes", r.returncode == 0, r.stderr)
+    pf.unlink()
+    r = run(pair_proj, pair_home, "--authored", both)
+    check("paired: nothing written → passes with the ref asked for too", r.returncode == 0, r.stderr)
+
+    # 8d. Each pair says its own reason after the shared first clause. "That default has changed"
+    #     is true of a ref whose type the floor used to supply, and of nothing else.
+    changed = "that default has changed"
+    pf.write_text("task:\n  record:\n    ref: ./x\n")
+    r = run(pair_proj, pair_home, "--authored", "task.record.type")
+    check("reason: ref without type → the default it leaned on changed", changed in r.stderr, r.stderr)
+    pf.write_text("task:\n  record: {type: notion, ref: 'collection://x'}\n")
+    r = run(pair_proj, pair_home, "--authored", "task.link_property")
+    check("reason: link property → which property holds the ticket's link",
+          "holds the ticket's link" in r.stderr and changed not in r.stderr, r.stderr)
+    pf.write_text("task:\n  record:\n    type: notion\n")
+    r = run(pair_proj, pair_home, "--authored", "task.record.ref")
+    check("reason: ref → which database or repository, not a local folder",
+          "database or repository" in r.stderr and "local folder" in r.stderr and changed not in r.stderr, r.stderr)
+    pf.unlink()
+
     # 9. --origin describes the strongest layer without asking it to declare anything
     r = run(proj, home, "--origin")
     check("--origin → names the layer in play", str(proj / NAME) in r.stdout, r.stdout)
