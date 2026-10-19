@@ -60,7 +60,7 @@ It prints `{"action", "dir", "heading", "script", "adapter", "note"}`, and `acti
 
 | action | What this skill does |
 |---|---|
-| `write` | Write the line into a markdown task file (below). `{script}` is pm's `markdown-tracker.py`, `{dir}` the task folder, `{heading}` the heading |
+| `write` | Write the line into a markdown task file (below). `{script}` is pm's `markdown-tracker.py`, `{dir}` the task folder, `{heading}` the heading. Show `note` beside the written line where there is one |
 | `print` | Put the line in the response, with `note` beside it where there is one. Nothing is written |
 | `notion`, `github` | Unchanged — the method `/fig:diff` uses for that tracker |
 
@@ -158,7 +158,7 @@ Re-read the task doc where the line went and confirm it landed under the heading
 · 02. Account - Signup   warning — section number 02 disagrees with its place on canvas
 
 [version]    {label} · {date} · version-id {id}   (or "not pinned — handoff.version is off")
-[task doc]   {the file, the page, "printed — {note}", or "no tracker configured"}
+[task doc]   {the file or the page (with `note` after it where there is one), "printed — {note}", or "no tracker configured"}
 ```
 
 ## Constraints

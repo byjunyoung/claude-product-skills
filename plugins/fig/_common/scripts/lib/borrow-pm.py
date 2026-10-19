@@ -438,7 +438,8 @@ def decide_task(cfg, pm, cwd):
     mine = text(tt.get("ui_section_heading"))
     out.update(action="write", dir=folder, script=script, adapter=adapter, heading=theirs)
     if mine and mine != theirs:
-        out["note"] = (f"The line goes under pm's heading \"{theirs}\" (task.design_heading), not under "
+        out["note"] = (f"The line goes under pm's heading \"{theirs}\" (task.design_heading, or \"{HEADING}\" "
+                       f"where pm sets none), not under "
                        f"task_tracker.ui_section_heading \"{mine}\" — fig's heading applies to Notion "
                        f"and GitHub only.")
     return out
