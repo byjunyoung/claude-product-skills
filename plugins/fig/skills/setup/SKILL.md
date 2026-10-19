@@ -1,7 +1,7 @@
 ---
 name: setup
 description: Reads an unfamiliar Figma file and drafts its figma-conventions.yaml. Naming, spacing, section and arrow style are observed from actual nodes; a thin or split sample stays null. What only a person knows — which pages count, the screen width, where the PRD and tasks live — is asked; the rest is left to the defaults. Ends with /fig:lint, judged by its false positives. Triggers - "/fig:setup", "work out this file's conventions", "draft the config", "이 파일 관례 뽑아줘", "설정 초안 만들어줘", "이 파일에 맞게 세팅해줘".
-allowed-tools: AskUserQuestion, Bash, Read, Write, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
+allowed-tools: AskUserQuestion, Bash, Read, Write, Edit, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
 ---
 
 # fig:setup — infer a file's conventions, draft the config

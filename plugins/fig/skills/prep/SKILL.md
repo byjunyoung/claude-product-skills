@@ -1,7 +1,7 @@
 ---
 name: prep
 description: Prepares a Figma design page before the real work — normalizing frame names to `[screen]-[state]`, creating and placing feature-level sections, and reading screen content to find missing cases (state variants, interaction results) and stub them as placeholder frames. Includes the absorb workflow that works around reparenting limits with local font files. It handles renumbering and handoff URLs; it does not verify or report violations — both status checks and completion checks belong to /fig:lint. Triggers - "/fig:prep", "tidy this page", "group these into sections", "stub the missing states", "프렙 해줘", "가이드대로 정리해줘", "빠진 케이스 채워줘".
-allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
+allowed-tools: AskUserQuestion, Bash, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
 ---
 
 # fig:prep — prepare the page (tidy, section, stub missing cases)

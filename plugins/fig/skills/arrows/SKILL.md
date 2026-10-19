@@ -1,7 +1,7 @@
 ---
 name: arrows
 description: Generates and re-syncs flow arrows and their labels on a Figma design page. Reproduces in code what Autoflow-style plugins do — edge-midpoint anchors, right-angle elbows, branch trunks, element anchors, line styles that carry meaning. The flow lives in the node name (`source --> target`), so the whole page re-syncs with one command after frames move. Triggers - "/fig:arrows", "draw the flow arrows", "connect these screens", "re-sync the arrows", "화살표 그려줘", "흐름 화살표 추가", "화살표 sync", "플로우 연결해줘".
-allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__whoami
+allowed-tools: AskUserQuestion, Bash, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__whoami
 ---
 
 # fig:arrows — draw and sync screen flow arrows

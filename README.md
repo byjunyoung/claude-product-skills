@@ -143,7 +143,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | Skill | Also needs |
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — they drive a real browser |
-| `/fig:prep` `/fig:draw` `/fig:lint` `/fig:sync` `/fig:handoff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
+| `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — only where `task_tracker.type` / `task.mirror.type` is `github`. Two logins are involved: Claude's connection, and the `gh` command the tracker is read through — `/pm:task` uses `gh` alone. The check covers both, and names the account `gh` is on |
 | `/fig:qa` `/pm:task draft` | **A chat tool** — only where the request source is a thread. For `pm`, `sources.chat_type` names it; `/fig:qa` takes the tool from the link. Slack ships |
 | `/pm:log` | **A calendar and a chat tool** — both optional, named by `sources.calendar_type` and `sources.chat_type`; Google Calendar and Slack ship. Named as `none` they are skipped and the log says so. A scheduler on your own machine, if you want it unattended |

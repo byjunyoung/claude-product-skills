@@ -169,6 +169,35 @@ check("deck's structural step reads margins from the spec", "1792" not in deck a
 pit = read(deck_dir + "pitfalls.md") if (REPO / (deck_dir + "pitfalls.md")).exists() else ""
 check("pitfalls read from the template", bool(pit) and not any(x in pit for x in ("1920", "1792", "128 /")))
 
+# ---- allowed-tools match the calls ---------------------------------------------------------------
+import yaml
+
+
+def fm_of(skill):
+    return yaml.safe_load(read(f"plugins/fig/skills/{skill}/SKILL.md").split("---")[1])
+
+
+def tools_of(skill):
+    return [x.strip() for x in fm_of(skill)["allowed-tools"].split(",")]
+
+
+FIG = "mcp__plugin_figma_figma__"
+want = {
+    "tokens": ["Bash", "Read"], "read": [FIG + "use_figma"],
+    "arrows": ["Skill"], "sync": ["Skill"], "setup": ["Edit", "Skill"], "prep": ["Skill"],
+}
+gone = {
+    "lint": ["mcp__claude_ai_Notion__notion-fetch"], "sync": ["mcp__claude_ai_Notion__notion-fetch"],
+    "sketch": [FIG + "get_design_context"], "draw": [FIG + "get_design_context"],
+}
+miss = [f"{s}:{x}" for s, xs in want.items() for x in xs if x not in tools_of(s)]
+extra = [f"{s}:{x}" for s, xs in gone.items() for x in xs if x in tools_of(s)]
+check("fig allowed-tools match the calls", not miss and not extra, f"missing {miss}; still listed {extra}")
+for rel in ("README.md", "README.ko.md"):
+    row = next((l for l in read(rel).splitlines() if "**Notion**" in l and "/fig:prep" in l), "")
+    check(f"{rel} Notion row no longer names lint and sync",
+          bool(row) and "/fig:lint" not in row and "/fig:sync" not in row, row)
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

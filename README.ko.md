@@ -143,7 +143,7 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 | 스킬 | 추가로 필요한 것 |
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — 실제 브라우저를 띄웁니다 |
-| `/fig:prep` `/fig:draw` `/fig:lint` `/fig:sync` `/fig:handoff` `/fig:qa` | **Notion** — 설정이 Notion 페이지를 가리킬 때만 |
+| `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — 설정이 Notion 페이지를 가리킬 때만 |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — `task_tracker.type` / `task.mirror.type`이 `github`일 때만. 로그인이 둘입니다 — Claude의 연결 하나, 트래커를 읽는 `gh` 명령 하나. `/pm:task`는 `gh`만 씁니다. 점검이 둘 다 보고 `gh`가 어느 계정인지 알려줍니다 |
 | `/fig:qa` `/pm:task draft` | **채팅 도구** — 요청 출처가 스레드일 때만. `pm`은 `sources.chat_type`이 지목하고, `/fig:qa`는 링크에서 도구를 압니다. Slack이 딸려 옵니다 |
 | `/pm:log` | **캘린더와 채팅 도구** — 둘 다 선택. `sources.calendar_type`·`sources.chat_type`이 지목하고, Google Calendar·Slack이 딸려 옵니다. `none`이면 건너뛰고 일지가 그렇게 말합니다. 무인으로 돌리려면 내 컴퓨터의 스케줄러 |
