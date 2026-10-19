@@ -213,11 +213,14 @@ handoff:
     ref:   "{label} · {date}"                 # how it is written into the task doc and the ticket
 
 # --- Task tracker --------------------------------------------------------------
-# Where the task doc /fig:diff writes into lives. type decides which of four things happens:
-#   null      unset: borrow pm's task record, but only where pm is installed and keeps its
-#             records as markdown. Anywhere else this behaves like none
-#   markdown  write through pm into its markdown task folder
-#   none      write nothing; /fig:diff stops at the Figma annotations and prints the table
+# Where the task doc lives — /fig:handoff writes its one line there, and /fig:diff its
+# comparison table. type decides which of these happens:
+#   null      unset: /fig:handoff borrows pm's task record, but only where pm is installed and
+#             keeps its records as markdown. Anywhere else, and for /fig:diff, this behaves like none
+#   markdown  /fig:handoff writes through pm into its markdown task folder (ref, where written,
+#             names the folder). /fig:diff treats it as none
+#   none      write nothing; /fig:handoff prints its line, /fig:diff stops at the Figma
+#             annotations and prints the table
 #   notion | github   the tracker named, with ref pointing at it (database id, repo name)
 # A ref written without a type is stopped by --authored: it no longer says which kind of
 # tracker it points at.
