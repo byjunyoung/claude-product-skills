@@ -182,7 +182,7 @@ audited N  →  applied X · not applied Y · needs checking Z · unmatched by n
 · working page → archive location, whether deleted
 
 [handoff]
-· version saved: {title}   (or: off — sync.named_version)
+· version saved: {title}   (or: off — sync.named_version · or: saved as {title}, not confirmed — no Figma token)
 ```
 
 If nothing was un-applied, report just that, briefly, with the not-detected line.
