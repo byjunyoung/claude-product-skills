@@ -30,7 +30,7 @@ Neither needs the other. Most of what follows is about `fig`; `pm` has [its own 
 | **skill / slash command** | One command, typed as `/fig:lint`. A skill is the instructions Claude follows when you type it |
 | **settings file** | One text file holding your team's rules — how screens are named, how far apart they sit. `/fig:setup` writes your first one |
 | **`null`** | A setting deliberately left empty. The check that needed it is skipped rather than guessed at |
-| **token** | A key you generate in a tool's own settings so a skill can talk to it directly. Figma and GitHub each have one |
+| **token** | Two things here. An *access token* is a key you generate in a tool's own settings so a skill can talk to it directly — Figma and GitHub each have one. A *colour token* is a named colour a design system shares (a *variable* in Figma): `/fig:lint` checks hand-typed colours against them and `/fig:tokens` binds colours to them |
 | **connection** | A tool linked to Claude — Notion, Slack, GitHub. A skill can only reach what is connected |
 | **tracker** | Wherever engineering keeps its tickets — GitHub, Jira, Linear. `pm` files into it |
 | **canonical page** | The Figma page that is the current truth, as opposed to the working copies beside it |
@@ -275,7 +275,7 @@ That's setup done. [**fig**](#fig--the-design-file) covers the loop from here.
 /fig:sketch   Agree the direction in text first — when a screen looks or behaves differently
 /fig:draw     Fill each stub — following your file's own pattern, cloned from canonical
 /fig:arrows   Wire transition arrows and state groups
-/fig:lint     Audit structure, flow, and components in one pass
+/fig:lint     Audit structure, flow, components, and colour tokens in one pass — the whole page, or one section you name
 /fig:handoff  Gate the passing sections, hand over the links, leave one line in the task
 ```
 
@@ -304,11 +304,11 @@ When the structure matches, it edits values rather than replacing the whole scre
 ### Any time — a file health check
 
 ```
-/fig:lint     Structure, flow, and component audit (zero writes)
-/fig:tokens   Check that colors are bound to design system tokens
+/fig:lint     Structure, flow, component and colour-token audit (zero writes)
+/fig:tokens   Bind the colours lint flags to design system tokens (after a go)
 ```
 
-Neither touches the file. Run one when you inherit a file someone else has been in, or when you reopen something old, and you'll know where it stands.
+`lint` never touches the file. Run it when you inherit a file someone else has been in, or when you reopen something old, and you'll know where it stands. `tokens` is the repair for the colours it flags: it writes, so it first shows which token each colour maps to and what that changes, and binds only after your go.
 
 ### Two side branches
 
@@ -342,7 +342,7 @@ flowchart TD
     sketch["fig:sketch<br/>text wireframe of each state · writes nothing"]
     draw["fig:draw<br/>pattern → clone canonical → fill each stub"]
     arrows["fig:arrows<br/>flow arrows · state groups"]
-    tokens["fig:tokens<br/>color token audit"]
+    tokens["fig:tokens<br/>bind colours to tokens"]
     lint{"fig:lint<br/>audit gate · zero writes"}
     proto["fig:proto<br/>working prototype"]
     handoff["Handoff"]
@@ -350,8 +350,9 @@ flowchart TD
     sync["fig:sync<br/>canonical page after release"]
     qa["fig:qa<br/>audit what shipped"]
 
-    setup --> prep --> sketch --> draw --> arrows --> tokens --> lint
+    setup --> prep --> sketch --> draw --> arrows --> lint
     lint -- violations --> prep
+    lint -- unbound colours --> tokens --> lint
     lint -- pass --> proto
     lint -- pass --> handoff
     handoff --> code
@@ -372,7 +373,7 @@ flowchart TD
 | `/fig:arrows` | Create and re-sync flow arrows |
 | `/fig:lint` | Read-only audit gate (zero writes) |
 | `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task — `pm`'s markdown task file, a Notion page or a GitHub issue — or printed where there is none |
-| `/fig:tokens` | Audit design system token binding for colors |
+| `/fig:tokens` | Bind the colours `/fig:lint` flags to design system tokens — the mapping shown first, binding after a go |
 | `/fig:sync` | Full canonical-page audit → apply → archive |
 | `/fig:proto` | Working single-file HTML prototype |
 | `/fig:code` | Apply the design to a frontend repo |
@@ -388,8 +389,9 @@ flowchart TD
 | Area | What it catches |
 |---|---|
 | Structure | Screens outside any section · screens past section bounds · overlapping screens · naming violations · section number vs. placement mismatch · a screen whose colours resolve in a light/dark mode nobody set · a control cut off by its own container or hanging off the screen |
-| Flow | Arrows cutting through unrelated screens · arrowheads pointing at empty space · screens on no flow at all · labels covering an arrowhead or another line |
+| Flow | Arrows cutting through unrelated screens · arrowheads pointing at empty space · screens on no flow at all · labels covering an arrowhead or another line · a dashed state link that leans sideways instead of running straight down |
 | Components | Variants stacked on top of one another inside a set · a component buried under the one placed beside it · settings that tagged along in a duplicate, leaving an empty slot rendered |
+| Colour tokens | A colour typed in by hand where the design system already has a token for it |
 
 <img src=".github/lint-catches.png" alt="A tidy-looking section with three numbered violations marked: an arrow crossing an unrelated screen, an arrowhead in empty space, and a screen on no flow" width="100%">
 
@@ -397,11 +399,15 @@ Arrowhead direction isn't catchable by distance alone. An arrow can sit 12px awa
 
 Sections nested inside other sections are read too — frames and arrows in a sub-section go through the same checks as the rest. Only the section-name checks (numbering and pattern) look at top-level sections alone.
 
+Name a section (its link or its name) and the audit reads that section and whatever is nested in it, nothing else; a link to a screen inside a section reads the section holding it. A section that overlaps its neighbour is still reported, since the overlap is about both; checks that only make sense across the whole page — which screens belong to a section, and in what order — are skipped, and the report says so. A name that matches no section, or several, is asked about rather than guessed; a link to a section that is not on the page is a blocking finding, and a section listed in `pages.exclude_sections` is left out with a note.
+
 The component audit works without any written convention. It derives the usage distribution from how other screens in the same file use that component, and compares against it.
 
 The two overlap checks read coordinates alone, so they run on a file with no config at all — and they run on a component page, which the frame-overlap check above never looked at. A set with no auto-layout drops each new variant on the last one's coordinates: the top variant draws fine and the rest are simply not visible, which is why review keeps letting it through.
 
 The mode check catches a duplicated screen that looked right only because of where it used to sit. A colour tied to a token with several modes (light and dark, say) renders in whatever mode the screen, any section it sits in, or its page names, and in the token's default where none does. Move a screen off a page that set light onto one that sets nothing, and it comes back dark, with nothing on the node looking wrong. So any screen using such a token has to name its mode somewhere above it, even when the default is what it wants.
+
+The colour-token check looks for a colour typed in by hand where a design-system token — a named colour the system shares, a *variable* in Figma — would have done. A colour applied through a style counts as on the system, the same as one bound to a token. One that matches a token exactly, opacity included — a token meant for that property, one a designer could pick there — holds its section back from handoff: engineering copies the hex, and the screen stops following the theme. One that is only close to a token, or near none, goes along as a warning, because snapping it changes the colour and that is a designer's call. So does an exact match whose only token is meant for something else (a text-only colour on a rectangle's fill): the check offers the nearest token meant for that place if one is close, and otherwise says no token can be used there — then the fix is the token's settings, not the screen. The tokens it knows are the ones this file already uses plus its own; a library token nobody in the file has used yet cannot be seen from a script. A file with no colour tokens at all skips the check and says so, rather than flagging every fill. Something loose on the canvas, outside every section, only ever gets a warning, since handoff works section by section. Colours inside a component instance belong to the component and are checked on the page where it is made: the report counts them and points there. Arrows, labels, placeholders and sections are left out. Binding them is `/fig:tokens`.
 
 ---
 
@@ -752,7 +758,7 @@ Drawing is the official plugins' job. What happens around the drawing is this bu
 
 ## Design principles
 
-**One place decides.** The skills that write to files (`prep`, `arrows`, `sync`) contain no audit code. `/fig:lint` is the only thing that judges right from wrong; everything else just fixes what it flagged. Spread the checks across skills and you get a gap — "I skipped that skill this time, so the check never ran."
+**One place decides.** The skills that write to files (`prep`, `arrows`, `sync`, `tokens`) contain no audit code. `/fig:lint` is the only thing that judges right from wrong; everything else just fixes what it flagged. Spread the checks across skills and you get a gap — "I skipped that skill this time, so the check never ran."
 
 **Conventions are observed, not asked.** Every team names screens differently, spaces them differently, groups sections differently. `/fig:setup` doesn't ask — it reads the file and works it out. People get their own team's conventions wrong when answering from memory.
 
@@ -774,7 +780,7 @@ plugins/
     README.md
     skills/
       setup   read  prep   arrows  lint
-      handoff sync  tokens
+      handoff sync  tokens draw    sketch
       proto   code  qa     deck           one SKILL.md each (plus setup.md, pitfalls.md)
     _common/
       conventions.example.yaml           config schema + bundled defaults
@@ -783,9 +789,15 @@ plugins/
         audit-struct.js                  membership, bounds, overlap, naming, ordering
         audit-flow.js                    arrow geometry, entry direction, pass-through, labels, coverage
         audit-component.js               component default residue
+        audit-tokens.js                  colours left off the design system's tokens
         arrow-build.js                   arrow construction helper
         prep-ops.js                      page cleanup helper
         probe-page.js                    convention observation
+        sync-compare.js                  /fig:sync's text, height and component comparison
+        sync-ops.js                      /fig:sync's keyword search and in-place value edits
+        text-walk.js                     reading every text layer, for /fig:proto
+        image-fills.js                   finding image fills, for /fig:proto
+        token-bind.js                    binding colours to tokens, for /fig:tokens
         lib/                             config resolution, preflight, draft generation, syntax check
   pm/
     .claude-plugin/plugin.json

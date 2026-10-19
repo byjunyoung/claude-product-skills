@@ -43,6 +43,8 @@ FREE_KEY_MAPS = (
     "task.hierarchy.milestone_format.",
 )
 
+# Blocks pasted into more than one script, each between `// <name>` and `// </name>` markers.
+MARKED_BLOCKS = ["sections-deep", "scaffolding", "scope-of", "paint-scope", "token-fit"]
 SHARED = ["_common/scripts/lib/resolve-config.py", "_common/scripts/lib/preflight.py",
           "hooks/shared-config.py", "hooks/hooks.json"]
 
@@ -495,18 +497,30 @@ def main():
             groups = " vs ".join("+".join(v) for v in seen.values())
             fails.append(f"[shared] copies of {rel} have diverged: {groups}")
 
-    # The audit scripts are sent to the Figma sandbox one file at a time and cannot import a helper,
-    # so the section walker is pasted into each between markers. Compare the marked blocks.
+    # Scripts are sent to the Figma sandbox one file at a time and cannot import a helper, so a shared
+    # block is pasted into each script that needs it, between `// <name>` and `// </name>` markers.
+    # Every script under _common/scripts that carries a marker is compared with the first such file
+    # in sorted path order. A marker carried by one file only has nothing to differ from.
     for root in roots.values():
-        blocks = {}
-        for f in sorted((root / "_common" / "scripts").glob("audit-*.js")):
-            m = re.search(r"// <sections-deep>\n.*?// </sections-deep>", f.read_text(encoding="utf-8"), re.S)
-            blocks[f.name] = m.group(0) if m else None   # a deleted marker must not pass as "no copy"
-        if any(blocks.values()):
-            ref = next(b for b in blocks.values() if b)
+        scripts = sorted((root / "_common" / "scripts").glob("*.js"))
+        for marker in MARKED_BLOCKS:
+            pat = re.compile(rf"// <{re.escape(marker)}>\n.*?// </{re.escape(marker)}>", re.S)
+            blocks = {}
+            for f in scripts:
+                m = pat.search(f.read_text(encoding="utf-8"))
+                if m:
+                    blocks[f.name] = m.group(0)
+            if marker == "sections-deep" and blocks:
+                # the audit scripts all walk sections; a deleted marker must not pass as "no copy"
+                for f in scripts:
+                    if f.name.startswith("audit-") and f.name not in blocks:
+                        fails.append(f"[fig] {marker} marker missing from {f.name}")
+            if len(blocks) < 2:
+                continue
+            ref_name = next(iter(blocks))
             for name, b in blocks.items():
-                if b != ref:
-                    fails.append(f"[fig] sections-deep copies differ: {name}")
+                if b != blocks[ref_name]:
+                    fails.append(f"[fig] {marker} copy in {name} differs from {ref_name}")
 
     print("=" * 60)
     for x in warns:

@@ -193,115 +193,18 @@ A declined frame is counted on the first line in the bucket the audit gave it (n
 
 If nothing was un-applied, report just that, briefly, with the not-detected line.
 
-## Implementation snippets
+## Scripts
 
-**Name-matched text comparison (one whole archive page)**
+Both live under `${CLAUDE_PLUGIN_ROOT}/_common/scripts` and are handed to `use_figma` the way the other skills hand theirs: the single `const CFG = {...};` line from `python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --js <fileKey>`, any input lines named below, then the whole file.
 
-```js
-const N = CFG.naming || {}, P = CFG.pages || {};
-const NAME_RE = N.frame_pattern ? new RegExp(N.frame_pattern) : null;   // null: match by exact name, never "unmatched"
-const EXCLUDE = P.exclude_sections && P.exclude_sections.length ? new RegExp(P.exclude_sections.join('|')) : null;
-const LATER = 'may be later work — confirm';
-// Every string is compared whatever its length; sync.text_diff_max_len only shortens how the report shows it
-const texts = n => [...new Set(n.findAll(x => x.type === 'TEXT').map(t => t.characters.trim()).filter(Boolean))];
-async function masters(n) {   // signal 3: every instance's component master, by id, with its name for the report
-  const seen = new Map();
-  for (const i of n.findAll(x => x.type === 'INSTANCE')) { const m = await i.getMainComponentAsync(); if (m) seen.set(m.id, `${m.name} (${m.id})`); }
-  return seen;
-}
-function frames(n, acc) {   // dig through the section hierarchy, collect screen frames only; excluded sections are skipped on both pages
-  for (const c of n.children || []) {
-    if (c.type === 'FRAME') acc.push(c);
-    else if (c.type === 'SECTION' && !(EXCLUDE && EXCLUDE.test(c.name))) frames(c, acc);
-  }
-  return acc;
-}
-const canonPage = await figma.getNodeByIdAsync(CANON_PAGE_ID);   // the canonical page, from the confirmed axes
-await figma.setCurrentPageAsync(canonPage);
-const canon = {};   // frame name -> every canonical frame carrying it (a repeated name is kept, not overwritten)
-for (const f of frames(canonPage, []))
-  (canon[f.name] = canon[f.name] || []).push({ id: f.id, node: f, set: new Set(texts(f)), height: Math.round(f.height) });
-const page = await figma.getNodeByIdAsync(PAGE_ID);   // the working or archive page being judged
-await figma.setCurrentPageAsync(page);
-const out = [];
-for (const f of frames(page, [])) {
-  if (NAME_RE && !NAME_RE.test(f.name)) { out.push({ frame: f.name, mode: 'unmatched', note: 'unmatched by name — asked (fails naming.frame_pattern; run /fig:prep to normalise names first)' }); continue; }
-  const W = new Set(texts(f)), C = canon[f.name];
-  if (!C) { out.push({ frame: f.name, mode: 'new', bucket: 'not applied', note: 'new — not on the canonical page', all: [...W].slice(0, 70) }); continue; }
-  if (C.length > 1) { out.push({ frame: f.name, mode: 'ambiguous', bucket: 'needs checking', canonicalIds: C.map(c => c.id) }); continue; }
-  const c = C[0];
-  const onlyWorking = [...W].filter(x => !c.set.has(x));     // must reach canonical
-  const onlyCanonical = [...c.set].filter(x => !W.has(x));   // may be later work on canonical: never removed without a confirm
-  const height = { working: Math.round(f.height), canonical: c.height };
-  let bucket, why, sameMasters = null, differ = null;   // masters are read only where they decide: identical text, same height
-  if (onlyWorking.length) [bucket, why] = ['not applied', 'working-only text missing from canonical'];
-  else if (onlyCanonical.length) [bucket, why] = ['needs checking', 'only canonical-only text differs — may be later work'];
-  else if (height.working !== height.canonical) [bucket, why] = ['needs checking', 'identical text, height differs (signal 2)'];
-  else {
-    const mw = await masters(f), mc = await masters(c.node);
-    differ = { working: [...mw].filter(([id]) => !mc.has(id)).map(([, n]) => n), canonical: [...mc].filter(([id]) => !mw.has(id)).map(([, n]) => n) };
-    sameMasters = !differ.working.length && !differ.canonical.length;
-    [bucket, why] = sameMasters ? ['applied', 'text, height and component masters all agree']
-                                : ['needs checking', 'identical text, component master differs (signal 3)'];
-  }
-  out.push({ frame: f.name, mode: onlyWorking.length || onlyCanonical.length ? 'differs' : 'identical', bucket, why,
-    onlyWorking, onlyCanonical, ...(onlyCanonical.length ? { confirm: LATER } : {}), height, sameMasters,
-    ...(sameMasters === false ? { masters: differ } : {}) });   // both sides' masters, named, where they differ
-}
-return out;
-```
+**Name-matched text comparison (one whole archive page)** — `sync-compare.js`. Prepend `const PAGE_ID = "<the working or archive page being judged>";` and `const CANON_PAGE_ID = "<the canonical page, from the confirmed axes>";`. It returns one entry per working frame with its bucket, `onlyWorking`, `onlyCanonical`, the heights, `sameMasters` and, where they differ, `masters`. Read-only. Excluded sections are skipped on both pages, a frame that fails `naming.frame_pattern` comes back as `unmatched`, and a repeated canonical name comes back as `ambiguous` rather than being overwritten.
 
-**Finding the keywords in canonical frames**
+**Apply-step helpers** — `sync-ops.js`, a preamble in the way `prep-ops.js` is: concatenate the config line, the whole file and your own calls. It only declares functions:
 
-```js
-const KW = [/* the strings from the comparison above */];
-function tf(n, acc) {   // dig through the section hierarchy, collect screen frames only
-  for (const c of n.children || []) {
-    if (c.type === 'SECTION') tf(c, acc);
-    else if (['FRAME','COMPONENT','INSTANCE'].includes(c.type) && !c.name.startsWith('[label]')) acc.push(c);
-  }
-  return acc;
-}
-const res = {};
-for (const kw of KW) res[kw] = [];
-for (const f of tf(figma.currentPage, [])) {
-  const txt = f.findAll(x => x.type === 'TEXT').map(t => t.characters).join('');
-  for (const kw of KW) if (txt.includes(kw)) res[kw].push(f.name);
-}
-return res;   // an empty array means that keyword is absent from canonical
-```
-
-**Structure comparison (can this be a value edit?)**
-
-```js
-// Run on each page separately and compare the results (one setCurrentPageAsync per script)
-const f = await figma.getNodeByIdAsync(FRAME_ID);
-return f.findAll(x => x.type === 'TEXT').map(t => `${t.parent.name}|${t.characters.replace(/\n/g,' ')}`);
-// Same length, same order, same parent names on both sides → only values differ → value edit is safe
-```
-
-**Value edit (guard plus font loading)**
-
-```js
-const edits = [/* [textNode, newValue] pairs */];
-if (edits.length !== EXPECTED) throw new Error(`aborted: expected ${EXPECTED}, got ${edits.length}`);
-const fonts = new Set();
-for (const [t] of edits) for (const s of t.getStyledTextSegments(['fontName'])) fonts.add(JSON.stringify(s.fontName));
-for (const fs of fonts) await figma.loadFontAsync(JSON.parse(fs));
-for (const [t, v] of edits) t.characters = v;
-return { mutatedNodeIds: edits.map(([t]) => t.id) };
-```
-
-**Four-edge intersection check before stretching a section**
-
-```js
-const t = target.absoluteBoundingBox;
-const T = { x: t.x, y: t.y, r: t.x + t.width, b: t.y + t.height };   // computed with the post-stretch values
-return figma.currentPage.children.filter(c => c.type === 'SECTION' && c.id !== target.id)
-  .map(s => { const b = s.absoluteBoundingBox;
-    return { name: s.name, hit: b.x < T.r && b.x + b.width > T.x && b.y < T.b && b.y + b.height > T.y }; })
-  .filter(s => s.hit);   // must be empty to be safe
-```
+- `findKeywords(root, words)` — which canonical frames hold each keyword (the strings from the comparison). `root` is the canonical page: prepend the config line and `sync-ops.js`, then `await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("<CANON_PAGE_ID>")); return findKeywords(figma.currentPage, ["…", "…"]);`. An empty array means that keyword is absent from canonical.
+- `structureOf(frame)` — can this be a value edit? One `[parentName, text]` pair per text, in order. Each page needs its own script (one page switch per script): config line, `sync-ops.js`, then `await figma.setCurrentPageAsync(await figma.getNodeByIdAsync("<that side's page id>")); return structureOf(await figma.getNodeByIdAsync("<FRAME_ID>"));`. Compare the two returned lists: equal length, same order and same parent names on both sides mean only the values differ, so a value edit is safe. `sameStructure(a, b)` makes that comparison for two frames on the same page and returns true or false.
+- `editValue(textNode, value)` — loads every font the text uses, then writes the value. `editValues(edits, expected)` takes `[textNode, newValue]` pairs and aborts before touching anything when their count is not the one the audit settled on.
+- `fourEdgeClear(section, w, h)` — the post-stretch box against every other section beside it (its parent's sections, so a nested section is checked against its neighbours, not against the section holding it) on all four edges. `clear` must be true to be safe; `hits` names the sections in the way.
 
 ## Traps
 

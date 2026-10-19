@@ -168,7 +168,7 @@ Infer the transitions from screen content and present them as a table:
 
 ### 4. Verify
 
-Do not finish on an eyeballed screenshot — small misalignments are invisible at zoomed-out scale. Right after creating or syncing, **call `/fig:lint` and get a `FLOW PASS`.** What is checked and at what tolerance all lives there: geometry, entry direction, pass-through, orphans, labels. The same check is not kept in two places.
+Do not finish on an eyeballed screenshot — small misalignments are invisible at zoomed-out scale. Right after creating or syncing, **call `/fig:lint` and get a `PASS`.** What is checked and at what tolerance all lives there: geometry, entry direction, pass-through, orphans, labels. The same check is not kept in two places.
 
 One thing this skill knows on its own — **element-anchored arrows are exempt from the edge-midpoint check.** They deliberately leave the midpoint to match the trigger element, so it is not a violation. When lint reports a midpoint deviation, first check whether that arrow is element-anchored.
 
@@ -260,11 +260,11 @@ const trigger = sourceFrame.findAll(n =>
 // If it isn't found, don't guess — fall back to the edge midpoint and report it.
 ```
 
-The numeric audit is not here — `audit-flow` under `/fig:lint` is the single source. Calling it right after creating or syncing and getting a `FLOW PASS` is the completion condition.
+The numeric audit is not here — `audit-flow` under `/fig:lint` is the single source. Calling it right after creating or syncing and getting a `PASS` is the completion condition.
 
 ## Constraints
 
-- **The mandatory last action before completion — call `/fig:lint` (via the Skill tool).** Once arrows are created or synced, **always** call it and get `STRUCT PASS` and `FLOW PASS` (frame membership and bounds come along with the flow). This skill has no audit code — every verdict comes from there. Fix what it reports and call again; **never report completion without a PASS**
+- **The mandatory last action before completion — call `/fig:lint` (via the Skill tool).** Once arrows are created or synced, **always** call it and get a `PASS` from both the structure and the flow audit (frame membership and bounds come along with the flow). This skill has no audit code — every verdict comes from there. Fix what it reports and call again; **never report completion without a PASS**
 - **Preview → go before writing** (the flow list table). For sync, report how many will change first
 - Never call ConnectorNode or createConnector in a design file (FigJam only; it errors)
 - Newly created vectors, text, and pills use only the configured label font, so the local-font constraint does not apply. **Put a node in the right section at creation time** rather than reparenting an existing arrow

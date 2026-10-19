@@ -1,9 +1,8 @@
-/* Runs /fig:sync's name-matched comparison snippet, as written in its SKILL.md, against fake pages.
+/* Runs /fig:sync's name-matched comparison script (_common/scripts/sync-compare.js) against fake pages.
  *
- *     node --test tools/test/sync-snippet.test.js
+ *     node --test tools/test/sync-compare.test.js
  *
- * The snippet is prose a model copies into use_figma, so it is lifted out of the document rather than
- * kept as a second copy here. It reads `CFG`, `figma`, `CANON_PAGE_ID` and `PAGE_ID` and returns one
+ * The script is pasted into use_figma after the config line and the two page ids. It reads `CFG`, `figma`, `CANON_PAGE_ID` and `PAGE_ID` and returns one
  * entry per working frame; these cases hold its buckets to the rules the document states.
  */
 const { test } = require("node:test");
@@ -11,12 +10,16 @@ const assert = require("node:assert");
 const { readFileSync } = require("node:fs");
 const { join } = require("node:path");
 
-const DOC = readFileSync(
-  join(__dirname, "..", "..", "plugins", "fig", "skills", "sync", "SKILL.md"),
-  "utf8"
-);
-const after = DOC.split("**Name-matched text comparison", 2)[1] || "";
-const SRC = (after.match(/```js\n([\s\S]*?)```/) || [])[1] || "";
+const SRC = (() => {
+  try {
+    return readFileSync(
+      join(__dirname, "..", "..", "plugins", "fig", "_common", "scripts", "sync-compare.js"),
+      "utf8"
+    );
+  } catch (e) {
+    return "";
+  }
+})();
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 // ---- fake Figma nodes ------------------------------------------------------------------------------
@@ -51,7 +54,7 @@ const baseCfg = (over = {}) => ({
 });
 
 const run = async (canonChildren, workChildren, cfg = baseCfg()) => {
-  assert.ok(SRC, "the name-matched comparison snippet was not found in sync/SKILL.md");
+  assert.ok(SRC, "_common/scripts/sync-compare.js was not found");
   const pages = { CANON: page("CANON", canonChildren), WORK: page("WORK", workChildren) };
   const figma = {
     getNodeByIdAsync: async (id) => pages[id],

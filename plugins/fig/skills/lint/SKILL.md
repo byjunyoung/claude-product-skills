@@ -4,11 +4,11 @@ description: Audits a Figma design page read-only against figma-conventions.yaml
 allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
 ---
 
-# fig:lint — read-only structure and flow audit (violations only)
+# fig:lint — read-only audit of structure, flow, components and colour tokens (violations only)
 
 **Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install fig@byjunyoung`), rather than improvising what the scripts do.
 
-Takes one design page and **audits structure (placement), flow (arrows), and component usage in a single pass**, reporting only violations. Detection is separated from repair, the way a design lint should be — this skill **only detects**; fig:prep fixes structure and fig:arrows fixes flow.
+Takes one design page and **audits structure (placement), flow (arrows), component usage, and colours left off the design system's tokens in a single pass**, reporting only violations. Detection is separated from repair, the way a design lint should be — this skill **only detects**; fig:prep fixes structure, fig:arrows fixes flow, and fig:tokens binds colours to tokens.
 
 **Why it exists**: to keep verification logic in **one place behind one gate**. Whatever touched the canvas — prep, arrows, a duplicated form, a manual edit — running this one skill at the end covers all of it. When verification is scattered across the working skills you get a blind spot shaped like "I wasn't using that skill this time, so the audit never ran." Removing that blind spot is the reason it is separate.
 
@@ -26,14 +26,15 @@ Takes one design page and **audits structure (placement), flow (arrows), and com
 - Actually fixing, tidying, or stubbing placeholders → `/fig:prep`
 - Drawing the screen a violation is about → `/fig:draw`
 - Creating or syncing arrows → `/fig:arrows`
-- Auditing token (variable) bindings → `/fig:tokens`
+- Binding colours to the design system's tokens → `/fig:tokens` (this skill finds the unbound ones; tokens binds them)
 - Checking and applying work into the canonical page → `/fig:sync`
 - Just understanding the structure → `/fig:read`
 
 ## Inputs
 
 - `figma_url` (required): the page to audit. For several pages, split the calls per page and run them in parallel
-- `scope` (optional): structure only / flow only / components only. Omitted, all three run
+- `scope` (optional): structure only / flow only / components only / `tokens` only (colour tokens). Omitted, all four run
+- `section` (optional): a section link or a section name. Only that section and the sections nested in it are audited, at any depth. Omitted, the whole page is. A link carries the section's id in `node-id` (Figma writes `1-2` for `1:2`; use `1:2`). A link to a frame or any other node inside a section is resolved to the section holding it — its nearest SECTION ancestor, read with a read-only `use_figma` call before the scripts run — and the report names that section; a node in no section narrows nothing, so ask whether the whole page was meant. A name is resolved to one id the same way; if it matches no section or several, ask which one rather than choosing. Component collect (C-1) reads reference pages and ignores it
 - `reference_page` (optional): an existing production page to derive component usage conventions from. Omitted, the page in the same file that uses the most of the same components is chosen
 
 ## Where the rules come from — the config file (same source as fig:prep and fig:sync)
@@ -80,7 +81,7 @@ The layers merge bottom-up: bundled defaults → `~/.claude/figma-conventions.ya
 | Transition arrow geometry | Start point within `arrows.audit.edge_tolerance` of the source edge / arrowhead within `arrows.audit.gap_range` of the target edge / **the final segment perpendicular to the target edge, so the head enters head-on** / no segment passing through an unrelated frame / both source and target frames exist (orphan) |
 | Labels | The pill above its own arrow in z-order / clearing the arrowhead by more than `arrows.audit.label_clear` / not covering another arrow's segment |
 | Coverage orphans | Every screen frame appears at least once in a `-->` or a `[state]` (zero orphans) |
-| `[state]` dashed lines | Two vertices, vertical, no elbows / name order top to bottom / endpoints within `arrows.audit.edge_tolerance` of the source's bottom edge and the target's top edge / no other frame between them |
+| `[state]` dashed lines | Two vertices, vertical, no elbows / name order top to bottom / endpoints within `arrows.audit.edge_tolerance` of the source's bottom edge and the target's top edge / **each endpoint inside its frame's x-span**, within the same tolerance, so a link that leans sideways off its frames is caught and not only one that misses them vertically / no other frame between them |
 
 ### C. Component usage (default residue) — fig:prep's territory
 
@@ -92,6 +93,21 @@ An instance that was newly placed or duplicated **carries the component's defaul
 | Empty display toggle | Same axis — a slot, caption, or supplementary area switched on with nothing in it | medium |
 
 The basis is not a written rule but **how the same file actually uses the component** — the same principle as preferring existing assets. A property whose value also varies across production screens is a per-use choice, not a violation, and is not reported; only properties overwhelmingly settled one way count as deviation. The thresholds are `component_audit.min_samples` and `dominance`.
+
+### D. Colour tokens — fig:tokens's territory
+
+A colour typed in by hand where the design system has a token for it — a named colour the system shares, a *variable* in Figma. Engineering copies the hex it reads, and the screen stops following the theme.
+
+| Item | Basis |
+|---|---|
+| **Unbound colour, exact token** | A solid fill, stroke, text or effect colour not bound to a variable, whose colour and opacity are exactly a token's — a token scoped for that property, one a designer could pick there and `/fig:tokens` could bind |
+| Unbound colour, near or no token | The same, where the nearest token scoped for that property is within `design_system.match_threshold_channel` on every colour channel (near) or further (none). Opacity is set aside here, so the same colour at another opacity — a 20% shadow against an opaque token — is near, never exact. Snapping it changes the colour, so a designer chooses. With the threshold `null`, only that same-colour case is near. **An exact colour whose tokens are all scoped for other properties** — a rectangle's fill matching a text-only token, or a primitive scoped to nothing — is reported this way too: near, with the message saying its own tokens are scoped elsewhere, where a token scoped for that property is within the threshold; otherwise as "exact colour, no token scoped for fill colours", since no token can be bound there and the fix is the token's scopes, not the screen |
+
+**The tokens it compares against** are the colour variables bound anywhere on the page plus the file's own local colour variables, each read in its collection's default mode. **A colour typed by hand to match a token's value in another mode** — its dark-mode value, say — therefore grades near or none, not exact — except where a token's own value cannot be read (a library collection the script is not given) and the colour its bound paints show stands in. **A library token nobody in this file has used yet cannot be seen from a script**, so a colour matching only such a token comes back as near or none, not exact. A file with no colour tokens at all — a team with no design system — skips the check: the result is a pass with a note saying so, never a finding on every fill. The note says too when colour variables were found but none could be read.
+
+**Outside every section, never blocking.** A colour on a node loose on the canvas — in no section — is reported, but as a warning even where it matches a token exactly: `/fig:handoff` gates sections, and a note left beside them must not hold back a page whose sections pass.
+
+**Not read**: anything inside a component instance, including overrides on its layers, and an instance's own paint unless the instance overrides it — otherwise the paint is the component's and is reported on the component, which means **on the page that holds its master**. Where instances in the audited scope hold hand-typed colours, the result's `note` counts them and says to run lint on that page: a draft component nobody has handed over yet carries its hand-typed colours into every screen that uses it, and this page's audit never grades them; working scaffolding (arrows, labels and state chains by the names in `naming`, placeholders by their `placeholder_style` paint, and a section's or component set's own paint); sections in `pages.exclude_sections`; hidden layers and everything in them; gradients, images and videos; text in several colours; and paints switched off. A paint already bound to a variable passes, whichever variable it is, and so does a fill, stroke or effect applied through a style — a style is already the design system's.
 
 ### The ✋ mark — a check the script does not do
 
@@ -108,11 +124,12 @@ Every violation carries one of two grades. **The grade never changes what is aud
 - **blocking** — engineering reading the file as it stands would build the wrong thing. A screen that cannot be seen, a coordinate that left its section, a connection that points somewhere it does not go, a slot switched on with nothing in it
 - **warning** — the file reads correctly and is merely untidy. Names, numbering, a few pixels of tolerance
 
-The grade is read off the tag the script already emits, so it is a lookup and not a second judgement.
+**The scripts set the grades.** Each finding comes back with its `grade`, decided where the script emits it, so reading it is a lookup and not a second judgement. The table below explains those grades to the reader and has to name every tag a script can emit.
 
 | In the output | Grade | Why |
 |---|---|---|
-| `[duplicate name]` | blocking | A name lookup catches only one of them, so nothing else in the run can be trusted — narrow and re-run before reading the rest |
+| `[duplicate name]` | blocking | A name lookup catches only one of them, so nothing else in the run can be trusted — narrow with the `section` input and re-run before reading the rest |
+| `[section]` | blocking | The section asked for is not on this page, so nothing was audited |
 | `[membership]` | blocking | Not in a section. Handoff marks status on sections, so the screen is not in the handover at all |
 | `[bounds]` | blocking | The frame left its own section |
 | `[frame overlap]` | blocking | Screens cover each other — the one behind is invisible |
@@ -126,25 +143,27 @@ The grade is read off the tag the script already emits, so it is a lookup and no
 | `[state] … orphan` · `… passes through` | blocking | The same two, on a state chain |
 | `[coverage] orphan frame` | blocking | A screen nothing reaches — engineering cannot tell how the user gets there |
 | `[default]` | blocking | The instance carries a library default this screen does not use, and it ships as an empty slot |
+| `[unbound]` … an exact token exists | blocking | A token for this exact colour, scoped for that property, exists and was not used — engineering copies the hex, and the screen stops following the theme |
 | Missing required state ✋, **type settled** | blocking | A state nobody designed is a state engineering invents |
 | `[naming]` · `[order]` | warning | Reads correctly, filed untidily |
 | `[layer name]` | warning | Reads fine to whoever drew it, and to nobody else |
 | `[annotation]` | warning | Pins that pile up stop being read, and a copied pin states a decision nobody made for this screen |
-| `[arrow]` · `[state]` geometry — edge offset, target gap, entry direction, elbows, name order | warning | The connection is right; the drawing is off |
+| `[arrow]` · `[state]` geometry — edge offset, target gap, entry direction, elbows, name order, a state link off its frames' x-span | warning | The connection is right; the drawing is off |
 | `[label]` — z-order, clearance, covering a line | warning | Legibility, not meaning |
+| `[unbound]` — near a token, none scoped for that property, or outside every section | warning | Snapping it to the nearest token changes the colour, so a designer has to choose; where the colour's only tokens are scoped for other properties, no token can be bound there at all; and a node loose on the canvas belongs to no section, so it holds none back from handoff |
 | Missing required state ✋, **type unclear** | warning | Undecided is not the same as missing, and the report has to say which |
 
 Three of these are close calls placed deliberately rather than obviously: `[section overlap]` (ambiguity, not invisibility), `[label] covers` (a label can be read against the wrong arrow), and `[arrow] arrowhead parallel` (the entry direction is wrong, the connection is not). If a file argues otherwise, move it and say so in the report.
 
-**Who reads which.** `/fig:handoff` gates on blocking alone — how a file is filed is not a reason to withhold work engineering can build. `/fig:prep` and `/fig:arrows` call this skill right after writing and still need a full `PASS`: the person who would fix the warning is the one standing there.
+**Who reads which.** `/fig:handoff` gates on blocking alone — how a file is filed is not a reason to withhold work engineering can build. `/fig:prep` and `/fig:arrows` call this skill right after writing and need a `PASS` from the structure and flow audits, warnings included: the person who would fix the warning is the one standing there. The colour-token group is not part of their gate — neither writes a colour, and a colour on the page is `/fig:tokens`'s to bind.
 
 
 ## Procedure
 
 1. **Settle the target page and resolve the config.** Take fileKey and page from the URL and get `CFG` via `resolve-config.py --js <fileKey>`. For several pages, split per page and **call in parallel** — one `setCurrentPageAsync` per script, per the figma-use rule.
-2. **Run the read-only audits** — the scripts below (A structure / B flow / C components) and collect violations. Zero node changes. C is two stages: derive conventions from a reference page (C-1), then compare against the working page (C-2). Different pages, so different calls.
+2. **Run the read-only audits** — the scripts below (A structure / B flow / C components / D colour tokens) and collect violations. Zero node changes. C is two stages: derive conventions from a reference page (C-1), then compare against the working page (C-2). Different pages, so different calls.
 3. **Judge required states (✋) and do the second visual pass** — settle the screen type (list, form, search) from a screenshot and compare against `naming.required_states`. Then, if a violation is suspected or clone/move was involved, confirm with **a screenshot of the whole section node**, not an isolated frame. Isolated renders cannot catch parent or position errors, so they are never grounds for a PASS.
-4. **Report** — violating nodes by category, a one-line reason each, its **grade** (see "Severity"), and **which skill fixes it** (structure → fig:prep, flow → fig:arrows). Blocking first, warnings beneath them, never interleaved. Close on a line of its own with both counts — `blocking: N · warning: N`. Zero of both is `PASS`. Zero blocking with warnings still open is `GATE PASS` — enough for /fig:handoff, not enough for fig:prep or fig:arrows.
+4. **Report** — violating nodes by category, a one-line reason each, its **grade** (see "Severity"), and **which skill fixes it** (structure → fig:prep, flow → fig:arrows, colour tokens → fig:tokens). Blocking first, warnings beneath them, never interleaved. Print every `note` a script returned, each on its own line above the counts — a section audited on its own (the page-level checks left out), hand-typed colours inside instances (run lint on the page holding their masters), a colour check skipped or a variable left unread; a note is printed with the verdict and never changes a count or the verdict itself: `PASS` and `GATE PASS` stand as they are, so the callers that need one — fig:prep, fig:arrows, fig:draw, /fig:handoff — still get it. The one exception is a section excluded by `pages.exclude_sections`: nothing was audited, so its note is reported in place of a verdict, never as a `PASS`. Close on a line of its own with both counts — `blocking: N · warning: N`. Zero of both is `PASS`. Zero blocking with warnings still open is `GATE PASS` — enough for /fig:handoff, not enough for fig:prep or fig:arrows where the warning is in the structure or flow audit.
 
 ## Running it
 
@@ -154,33 +173,37 @@ The audit code lives in `${CLAUDE_PLUGIN_ROOT}/_common/scripts/`. Snippets are n
 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/audit-struct.js       A. structure
 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/audit-flow.js         B. flow
 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/audit-component.js    C. components (MODE=collect / compare)
+${CLAUDE_PLUGIN_ROOT}/_common/scripts/audit-tokens.js       D. colour tokens
 ```
 
-All three are called the same way.
+All four are called the same way.
 
 1. Get the single `const CFG = {...};` line from `resolve-config.py --js <fileKey>`
-2. Concatenate that line and the whole script, and hand it to `use_figma`. If the target page is not the first page, prepend one `setCurrentPageAsync` line (once per script)
-3. The return value is either an array of violations or `STRUCT PASS` · `FLOW PASS` · `COMPONENT PASS`
+2. Optionally one input line, `const SECTION = "<section node id>";`, after the CFG line (from the `section` input; leave it out to audit the whole page). Compare mode of the component script takes it too, after `STAT`
+3. Concatenate those lines and the whole script, and hand it to `use_figma`. If the target page is not the first page, prepend one `setCurrentPageAsync` line (once per script)
+4. The return value is an `AuditResult`: `{ pass, findings }`. Each finding is `{ tag, grade, node, msg }` — `tag` the bracketed tag (`"[arrow]"`), `grade` `"blocking"` or `"warning"`, `node` the offending node's id (or `null` where there is none), `msg` the message without its tag. `pass` is true exactly when `findings` is empty. The component script's compare result carries one more field, `unknown: string[]` — properties the collect pass never saw. Report it as an information line asking for another reference page (see C-1); it is not a finding and never changes `pass`. Read the grade from `grade`; do not infer it from the message text. `pass` is the script's own verdict, so there is no string to look for. With `SECTION` set, an id that is not on the page comes back as one blocking `[section]` finding, and an id inside a section that `pages.exclude_sections` excludes comes back as `pass: true` with a `note` (`AuditResult` may carry `note?: string`) saying nothing was audited — print the note instead of a bare PASS. With `SECTION` set the page-level checks are skipped: `[membership]` (frames loose on the page, in no section) and `[order]` (a ranking across all sections), and the structure script's result carries a `note` saying so. Everything else runs on the section and what is nested in it, and a section overlapping a neighbour is still reported when either side is the one asked for. In the flow script, coverage counts only arrows that start or end inside the section, so a frame reached by an arrow from outside it is not an orphan. A page that does not exist makes the component script throw, which `use_figma` reports as an error
 
 For several pages, split the calls per page and **issue them in one message so they run in parallel**. One script never switches pages twice.
 
 **C is two stages and its calls are split.** `MODE="collect"` derives STAT from the reference page; `MODE="compare"` checks the working page against it. If one reference page does not yield enough samples, take one form-heavy page and one list-heavy page and sum their STAT.
+
+**D runs in its default mode, one call.** It reads the file's colour variables as well as the page, and writes nothing. Its `MODE="collect"` returns the token dictionary and the unbound colours grouped by colour and kind, each with the tokens that fit it — that is `/fig:tokens`'s scan, not part of this audit. A file with no colour tokens comes back as `pass: true` with a `note` saying the check was skipped; print the note with the verdict, which it does not change — the `PASS` or `GATE PASS` stands (step 4). A `note` may also count colour variables that could not be resolved to a colour and were left out of the comparison, and the hand-typed colours held inside instances in scope, which this run does not grade — run D on the page holding those components' masters too.
 
 After editing a script, check its syntax with `scripts/lib/check.sh`. `use_figma` wraps scripts in an async function, so top-level `await` and `return` are both legal — a combination `node --check` alone cannot accept. check.sh wraps them the same way before checking.
 
 ## Constraints
 
 - **Never substitute eye inspection for the component default check (C)** — empty icon slots and empty supplementary areas are invisible at zoomed-out scale. Always run C after building a screen by duplication, or after duplicating a field. Repairs go through fig:prep as a **"handle the first match, then re-query" while loop** — changing an instance property invalidates sibling handles
-- **Grading never narrows the audit** — every check runs and everything found is reported whatever its grade. The grade tells the reader what to do, and only /fig:handoff acts on it
-- **Zero writes** — `use_figma` is read-only (`return` only). Never create or change a node. Repairs go to fig:prep or fig:arrows behind their own go
+- **Grading never narrows the audit** — every check runs and everything found is reported whatever its grade. The one narrowing is the `section` input, which the person asks for: it drops `[membership]` and `[order]`, which belong to the page as a whole — and the result's note says so — and reads nothing outside the section except its overlap with neighbours and the arrows that reach its frames. The grade tells the reader what to do, and only /fig:handoff acts on it
+- **Zero writes** — `use_figma` is read-only (`return` only). Never create or change a node. Repairs go to fig:prep or fig:arrows, and colours to `/fig:tokens`, behind their own go
 - **Never PASS on an isolated screenshot alone** — measured metadata is the first pass, a whole-section screenshot the second. A frame rendered by itself cannot show a parent or canvas-position error
 - Convention-dependent checks (naming and the like) are only decided when the config has a pattern. On `null`, skip the check; if it ran on bundled defaults, say so in the report
 - **Excluded sections are treated three different ways** — dropped from the audit, dropped from coverage, but **kept as pass-through targets.** If a line actually crosses one, it is a broken line whether the section is excluded or not. The list is `pages.exclude_sections`
-- Duplicate frame names make a name lookup return only one of them. Report `[duplicate name]` first, then narrow to a single section and re-run
+- Duplicate frame names make a name lookup return only one of them. Report `[duplicate name]` first, then narrow to a single section with the `section` input and re-run
 - **States managed on a common page are not counted as per-screen omissions or orphans** (see fig:prep, "repeated common elements") — (1) a state present on the common page counts as covered for every screen that does not draw its own, (2) canonical state frames on a page matching `naming.common_page_pattern` are expected not to appear in per-screen flow, so they are dropped from coverage. If the setting is `null`, this exception does not apply
 - **A pattern page is dropped from coverage the same way** — the page `naming.pattern_page_pattern` matches holds arrangements rather than screens (how a row is built, where a badge sits in it), and nobody navigates to one, so requiring its frames to appear in the flow would report each of them as an orphan. `/fig:draw` writes and reads that page. With the setting `null` the exception does not apply, and the page's sections come back as orphans — which is the signal to record it
 - **File patterns in sections, the same as any other page.** Coverage collects frames from sections only, so a pattern sitting directly on the page escapes the exception above — and lands on `[membership]` instead, which the structure script applies to every page-level frame without reading page strictness. Neither is a reason to scatter patterns loose on the canvas: put them in a section, where the coverage exception is what carries them
-- **The component check cannot see a pattern page under a shell offset.** `component_audit.body_offset` skips the nav column and top bar of a full screen, and a pattern frame is narrower than that offset, so every instance on it is skipped and the page reports `COMPONENT PASS` having examined nothing. The offset is dropped on a pattern page for that reason — a clean report there means the instances were read, not that there were none
+- **The component check cannot see a pattern page under a shell offset.** `component_audit.body_offset` skips the nav column and top bar of a full screen, and a pattern frame is narrower than that offset, so every instance on it is skipped and the page reports `pass: true` having examined nothing. The offset is dropped on a pattern page for that reason — a clean report there means the instances were read, not that there were none
 
 ## Notes
 

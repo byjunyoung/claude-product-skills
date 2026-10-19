@@ -26,7 +26,7 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 - Laying out the section skeleton or stubbing missing cases → `/fig:prep`
 - Creating or syncing flow arrows → `/fig:arrows`
 - Checking for violations only, zero writes → `/fig:lint`
-- Auditing token bindings → `/fig:tokens`
+- Binding colours to tokens → `/fig:tokens` (`/fig:lint` finds the unbound ones)
 - Applying finished work into the canonical page → `/fig:sync`
 - Looking at what changed between two versions of a design → Dev Mode's *Compare changes* in Figma — it needs a Dev Mode seat, and compares a frame with its own version history, not two separate frames
 - Turning a finished design into a working prototype → `/fig:proto`
@@ -54,7 +54,7 @@ Sections read: `naming` (frame and section patterns, state suffixes, the common 
 |---|---|
 | Which pattern the thing being drawn follows | Discovering and composing components → `figma:figma-generate-design` |
 | Which canonical screen it is anchored to | Building a master or a variant set → `figma:figma-generate-library` |
-| Which page, section and name it lands under | Whether colours are bound to tokens → `/fig:tokens` |
+| Which page, section and name it lands under | Whether colours are bound to tokens → `/fig:lint` checks, `/fig:tokens` binds |
 | Where the copy came from | Whether it is placed and connected legally → `/fig:lint` |
 | What is finished and what is still open | The skeleton and the to-draw list → `/fig:prep` |
 
@@ -186,13 +186,13 @@ Per "What's undecided stays inline" above. Draw first, annotate second, and neve
 
 ### 9. Verify
 
-**The mandatory last action — call `/fig:lint` (via the Skill tool).** A clone happened, so this is never optional: get `STRUCT PASS` and `FLOW PASS`, fix what comes back, call again. Its `[mode]` check is the one a clone trips most: a screen cloned off a page that set the colour mode lands in the collection default.
+**The mandatory last action — call `/fig:lint` (via the Skill tool).** A clone happened, so this is never optional: get a `PASS` from both the structure and the flow audit, fix what comes back, call again. Its `[mode]` check is the one a clone trips most: a screen cloned off a page that set the colour mode lands in the collection default.
 
-**Call `/fig:tokens` in its check-only mode on every frame drawn, cloned or not.** A clone copies whatever its source carried, and a source that is itself a draft built earlier in the work — a component nobody has handed over yet — carries its hand-typed colours into every screen that uses it. Those colours looked right in the mode they were typed for, and disappear in the other. "It was cloned, so it is clean" is only true of a canonical source.
+**The same run checks the colours on every frame drawn, cloned or not** — lint's colour-token audit, `[unbound]`, so there is no separate call; keep it in the run rather than narrowing lint's `scope` to structure and flow. A clone copies whatever its source carried, and a source that is itself a draft built earlier in the work — a component nobody has handed over yet — carries its hand-typed colours into every screen that uses it. Those colours looked right in the mode they were typed for, and disappear in the other. "It was cloned, so it is clean" is only true of a canonical source. **This page's run does not grade colours inside a component instance** — they belong to the component and are graded where its master is — so lint's `note` counts them instead; where the screens use such a draft component, **run lint on the page that holds its master as well**. An exact-token colour it flags is blocking and goes to `/fig:tokens` to bind, behind that skill's own go; a near or no-token one is reported for the designer to decide.
 
-**Then render every frame drawn, together, and look.** One image of all of them at a reduced scale — the whole section, or several sections side by side — not a screenshot per frame. Each screen looked at alone passes; a dark screen among light siblings, an empty box where a label should be, a hover-only control left showing, are obvious only next to the others. Lint and tokens measure what they can name; this is where what nobody named turns up. Where the drawn frames span more than one page, the design tool's image export renders them in one request.
+**Then render every frame drawn, together, and look.** One image of all of them at a reduced scale — the whole section, or several sections side by side — not a screenshot per frame. Each screen looked at alone passes; a dark screen among light siblings, an empty box where a label should be, a hover-only control left showing, are obvious only next to the others. Lint measures what it can name; this is where what nobody named turns up. Where the drawn frames span more than one page, the design tool's image export renders them in one request.
 
-No audit lives in this file. The verdict comes from those two skills alone, the same way `/fig:prep` and `/fig:arrows` take theirs.
+No audit lives in this file. The verdict comes from `/fig:lint` alone, the same way `/fig:prep` and `/fig:arrows` take theirs.
 
 ## Implementation — the parts that are not delegated
 
@@ -239,7 +239,7 @@ No `categoryId` — see "What's undecided stays inline". Annotations are visible
 [sources]    where each string came from · values with no source
 [open]       the question, and which spec entry it belongs to
 [decisions]  what forked while drawing, for somebody else to settle
-[gates]      lint · tokens · not handed over yet, no version pinned
+[gates]      lint, its colour check included · exact-token colours still to bind with /fig:tokens · not handed over yet, no version pinned
 ```
 
 Two of those lines exist for whatever files the ticket. `[drawn]` is a section-by-section frame list because the acceptance checklist carries **one step per screen**, state variants included, and it is built from this list rather than by reading the file again. `[open]` names the question and the entry it belongs to, and **stops there** — who decides it and by when belongs to the spec, and an owner invented here would read as an agreed one.
@@ -263,7 +263,7 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 | Pins that came along with a clone | Last round's labels read as this round's decisions. Clear the clone's annotations in the call that clones it, including those on nested instances |
 | Explaining the screen in pins — navigation, before/after, rules, code notes | Each already lives in the arrows, the canonical and working pages, the spec or the ticket. Pin only an open question, once |
 | Calling it done on an isolated screenshot | The gate is `/fig:lint` plus a whole-section screenshot, as everywhere else here |
-| Skipping `/fig:tokens` because every frame was cloned | A clone of a draft carries the draft's hand-typed colours. Check every drawn frame |
+| Narrowing `/fig:lint` to structure and flow because every frame was cloned | A clone of a draft carries the draft's hand-typed colours. Keep the colour check in the run, on every drawn frame, and bind what it flags with `/fig:tokens` |
 | Checking each drawn screen on its own | Render all of them in one image before reporting — a screen that is wrong only relative to its siblings looks fine alone |
 | A cloned screen that looked right on its source page | It may have been borrowing that page's colour mode. Name the mode on the screen itself |
 
@@ -271,7 +271,7 @@ Two of those lines exist for whatever files the ticket. `[drawn]` is a section-b
 
 - **A change to how a screen looks is sketched with `/fig:sketch` and agreed before its preview.** A stub the canonical screen already settles is exempt
 - **Preview → go before writing**, split per screen or per state, and a pattern write takes a gate of its own
-- **`/fig:lint` and `/fig:tokens` after every run**, on every frame drawn — every run clones, and a clone carries whatever its source carried. Never report done without a `PASS`
+- **`/fig:lint` after every run**, its colour check included, on every frame drawn — every run clones, and a clone carries whatever its source carried. Never report done without a `PASS` from the structure and flow audits. Lint checks the colours; `/fig:tokens` binds the ones it flags
 - Sections matching `pages.exclude_sections` are never drawn into, and a page matching `pages.readonly` is refused
 - Never invent an arrangement the file or its pattern page could have settled
 - Never invent a fact a source could have settled, and never leave an unsourced value unmarked

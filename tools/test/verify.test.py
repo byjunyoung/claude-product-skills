@@ -107,6 +107,11 @@ with tempfile.TemporaryDirectory() as tmp:
     lines = [l for l in out.splitlines() if "[pm:task] description is" in l]
     check("override limit applies", not lines, "\n".join(lines))
 
+case("a 750-character deck description fails even under its 700 override",
+     lambda r: (r / "plugins/fig/skills/deck/SKILL.md").write_text(
+         set_description((r / "plugins/fig/skills/deck/SKILL.md").read_text(), "a" * 750), encoding="utf-8"),
+     1, "[fig:deck] description is 750 characters (limit 700)")
+
 
 def plant_market_drift(r):
     f = r / "plugins" / "pm" / ".claude-plugin" / "plugin.json"
@@ -127,7 +132,82 @@ def plant_sections_deep_drift(r):
 
 
 case("sections-deep copies differ", plant_sections_deep_drift,
-     1, "[fig] sections-deep copies differ: audit-flow.js")
+     1, "[fig] sections-deep copy in audit-flow.js differs from audit-component.js")
+
+
+def plant_probe_drift(r):
+    """probe-page.js is not an audit-*.js script, and still carries the block."""
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "probe-page.js"
+    t = f.read_text(encoding="utf-8")
+    start = t.index("// <sections-deep>")
+    f.write_text(t[:start] + t[start:].replace("inherited = false", "inherited = true", 1), encoding="utf-8")
+
+
+case("a drifted sections-deep copy in probe-page.js fails, naming it and the reference file",
+     plant_probe_drift,
+     1, "[fig] sections-deep copy in probe-page.js differs from audit-component.js")
+
+
+def plant_missing_marker(r):
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "audit-struct.js"
+    f.write_text(f.read_text(encoding="utf-8").replace("// <sections-deep>", "// (marker removed)"), encoding="utf-8")
+
+
+case("an audit script that lost its sections-deep marker fails", plant_missing_marker,
+     1, "[fig] sections-deep marker missing from audit-struct.js")
+
+
+def strip_scaffolding(r):
+    # The real copies (audit-tokens.js, and the bind script after it) would join either case below,
+    # so each case starts from scripts that carry none.
+    pat = re.compile(r"// <scaffolding>\n.*?// </scaffolding>\n?", re.S)
+    for f in (r / "plugins" / "fig" / "_common" / "scripts").glob("*.js"):
+        t = f.read_text(encoding="utf-8")
+        if pat.search(t):
+            f.write_text(pat.sub("", t), encoding="utf-8")
+
+
+def plant_scaffolding_drift(r):
+    strip_scaffolding(r)
+    d = r / "plugins" / "fig" / "_common" / "scripts"
+    for name, body in (("audit-flow.js", "// one"), ("audit-struct.js", "// two")):
+        f = d / name
+        f.write_text(f.read_text(encoding="utf-8") + f"\n// <scaffolding>\n{body}\n// </scaffolding>\n", encoding="utf-8")
+
+
+case("a drifted scaffolding copy fails", plant_scaffolding_drift,
+     1, "[fig] scaffolding copy in audit-struct.js differs from audit-flow.js")
+
+
+def plant_lone_scaffolding(r):
+    strip_scaffolding(r)
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "audit-flow.js"
+    f.write_text(f.read_text(encoding="utf-8") + "\n// <scaffolding>\n// one\n// </scaffolding>\n", encoding="utf-8")
+
+
+case("a marked block carried by one file only passes", plant_lone_scaffolding, 0)
+
+def plant_paint_scope_drift(r):
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "token-bind.js"
+    t = f.read_text(encoding="utf-8")
+    start = t.index("// <paint-scope>")
+    f.write_text(t[:start] + t[start:].replace('id !== ""', 'id !== "-"', 1), encoding="utf-8")
+
+
+case("a drifted paint-scope copy fails, so the bind cannot read a style the audit does not",
+     plant_paint_scope_drift,
+     1, "[fig] paint-scope copy in token-bind.js differs from audit-tokens.js")
+
+def plant_token_fit_drift(r):
+    f = r / "plugins" / "fig" / "_common" / "scripts" / "token-bind.js"
+    t = f.read_text(encoding="utf-8")
+    start = t.index("// <token-fit>")
+    f.write_text(t[:start] + t[start:].replace('"ALL_SCOPES"', '"ALL_FILLS"', 1), encoding="utf-8")
+
+
+case("a drifted token-fit copy fails, so lint cannot block a colour the bind would refuse",
+     plant_token_fit_drift,
+     1, "[fig] token-fit copy in token-bind.js differs from audit-tokens.js")
 
 case("unknown config key in a _common document",
      lambda r: write(r, "plugins/pm/_common/trackers/README.md", "\n`task.nonexistent_key`\n", append=True),

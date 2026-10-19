@@ -22,7 +22,7 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const STAT = { "Button|Icon": { t: 10, f: 0 } };
 
 const instance = (iconOn) => ({
-  type: "INSTANCE", name: "Button",
+  type: "INSTANCE", id: "I:1", name: "Button",
   absoluteBoundingBox: { x: 10, y: 10, width: 80, height: 40 },
   componentProperties: { "Icon#1:2": { type: "BOOLEAN", value: iconOn } },
   getMainComponentAsync: async () => ({ name: "Button", parent: null }),
@@ -37,11 +37,11 @@ const screen = () => {
 };
 const section = (name, children) => ({ type: "SECTION", name, x: 0, y: 0, width: 4000, height: 4000, children });
 
-const run = (pageChildren, bodyOffset = { left: 0, top: 0 }) => {
+const run = (pageChildren, bodyOffset = { left: 0, top: 0 }, SECTION, pages = {}) => {
   const page = { name: "[UI] Fixture", children: pageChildren };
-  return new AsyncFunction("CFG", "MODE", "PAGE", "STAT", "figma", SRC)(
-    { component_audit: { min_samples: 5, dominance: 0.9, body_offset: bodyOffset } },
-    "compare", "Fixture", STAT,
+  return new AsyncFunction("CFG", "MODE", "PAGE", "STAT", "SECTION", "figma", SRC)(
+    { pages, component_audit: { min_samples: 5, dominance: 0.9, body_offset: bodyOffset } },
+    "compare", "Fixture", STAT, SECTION,
     { root: { children: [page] }, setCurrentPageAsync: async () => {} }
   );
 };
@@ -49,18 +49,91 @@ const run = (pageChildren, bodyOffset = { left: 0, top: 0 }) => {
 test("a frame in a nested section yields the same findings as in a top-level section", async () => {
   const flat = await run([section("S1", [screen()])]);
   const deep = await run([section("Outer", [section("S1", [screen()])])]);
-  assert.ok(Array.isArray(flat.component) && flat.component.length === 1, "the fixture must produce a finding");
-  assert.match(flat.component[0], /\[default\] Home-Default \/ Button Icon=false/);
+  assert.strictEqual(flat.findings.length, 1, "the fixture must produce a finding");
+  assert.strictEqual(flat.findings[0].tag, "[default]");
+  assert.strictEqual(flat.findings[0].grade, "blocking");
+  assert.strictEqual(flat.findings[0].node, "I:1");
+  assert.match(flat.findings[0].msg, /^Home-Default \/ Button Icon=false/);
   assert.deepStrictEqual(deep, flat);
+});
+
+test("struct, flow and component see a frame three sections deep", async () => {
+  const r = await run([sec("L1", [sec("L2", [sec("L3", [screen()])])])]);
+  assert.strictEqual(r.findings.length, 1);
+  assert.strictEqual(r.findings[0].node, "I:1");
+});
+
+// ── pages.exclude_sections — both modes, SECTION or not ──
+const runCollect = (pageChildren, pages = {}) => {
+  const page = { name: "[UI] Fixture", children: pageChildren };
+  return new AsyncFunction("CFG", "MODE", "PAGE", "figma", SRC)(
+    { pages, component_audit: {} }, "collect", "Fixture",
+    { root: { children: [page] }, setCurrentPageAsync: async () => {} }
+  );
+};
+
+test("component compare and collect skip pages.exclude_sections", async () => {
+  const pages = { exclude_sections: ["^Scratch$"] };
+  const tree = () => [sec("Live", [screen()]), sec("Scratch", [screen(), sec("Inner", [screen()])])];
+  const cmp = await run(tree(), undefined, undefined, pages);
+  assert.strictEqual(cmp.findings.length, 1, JSON.stringify(cmp));
+  assert.deepStrictEqual(await runCollect(tree(), pages), { "Button|Icon": { t: 0, f: 1 } });
+  assert.deepStrictEqual(await runCollect(tree()), { "Button|Icon": { t: 0, f: 3 } });
 });
 
 test("body_offset null examines the whole frame", async () => {
   const r = await run([section("S1", [screen()])], null);
-  assert.strictEqual(r.component.length, 1);
-  assert.match(r.component[0], /\[default\]/);
+  assert.strictEqual(r.findings.length, 1);
+  assert.strictEqual(r.findings[0].tag, "[default]");
 });
 
 test("a set body_offset still exempts the shell", async () => {
   const r = await run([section("S1", [screen()])], { left: 270, top: 120 });
-  assert.strictEqual(r.component, "COMPONENT PASS");
+  assert.deepStrictEqual(r, { pass: true, findings: [], unknown: [] });
+});
+
+test("compare with an unseen property → pass true, unknown lists it", async () => {
+  const page = { name: "[UI] Fixture", children: [section("S1", [screen()])] };
+  const r = await new AsyncFunction("CFG", "MODE", "PAGE", "STAT", "figma", SRC)(
+    { component_audit: { min_samples: 5, dominance: 0.9 } }, "compare", "Fixture", {},
+    { root: { children: [page] }, setCurrentPageAsync: async () => {} }
+  );
+  assert.strictEqual(r.pass, true);
+  assert.deepStrictEqual(r.findings, []);
+  assert.deepStrictEqual(r.unknown, ["Button|Icon x1"]);
+});
+
+// ── SECTION — audit one section and the ones nested in it (compare mode) ──
+const sec = (id, children) => Object.assign(section(id, children), { id });
+const levels = () => [
+  sec("L1", [screen(), sec("L2", [screen(), sec("L3", [screen()])])]),
+  sec("Other", [screen()]),
+];
+
+test("SECTION limits the audit to that section and its nested sections", async () => {
+  assert.strictEqual((await run(levels())).findings.length, 4);
+  assert.strictEqual((await run(levels(), undefined, "L2")).findings.length, 2);
+  assert.strictEqual((await run(levels(), undefined, "L3")).findings.length, 1);
+});
+
+test("unknown SECTION is a blocking [section] finding", async () => {
+  const r = await run(levels(), undefined, "nope");
+  assert.strictEqual(r.pass, false);
+  assert.deepStrictEqual(r.findings, [{ tag: "[section]", grade: "blocking", node: null, msg: "section nope is not on this page" }]);
+});
+
+test("SECTION inside an excluded parent audits nothing and says so", async () => {
+  const r = await run(levels(), undefined, "L3", { exclude_sections: ["^L1$"] });
+  assert.deepStrictEqual(r, {
+    pass: true, findings: [], unknown: [],
+    note: "section L3 is excluded by pages.exclude_sections; nothing audited",
+  });
+});
+
+test("SECTION that is itself excluded audits nothing and says so", async () => {
+  const r = await run(levels(), undefined, "L2", { exclude_sections: ["^L2$"] });
+  assert.deepStrictEqual(r, {
+    pass: true, findings: [], unknown: [],
+    note: "section L2 is excluded by pages.exclude_sections; nothing audited",
+  });
 });

@@ -138,7 +138,7 @@ check("a frame differing only in height or master takes the move path in step 3"
       bool(re.search(r"height or (a )?(component )?master[^.\n]*\*\*move", step3, re.I)))
 check("step 3's confirm is per frame, and a declined frame stays in its bucket",
       "declined" in step3 and "as a whole" in step3)
-report = section_of(sync, "## Reporting", "## Implementation")
+report = section_of(sync, "## Reporting", "## Scripts")
 check("the report counts declined frames and gives a new frame's before line",
       "declined" in report and "(new screen)" in report and "which the person confirmed" not in report)
 # Every string is compared; the length key only shortens how a long one is shown
@@ -151,10 +151,10 @@ check("the example config says text_diff_max_len only shortens display",
 step4 = section_of(sync, "### Step 4", "### Step 5")
 unseen = "not detected by any signal"
 check("report and archive preview both say a visual-only change goes unseen",
-      unseen in section_of(sync, "## Reporting", "## Implementation") and unseen in step4)
+      unseen in section_of(sync, "## Reporting", "## Scripts") and unseen in step4)
 
 # The name test is the file's own pattern, and null means exact names
-snippet = section_of(sync, "**Name-matched text comparison", "**Finding the keywords")
+snippet = read("plugins/fig/_common/scripts/sync-compare.js")
 check("sync tests names with naming.frame_pattern, not a hardcoded shape",
       "frame_pattern" in snippet and "\\S-\\S" not in sync and "naming.frame_pattern" in sig1)
 check("null frame_pattern matches by exact name", "exact" in sig1 and "null" in sig1)
@@ -326,6 +326,52 @@ for rel in ("README.md", "README.ko.md"):
           and all("deck.assets_dir" in l for l in t.splitlines() if "~/.claude/deck-assets" in l))
 check("README names the Chrome row rather than counting it",
       "The first Chrome row" not in read("README.md") and "첫 Chrome 줄" not in read("README.ko.md"))
+
+# ---- tokens binds; /fig:lint checks colours ---------------------------------------------------------
+tokens = read("plugins/fig/skills/tokens/SKILL.md")
+check('tokens/SKILL.md has no "lint mode" and no js block',
+      "lint mode" not in tokens.lower() and "check-only" not in tokens.lower() and "```js" not in tokens)
+check("tokens scans, binds and verifies through the scripts",
+      all(s in tokens for s in ("audit-tokens.js", "token-bind.js", 'MODE = "collect"', "accept: true", "inInstance"))
+      and "acceptAlpha" not in tokens)
+check("a request only to check stops after the scan", "stops before binding" in tokens)
+check("each bind run gets its own preview and go", "its own preview and go" in tokens)
+check("tokens builds its preview from a dry run, and accept names its nodes",
+      "DRY_RUN" in tokens and "nodes" in tokens and "every remaining node" not in tokens
+      and "unchecked" in tokens and "never imports" in tokens
+      and "reruns the bind for that colour with `accept: true`" not in tokens)
+check("tokens runs the mapping its dry run returned, every entry naming its nodes",
+      "`mapping`" in tokens and "`paints`" in tokens and "plain ones too" in tokens
+      and "skipped and reported, not bound" not in tokens and "`[{ node, reason }]`" not in tokens
+      and "Run the same `MAPPING`" not in tokens)
+check("tokens takes an accepted change only on the paints its preview showed, and reports every import failure",
+      "→ the same run" not in tokens and "the paints the dry run listed it for" in tokens
+      and "even where a later token binds that paint" in tokens and "the token not in the file yet that is tried first" not in tokens)
+check("no fig document says an instance's colours are fixed at the component's source",
+      not [rel for rel, text in tracked_text_files() if rel.startswith("plugins/fig") and "fixed at the component" in text])
+t_head = fm_of_text(tokens)["description"].partition(" Triggers - ")[0]
+check("tokens' description says it binds, not that it audits",
+      "binds" in t_head.lower() and "audit" not in t_head.lower(), t_head)
+# Every trigger tokens answered to before it stopped checking (as of 181711b) still reaches it
+TOKENS_TRIGGERS = ("/fig:tokens", "check the token bindings", "find unbound colors",
+                   "토큰 바인딩 검수", "하드코딩 색상 검사", "디자인시스템 연동 점검")
+t_desc = fm_of_text(tokens)["description"]
+lost = [x for x in TOKENS_TRIGGERS if f'"{x}"' not in t_desc]
+check("tokens' description keeps every trigger it had", not lost, ", ".join(lost))
+
+draw = read("plugins/fig/skills/draw/SKILL.md")
+step9 = section_of(draw, "### 9. Verify", "\n## ")
+check("draw step 9 no longer calls /fig:tokens",
+      bool(step9) and "[unbound]" in step9 and not re.search(r"[Cc]all `/fig:tokens`", step9)
+      and "check-only" not in draw and "/fig:tokens` after every run" not in draw)
+check("draw's report gates on lint alone", "[gates]      lint · tokens" not in draw)
+for rel in ("README.md", "README.ko.md"):
+    t = read(rel)
+    check(f"{rel}: tokens is a repair lint routes to, not a step before it",
+          "arrows --> tokens" not in t and "arrows --> lint" in t and "--> tokens --> lint" in t)
+    check(f"{rel}: the tree lists both colour scripts", "audit-tokens.js" in t and "token-bind.js" in t)
+    writers = {"README.md": "(`prep`, `arrows`, `sync`, `tokens`)", "README.ko.md": "(`prep`·`arrows`·`sync`·`tokens`)"}[rel]
+    check(f"{rel}: tokens is among the skills that write", writers in t)
 
 # ---- descriptions in one shape ---------------------------------------------------------------------
 import glob
