@@ -16,7 +16,8 @@
  *
  * Optional input: `const SECTION = "<section node id>";` — audit that section and the sections nested in
  * it, at any depth. Page-level checks stay out of it ([membership] for loose frames, [order] across all
- * sections); a section overlapping a neighbour is still reported when either side is in scope.
+ * sections), and the result carries a `note` saying so; a section overlapping a neighbour is still
+ * reported when either side is in scope.
  * An id not on the page returns one blocking [section] finding; an id inside a section that
  * pages.exclude_sections excludes returns pass with a `note` and no findings.
  *
@@ -364,4 +365,7 @@ for (const { s, skipped } of deep) {
   }
 }
 
-return { pass: issues.length === 0, findings: issues };
+// A section audited on its own leaves out the two page-level checks; the note keeps a clean result from
+// reading as a whole-page PASS.
+const result = { pass: issues.length === 0, findings: issues };
+return SEC ? { ...result, note: "page-level checks [membership] and [order] not run" } : result;

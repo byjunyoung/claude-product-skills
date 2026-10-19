@@ -25,7 +25,9 @@
  * opacity, an effect's its colour's `a`, a variable's its resolved value's `a`. Each paint is graded
  * against the tokens that can be bound where it is — the <token-fit> block, shared byte for byte with
  * token-bind.js, so lint never blocks on a token the bind would refuse. Grades, per unbound paint:
- *   1  colour and alpha both match an entry with a token that fits      → blocking
+ *   1  colour and alpha both match an entry with a token that fits      → blocking — a warning on a
+ *      node loose on the page, outside every section: /fig:handoff gates sections, so a node beside
+ *      them must not hold back a page whose sections pass
  *   2  every colour channel within design_system.match_threshold_channel  → warning
  *      of the nearest entry with a token that fits, alpha aside — the same colour at another
  *      opacity is near, never exact. null makes the threshold 0, so only that case is near
@@ -48,6 +50,9 @@
  *            is used for there named together and the section named in msg. A dictionary left empty →
  *            { pass: true, findings: [], note }: the check is skipped, never run against nothing. The
  *            note says whether no colour variable was found at all or some were found and none resolved.
+ *            Where instances in scope hold hand-typed colours (the ones collect counts in inInstance),
+ *            the note says how many and that lint must run on the page holding their masters — this
+ *            audit never grades them, and a draft component's colours turn up nowhere else.
  *   collect  { dictionary: { [hex]: [{ key, scopes }] },
  *              unbound: [{ hex, kind, count, nodes, grade, nearest, tokens }], inInstance: [{ hex, count }], note? }
  *            The dictionary keeps each token's scopes beside its key (null where they cannot be read).
@@ -351,11 +356,12 @@ const gradeOf = (k, n, kind) => {
 const outcome = (r, ...rest) => [...rest, r.grade, r.nearest, r.tokens.join(",")].join("|");
 
 // ── Scan the editable nodes in scope — the <paint-scope> walk ──
-// Sections come from the walk above, every depth. Collect also counts what an instance holds and does
-// not override, so /fig:tokens can report it apart.
+// Sections come from the walk above, every depth. Both modes count what an instance holds and does not
+// override: collect lists it for /fig:tokens to report apart, and the audit notes it, since those colours
+// are graded only on the page that holds the component's master.
 const S = scaffoldingCfg(C);
 const hits = [], inInst = new Map();   // hits: { n, where, kind, key }
-const held = COLLECT ? (n, c, why) => { if (why === "instance") inInst.set(c.key, (inInst.get(c.key) || 0) + 1); } : null;
+const held = (n, c, why) => { if (why === "instance") inInst.set(c.key, (inInst.get(c.key) || 0) + 1); };
 for (const { n, where } of rootsOf(page, allSecs, scope ? scope.ids : null))
   walkColours(n, S, (m, c) => hits.push({ n: m, where, kind: c.kind, key: c.key }), held);
 
@@ -387,14 +393,20 @@ for (const h of hits) {
   const g = groups.get(k);
   if (!g.kinds.includes(h.kind)) g.kinds.push(h.kind);
 }
+// A node loose on the canvas, in no section, is never blocking: /fig:handoff gates sections, and a note
+// left beside them must not hold back a page whose sections all pass.
 for (const g of groups.values()) {
   const r = g.r, loc = g.where ? `${g.where} / ${g.n.name}` : g.n.name, what = `${g.kinds.join(", ")} ${g.key}`;
   const pct = Math.round(r.da / 255 * 100), alpha = r.da ? `, opacity off by ${pct ? pct + "%" : "<1%"}` : "";
-  if (r.grade === 1) add("[unbound]", "blocking", g.n.id, `${loc}: ${what} — an exact token for this colour exists and was not used`);
-  else add("[unbound]", "warning", g.n.id, r.unfit
-    ? `${loc}: ${what} — exact colour, no token scoped for ${g.kinds.join(" or ")} colours; the tokens of this colour are scoped for other properties`
+  if (r.grade === 1 && g.where !== null) add("[unbound]", "blocking", g.n.id, `${loc}: ${what} — an exact token for this colour exists and was not used`);
+  else add("[unbound]", "warning", g.n.id, r.grade === 1
+    ? `${loc}: ${what} — matches a token exactly but sits outside every section, which handoff does not gate; bind it all the same`
+    : r.unfit ? `${loc}: ${what} — exact colour, no token scoped for ${g.kinds.join(" or ")} colours; the tokens of this colour are scoped for other properties`
     : r.grade === 2 ? `${loc}: ${what} — near a token (${r.nearest}, ${r.d} off per channel${alpha}); a designer decides whether to snap it`
     : `${loc}: ${what} — no token within ${TH} per channel; a designer decides whether it needs one`);
 }
 
-return withNote({ pass: issues.length === 0, findings: issues });
+const inside = [...inInst.values()].reduce((s, x) => s + x, 0);
+return withNote({ pass: issues.length === 0, findings: issues }, inside
+  ? `${inside} hand-typed colour${inside === 1 ? " sits" : "s sit"} inside component instances — run lint on the page that holds their masters`
+  : null);

@@ -71,7 +71,7 @@ Excluded items that turn up are **reported, never fixed** — colours inside ins
 
 ## Grading — only auto-propose what is safe
 
-The scan grades each unbound colour against the dictionary, colour and opacity together, counting only the tokens scoped for the property the colour is on — the same grades `/fig:lint` reports.
+The scan grades each unbound colour against the dictionary, colour and opacity together, counting only the tokens scoped for the property the colour is on — the same grades `/fig:lint` reports, except that lint calls a colour on a node loose on the canvas, outside every section, a warning whatever its grade, since handoff gates sections. The scan still grades it, and binding it is as safe as anywhere.
 
 | Grade | Basis | Handling |
 |---|---|---|

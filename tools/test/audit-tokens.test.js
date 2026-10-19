@@ -133,7 +133,7 @@ test("instance children, scaffolding, excluded sections and bound paints are not
   ];
   const out = await run(page);
   assert.deepStrictEqual(ids(out), ["id:Button", "id:State=Default"], JSON.stringify(out, null, 1));
-  assert.ok(out.findings.every((f) => f.grade === "blocking"));
+  assert.deepStrictEqual(out.findings.map((f) => f.grade), ["blocking", "warning"], "the component set sits loose on the page, in no section");
 });
 
 test("gradient, image and mixed paints are ignored", async () => {
@@ -356,6 +356,45 @@ test("SECTION applies", async () => {
   const scoped = await run(page(), lib, { SECTION: "id:01. Home", MODE: "collect" });
   assert.deepStrictEqual(scoped.unbound,
     [{ hex: "#3366FF", kind: "fill", count: 2, nodes: ["id:Home-Default", "id:Sub-Default"], grade: 1, nearest: "#3366FF", tokens: ["key:lib-blue"] }]);
+});
+
+test("the audit notes hand-typed colours held inside instances, which it does not grade", async () => {
+  const MASTERS = "inside component instances — run lint on the page that holds their masters";
+  const out = await run([section("01. Home", [
+    frame("Home-Default", { fills: [bound("#3366FF", "primary")] }, [
+      node("INSTANCE", "Chip", { fills: [solid("#3366FF")] }, [                         // its own fill, not overridden: the component's
+        node("TEXT", "Chip label", { fills: [solid("#111111")] }),
+        node("RECTANGLE", "Bound", { fills: [bound("#3366FF", "primary")] }),         // bound: not counted
+        node("RECTANGLE", "Styled", { fills: [solid("#3366FF")], fillStyleId: "S:1" }), // on the system: not counted
+      ]),
+    ]),
+    node("VECTOR", "Home-Default --> Detail-Default", { strokes: [solid("#3366FF")] }), // scaffolding: not counted
+  ])]);
+  assert.deepStrictEqual(out, { pass: true, findings: [], note: `2 hand-typed colours sit ${MASTERS}` });
+
+  const one = await run([section("01. Home", [node("INSTANCE", "Chip", {}, [node("TEXT", "Chip label", { fills: [solid("#111111")] })])])]);
+  assert.strictEqual(one.note, `1 hand-typed colour sits ${MASTERS}`);
+
+  const none = await run([section("01. Home", [frame("Home-Default", { fills: [solid("#3366FF")] })])]);
+  assert.strictEqual(none.note, undefined, "no instance colour, no note");
+
+  const scoped = await run([
+    section("01. Home", [node("INSTANCE", "Chip", {}, [node("TEXT", "Chip label", { fills: [solid("#111111")] })])]),
+    section("02. Other", [frame("Other-Default", {})]),
+  ], LIB, { SECTION: "id:02. Other" });
+  assert.strictEqual(scoped.note, undefined, "only the instances in the audited scope count");
+});
+
+test("a colour loose on the canvas, outside every section, is a warning even where an exact token exists", async () => {
+  const out = await run([
+    section("01. Home", [frame("Home-Default", { fills: [solid("#3366FF")] })]),
+    frame("Loose-Default", { fills: [solid("#3366FF")] }),
+  ]);
+  assert.deepStrictEqual(out.findings.map((f) => [f.node, f.grade]), [["id:Home-Default", "blocking"], ["id:Loose-Default", "warning"]], JSON.stringify(out));
+  assert.match(out.findings[1].msg, /^Loose-Default: fill #3366FF — matches a token exactly but sits outside every section/);
+  assert.doesNotMatch(out.findings[1].msg, /exact token/, "lint-grades reads these words as blocking");
+  const col = await run([frame("Loose-Default", { fills: [solid("#3366FF")] })], LIB, { MODE: "collect" });
+  assert.strictEqual(col.unbound[0].grade, 1, "collect still grades it exact: binding it is as safe as anywhere");
 });
 
 // ── Scopes: a token counts only where it can be bound — the <token-fit> block token-bind.js shares ──

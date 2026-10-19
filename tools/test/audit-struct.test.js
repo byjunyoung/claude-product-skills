@@ -185,6 +185,17 @@ test("SECTION leaves out page-level findings that belong to no section", async (
   assert.ok(!out.findings.some((i) => i.tag === "[membership]"), JSON.stringify(out));
 });
 
+test("SECTION says in a note that the page-level checks did not run", async () => {
+  const clean = () => [section("Only", 0, 0, 3000, 3000, [frame("Home-Default", 100, 100)])];
+  const one = await run(clean(), baseCfg(), "id:Only");
+  assert.deepStrictEqual(one, { pass: true, findings: [], note: "page-level checks [membership] and [order] not run" },
+    "a clean section is not a bare PASS: the report says what was left out");
+  const bad = await run(levels(), baseCfg(), "id:L3");
+  assert.strictEqual(bad.note, "page-level checks [membership] and [order] not run");
+  const whole = await run(clean());
+  assert.strictEqual(whole.note, undefined, "the whole page runs them, so no note");
+});
+
 test("unknown SECTION is a blocking [section] finding", async () => {
   const out = await run(levels(), baseCfg(), "id:nope");
   assert.deepStrictEqual(out, {
