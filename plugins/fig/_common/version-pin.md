@@ -36,15 +36,22 @@ recognises the entry by that exact title.
    is connected, or the account signed in there is the wrong one, hand it back: show the name and
    ask for it to be saved under exactly that name.
 4. **Read it back**, newest first, and take the first entry the caller recognises (handoff:
-   matching `handoff.version.match`; sync: the exact title it saved):
+   matching `handoff.version.match`; sync: the exact title it saved). The read needs a personal
+   access token: mint it in Figma (Settings → Security → Personal access tokens) with the
+   `file_versions:read` scope, and export it under the name `tools.figma_token_env` gives
+   (default `FIGMA_TOKEN`). Resolve that name first and check the variable is non-empty **before**
+   the call, so a 401 never means "no token":
 
    ```bash
-   curl -s -H "X-Figma-Token: $FIGMA_TOKEN" \
+   TOKEN_VAR="${tools_figma_token_env:-FIGMA_TOKEN}"   # the value of tools.figma_token_env
+   [ -n "${!TOKEN_VAR}" ] || echo "no token in $TOKEN_VAR"   # stop here: nothing is sent
+   curl -s -H "X-Figma-Token: ${!TOKEN_VAR}" \
      "https://api.figma.com/v1/files/{fileKey}/versions?page_size=10"
    ```
 
-   - **No token, or an expired one** (`{"status": 401, "err": "Token has expired"}`) → say so.
-     Handoff asks for the version's link to be pasted instead; `version-id` is in its query
+   - **No token** (the variable is empty or unset — caught before the call) or **an expired or
+     wrong one** (`{"status": 401, "err": "Token has expired"}`) → say which, and say so either
+     way. Handoff asks for the version's link to be pasted instead; `version-id` is in its query
      string. Never carry on unpinned where the caller pins. Sync has no link to pin, so it does not
      ask for one: it reports that the entry could not be confirmed, with the title it saved
    - **Nothing matches** → it was not saved, or was saved under another name. Show what the newest

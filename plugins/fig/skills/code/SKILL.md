@@ -72,7 +72,7 @@ Follow exactly what turns up here. Even where a better approach suggests itself,
 - Take structure, numbers, and tokens from `get_design_context` and the visual from `get_screenshot`, together. Either one alone goes wrong.
 - Where token names are needed, `get_variable_defs`. If the design is bound to variables, **bind the code to the corresponding tokens. No hardcoded hex or px.**
 - **Labels and copy verbatim from the design.** Even where better wording suggests itself, do not change it — copy was decided alongside the plan doc.
-- Do not redraw images, icons, or illustrations in code; take the originals from the `get_design_context` response, downloaded as that response describes, with no temporary Figma asset URL left in the code (`figma-design-to-code` SKILL.md:23 — no other tool downloads them). Imitating them in code ends up inventing behaviour the design never had.
+- Do not redraw images, icons, or illustrations in code; take the originals from the `get_design_context` response, downloaded as that response describes, with no temporary Figma asset URL left in the code (`figma-design-to-code`: "DO NOT use other tools to download assets unless explicitly told to do so"). Imitating them in code ends up inventing behaviour the design never had.
 - **In change mode, build the comparison table here first** — design values beside current code values, so only the places that actually moved are picked out.
 
 | Item | Design | Current code | Action |

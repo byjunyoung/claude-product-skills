@@ -60,6 +60,8 @@ Pin the definition of done in verifiable form (which cards, branches, and states
 
 Load `figma:figma-design-to-code` before the first `get_design_context` — that skill's own hard prerequisite, loaded the same way `/fig:code` does. Skip it and the structure read comes out wrong.
 
+**What proto takes from `figma:figma-design-to-code`, and where it differs:** it takes the prerequisite order (load the skill first) and the structure read itself. It does not take two of the skill's must-do lines, deliberately. It does not re-request a sparse response's child nodes in a parallel batch ("you MUST correlate its hierarchical child node IDs with the screenshot, then request the visible child nodes"), because proto's labels come from the TEXT walk below and the deliverable is a behavioural prototype, not a pixel port. And it does not download assets as the `get_design_context` response describes ("ensure ALL static assets … have been downloaded as described"): it exports each image node whole with `get_screenshot`, so the overlays laid on it come along and the result stays one file.
+
 Moving it "as drawn" means securing the labels, the structure, and the visuals alike. The target frame id comes from the URL's `node-id` (that frame or page), or from `get_metadata` (the page nodeId) enumerating sections down to screen frames. Then combine four sources:
 
 - **Structure** — `get_design_context` on the target screen. It gives the frame tree, field placement, and the component skeleton. But **large frames come back sparse with text masked as `text`**, so the real labels are missing (layout only).

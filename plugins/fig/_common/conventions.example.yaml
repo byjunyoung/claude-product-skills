@@ -256,8 +256,8 @@ qa:
     design: figma                             # design source — figma | none
     # Where past decisions and reversals are kept, as { type, ref } — the same shape as
     # task_tracker above.
-    #   type  markdown | notion | github | none
-    #   ref   a folder of task files, a Notion database, or a repo name
+    #   type  markdown | notion | none
+    #   ref   a folder of task files, or a Notion database (qa has no GitHub read path)
     # null for either (or type: none) means qa does not read past decisions: that collection is skipped.
     tasks:  { type: null, ref: null }
 
@@ -269,7 +269,7 @@ qa:
 
   # Where the defect report goes besides the response. A folder: qa writes one markdown file there,
   # named for the feature and the date, after showing it and getting a "go". null means
-  # response only — nothing is written to disk.
+  # response only — no report file is written (screenshots taken while testing are saved either way).
   report_dir: null
 
   environments: {}                            # name → url, e.g. dev: "https://dev.example.com"
@@ -277,8 +277,8 @@ qa:
 
 # --- Tools ---------------------------------------------------------------------
 tools:
-  figma_token_env: FIGMA_TOKEN                # env var holding the PAT, for the version read-back in handoff and sync (version-pin.md)
-  frame_count_guard: 20                       # above this many frames, confirm before collecting screenshots
+  figma_token_env: FIGMA_TOKEN                # env var holding the PAT (scope file_versions:read), for the version read-back in handoff and sync; version-pin.md step 4 reads it and checks it is non-empty before calling
+  frame_count_guard: 20                       # above this many frames, confirm before collecting screenshots (/fig:read, default 20)
   proto_output_dir: "."                       # where working prototypes are written
   proto_publish:                              # an unset repo stays local and never offers to publish
     repo: null                                # <owner>/<repo>

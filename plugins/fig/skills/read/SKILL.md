@@ -36,13 +36,13 @@ Extract the fileKey from the Figma URL:
 
 ### 2. List the pages
 
-Read page names and **order** with one read-only `use_figma` call (`fileKey` from step 1). Load `figma:figma-use` before it, as every `use_figma` call requires, and pass `figma-use` in `skillNames` on the call (`figma-use` SKILL.md:11), read-only or not.
+Read page names and **order** with one read-only `use_figma` call (`fileKey` from step 1). Load `figma:figma-use` before it, as every `use_figma` call requires, and pass `figma-use` in `skillNames` on the call (`figma-use`: "Always include `figma-use` in the comma-separated `skillNames` parameter"), read-only or not.
 
 ```js
-return figma.root.children.map((p, i) => `${i}\t${p.id}\t${p.name}`).join("\n");
+return [figma.root.name, ...figma.root.children.map((p, i) => `${i}\t${p.id}\t${p.name}`)].join("\n");
 ```
 
-- Each line is `index<TAB>id<TAB>name` — the page's node id is what step 3-2 passes to `get_metadata`
+- The first line is the file's name (step 6's `# {file name}`); each line after it is `index<TAB>id<TAB>name` — the page's node id is what step 3-2 passes to `get_metadata`
 - `get_metadata` with a fileKey alone returns an incomplete page list, so it is not used to list pages
 - If the node-id in the user's URL is a page (canvas type), include that page as a direct entry candidate too
 - Zero pages back, or the call fails: say so and stop — do not guess page names
@@ -66,7 +66,7 @@ Collect the top-level frame ids for each page.
 
 ### 4. Frame-count guard
 
-If the total frame count exceeds `tools.frame_count_guard`, warn before proceeding:
+If the total frame count exceeds `tools.frame_count_guard` (default 20 when the key is not set — read has no config lookup of its own), warn before proceeding:
 - Print, as markdown, "{N} frames found. Pulling screenshots too will cost significant time and context. Continue?"
 - Branch through `AskUserQuestion`: "all of it / metadata only (skip screenshots) / pick pages again"
 

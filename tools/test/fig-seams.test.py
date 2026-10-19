@@ -4,11 +4,10 @@ Reads the repository as it stands (no copy); every case is a plain look at a tra
 
     python3 tools/test/fig-seams.test.py
 """
-import os, re, subprocess, sys
+import re, sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-SELF = Path(__file__).resolve()
 failures = []
 
 
@@ -16,31 +15,6 @@ def check(label, cond, detail=""):
     print(("PASS  " if cond else "FAIL  ") + label + (f"  — {detail}" if detail and not cond else ""))
     if not cond:
         failures.append(label)
-
-
-def clean_env():
-    # Inside a git hook, GIT_DIR and friends point at the real repository; drop every GIT_* key.
-    return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-
-
-def tracked_text_files():
-    """Tracked text files, minus docs/, the plugins' CHANGELOGs, binaries and this file."""
-    out = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, env=clean_env(),
-                         capture_output=True, text=True, check=True).stdout
-    files = []
-    for rel in filter(None, out.split("\0")):
-        p = REPO / rel
-        parts = Path(rel).parts
-        if parts[0] == "docs" or p.resolve() == SELF or not p.is_file():
-            continue
-        if len(parts) == 3 and parts[0] == "plugins" and parts[2] == "CHANGELOG.md":
-            continue
-        try:
-            text = p.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
-        files.append((rel, text))
-    return files
 
 
 def read(rel):
@@ -66,7 +40,11 @@ for rel in ("README.md", "README.ko.md"):
     check(f"{rel} token row does not name /fig:read", bool(tok) and "/fig:read" not in tok, tok[:80])
 ex = read("plugins/fig/_common/conventions.example.yaml")
 tl = next((l for l in ex.splitlines() if l.strip().startswith("figma_token_env:")), "")
+vp = read("plugins/fig/_common/version-pin.md")
 check("figma_token_env comment says handoff and sync use it", "handoff" in tl and "sync" in tl, tl)
+check("version-pin reads the token through tools.figma_token_env, checks it is set, names the scope",
+      "tools.figma_token_env" in vp and "file_versions:read" in vp and "non-empty" in vp
+      and "$FIGMA_TOKEN" not in vp)
 
 # ---- Task 2: draw and prep name what they take from generate-design; prep's batching has a reason ----
 draw = read(SK + "draw/SKILL.md")
@@ -122,7 +100,7 @@ check("retired deck keys are gone from the example",
       not any(k in dk for k in ("template_file", "fidelity:", "batch_size")) and "assets_dir" in dk, dk[:80])
 tm = re.search(r"^\s+tasks:\s*\{ type: null, ref: null \}", ex, re.M)
 check("qa.baseline.tasks has the {type, ref} shape",
-      tm is not None and "markdown | notion | github | none" in ex[:tm.start()][-900:]
+      tm is not None and "markdown | notion | none" in ex[:tm.start()][-900:]
       and "does not read past decisions" in ex[:tm.start()][-900:])
 qa = read(SK + "qa/SKILL.md")
 qa_tools = [x.strip() for x in tools_line(qa).split(",")]
@@ -136,6 +114,9 @@ check("qa baseline table says the design is read live and the pin is not compare
       "live file" in row and "not yet compared" in row, row[:120])
 
 # ---- Carried from Tasks 1-3: the skills load what they call -------------------------------------------
+check("prep no longer says 'Never all at once'", "Never all at once" not in prep)
+check("proto says where it differs from design-to-code",
+      "does not re-request" in proto and "get_screenshot" in proto.split("What proto takes from", 1)[1][:1500])
 check("code lists Skill", "Skill" in [x.strip() for x in tools_line(code).split(",")])
 pg = prep.find("figma:figma-generate-design")
 check("prep loads generate-design with figma-use, names both in skillNames, and limits its use",

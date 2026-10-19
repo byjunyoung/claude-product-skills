@@ -47,7 +47,7 @@ Even in `full`, the step-3 checklist is **shown before verification begins**. St
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --js {fileKey}
 ```
 
-`qa.baseline` and `qa.environments` are read from it. The PRD is then looked up, not read from the config directly:
+`qa.baseline`, `qa.environments` and `qa.report_dir` are read from it. The PRD is then looked up, not read from the config directly:
 
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/borrow-pm.py prd {fileKey}
@@ -80,7 +80,7 @@ Gather the documents the verdicts will rest on. **Internal assets first.** Where
 |---|---|
 | The PRD (from the lookup above) | Detailed behaviour (Given/When/Then), states and cases, rules and exceptions |
 | The design | Screen composition, state variants, copy — read from the live file; the version a handover pinned is not yet compared (see the fig CHANGELOG, 3.31.0) |
-| Existing tickets (`qa.baseline.tasks`, as `{ type, ref }`) | Past decisions and reversals, undecided items. Where the type or ref is `null`, this row is skipped |
+| Existing tickets (`qa.baseline.tasks`, as `{ type, ref }`; `markdown` or `notion` — there is no GitHub read path) | Past decisions and reversals, undecided items. Where the type or ref is `null`, this row is skipped |
 | The request itself | What is newly asked for in this round |
 
 - Pull features and policies **exhaustively, by domain**. Look at only a handful and verification items leak out.
@@ -204,6 +204,6 @@ Without these three the report reads as "I looked at everything". Writing down w
 
 ## Delivering the report
 
-The report goes to the response, and, where `qa.report_dir` names a folder, also to a markdown file there (named for the feature and the date). Where `qa.report_dir` is `null` it is the response only, and nothing is written to disk. Show the file's whole text and path first and write it only after "go". Filing the defects anywhere else is outside this skill (see *When NOT to invoke*).
+The report goes to the response, and, where `qa.report_dir` names a folder, also to a markdown file there (named for the feature and the date). Where `qa.report_dir` is `null` it is the response only, and no report file is written (the captures are saved to disk either way). Show the file's whole text and path first and write it only after "go". Filing the defects anywhere else is outside this skill (see *When NOT to invoke*).
 
 **The person reading the report sees the captures, not a list of file names.** Walk each issue step by step — what was done, the capture, what it shows — in plain language before any engineering detail, and send the images themselves (attach them, or use whatever file-sending tool the session has). Where the report is a markdown file, say which captures go with which item, and give their paths or links rather than leaving a name that opens nothing.
