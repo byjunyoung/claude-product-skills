@@ -135,7 +135,7 @@ Close with a few lines: the file path, the counts that went in, what the gap che
 ## When NOT to invoke
 
 - Turning these files into accomplishment statements → `/pm:log-review`
-- Writing a task record's context table → `/pm:task-draft`
-- Filing a task in an engineering tracker → `/pm:task-publish`
-- Reconciling two trackers → `/pm:task-sync`
+- Writing a task record's context table → `/pm:task draft`
+- Filing a task in an engineering tracker → `/pm:task publish`
+- Reconciling two trackers → `/pm:task sync`
 - Writing requirements → `/pm:prd`

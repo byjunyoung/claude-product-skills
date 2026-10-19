@@ -1,12 +1,4 @@
----
-name: task-sync
-description: Reconciles a planning-side task list against the engineering tracker it mirrors. Reads both, diagnoses how they drifted (unfiled, duplicated, wrong parent, broken link, resurrected, field mismatch), then proposes, waits for approval, and only then writes. Reports its coverage. With no tracker attached it says the tasks are records only and stops. One task is /pm:task-publish. Triggers - "/pm:task-sync", "reconcile the tasks", "sync notion and github", "일감 동기화해줘", "노션 깃헙 맞춰줘", "정합화 돌려줘".
-allowed-tools: AskUserQuestion, Bash, Agent, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__sub_issue_write, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues
----
-
-# task-sync — reconcile the planning list against the engineering tracker
-
-**Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install pm@byjunyoung`), rather than improvising what the scripts do.
+# sync — reconcile the planning list against the engineering tracker
 
 Brings a planning-side task list and the engineering tracker that mirrors it back to the same state, every run. This is not a bulk create: it reads both sides, diagnoses how they drifted, and writes only **after** a proposal has been approved. **Nothing is written automatically.**
 
@@ -57,8 +49,8 @@ A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` 
 
 ## When NOT to invoke
 
-- Filling one record's context table → `/pm:task-draft`
-- Filing or updating one task → `/pm:task-publish`
+- Filling one record's context table → `/pm:task draft`
+- Filing or updating one task → `/pm:task publish`
 - Writing the requirements → `/pm:prd`
 
 ## The cycle
@@ -119,8 +111,8 @@ It prints the file to read — the bundled one, or yours from `adapters.dirs` wh
 | Schedule past | The end date has gone by and neither side is terminal | **Report, propose nothing.** A date that slipped is a decision somebody has to make, and moving it here makes the slip disappear instead of surfacing it |
 | Version stale | The record's version differs from the milestone resolved for its ticket, or is blank where it should carry one | Correct the record toward the mirror. **Never the other way** — a milestone is moved on the tracker, where the people planning the release can see it, and a version edited on the record is exactly what this row exists to catch. A parent whose milestone moved shows here once for every task under it; they go in one batch. **A value the record's property cannot hold is reported rather than written** — adding the option is a schema change somebody should make where they can see the whole list. **And judge a milestone that looks wrong for the ticket by the ticket's project label, never by its title** — a title naming one product on a ticket filed under another is the ordinary case, not a drift, and only where the label disagrees as well is it worth asking before the copy. Only runs where `task.properties.version` is named |
 | Policy | Milestone on the wrong level, or a label the rules require that the ticket does not carry | Correct per `task.hierarchy`, and per the rule document where one is configured. **A label the tracker does not have is reported, never created** |
-| Reads as internals | A title, or a sentence a person acts on, written in the vocabulary of the system rather than of the people who act on it | **Report, and name the way out.** `/pm:task-publish` rewords one ticket with a person watching. The same reword across a list is a bulk edit of sentences other people wrote, on one approval |
-| Off template | The ticket's headings are not the template's — a section missing, a section the template never had, a different order | **Report, and name the way out.** `/pm:task-publish` fixes one ticket with a person watching. This skill does not, because the same edit across a list would rewrite a hundred tickets on one approval |
+| Reads as internals | A title, or a sentence a person acts on, written in the vocabulary of the system rather than of the people who act on it | **Report, and name the way out.** `/pm:task publish` rewords one ticket with a person watching. The same reword across a list is a bulk edit of sentences other people wrote, on one approval |
+| Off template | The ticket's headings are not the template's — a section missing, a section the template never had, a different order | **Report, and name the way out.** `/pm:task publish` fixes one ticket with a person watching. This skill does not, because the same edit across a list would rewrite a hundred tickets on one approval |
 | Held by the rules | The tracker's enforcement has flagged the ticket — a violation, a decision it is waiting on | **Report, propose nothing.** It is waiting on a person, and that person is usually not the one running this |
 
 ### 3–4. Propose → approve, in two tiers
@@ -136,13 +128,13 @@ Only what was approved goes to step 5.
 
 Run the approved changes and nothing else.
 
-**Creating follows the same rules as `/pm:task-publish`** — the parent is resolved and confirmed rather than assumed, the ticket carries the configured title and labels, read once for whether the people who will act on it can read it too, the milestone lands on the level `task.hierarchy.milestone_on` names, and the link property is written back afterwards. A project with no entry in `task.label_map.project` is skipped, not guessed at.
+**Creating follows the same rules as `/pm:task publish`** — the parent is resolved and confirmed rather than assumed, the ticket carries the configured title and labels, read once for whether the people who will act on it can read it too, the milestone lands on the level `task.hierarchy.milestone_on` names, and the link property is written back afterwards. A project with no entry in `task.label_map.project` is skipped, not guessed at.
 
-This skill writes only a minimal ticket body and **does not add a link back to the record** — that is `/pm:task-publish`'s job, done with a person in the loop. Where such a link is already in the body, leave it: it is not used for matching and it is not removed either.
+This skill writes only a minimal ticket body and **does not add a link back to the record** — that is `/pm:task publish`'s job, done with a person in the loop. Where such a link is already in the body, leave it: it is not used for matching and it is not removed either.
 
-**An off-template finding is never applied here**, whatever was approved elsewhere in the run. It is in the table so that a drift nothing else can see gets seen. The list is what a person works through afterwards, one ticket at a time, with `/pm:task-publish` — which offers exactly this edit, with its own preview, its own "go", and a question for every piece of content that has to move. Turning the same list into a batch is how a hundred tickets get rewritten on one approval, and the difference between the two is the person who is watching.
+**An off-template finding is never applied here**, whatever was approved elsewhere in the run. It is in the table so that a drift nothing else can see gets seen. The list is what a person works through afterwards, one ticket at a time, with `/pm:task publish` — which offers exactly this edit, with its own preview, its own "go", and a question for every piece of content that has to move. Turning the same list into a batch is how a hundred tickets get rewritten on one approval, and the difference between the two is the person who is watching.
 
-**The contract is left empty here**, whichever level `task.contract.level` names. Done conditions and a QA checklist are drafted from the spec and the design with somebody watching, which is the opposite of what a bulk reconciliation is for — a plausible condition nobody agreed to gets built. `task.contract.allow_tbd` does not gate this path: closing the gap between two lists is this skill's job, writing the contract is not. Report every ticket created here as still needing `/pm:task-publish`, so an empty contract is visible rather than assumed filled.
+**The contract is left empty here**, whichever level `task.contract.level` names. Done conditions and a QA checklist are drafted from the spec and the design with somebody watching, which is the opposite of what a bulk reconciliation is for — a plausible condition nobody agreed to gets built. `task.contract.allow_tbd` does not gate this path: closing the gap between two lists is this skill's job, writing the contract is not. Report every ticket created here as still needing `/pm:task publish`, so an empty contract is visible rather than assumed filled.
 
 ### Result
 
@@ -163,7 +155,7 @@ The coverage line comes first on purpose. A count with no coverage reads as "eve
 - **Never recreate a terminal pair.** That is the resurrection this design exists to stop
 - **Never close a parent where closing is gated on somebody's sign-off.** Name who can, and stop there
 - **Never read an automated close as a cancelled task.** Ask, and say which rule closed it
-- **Never rewrite a ticket's body to match a template.** The difference is reported and the person is pointed at `/pm:task-publish`, which does it one ticket at a time. This skill sees the drift precisely because nothing else does, and that is a reason to be careful with it, not licence
+- **Never rewrite a ticket's body to match a template.** The difference is reported and the person is pointed at `/pm:task publish`, which does it one ticket at a time. This skill sees the drift precisely because nothing else does, and that is a reason to be careful with it, not licence
 - **Never invent a mapping.** An unmapped project, priority or assignee is skipped and reported. **A user id found on another record is not a mapping** — copying it onto a second record because the tracker shows the same name is exactly the invention this rule forbids. An assignee reaches the record only through `task.assignee_map`
 - **Never create a record from a ticket on your own.** A ticket without a record is reported and asked about, one at a time, and a ticket outside `task.record.scope` is not even a gap
 - **Never write a version the tracker does not show.** The record copies the milestone; it does not propose one

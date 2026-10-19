@@ -100,5 +100,5 @@ The document path, how many items were written under which sections, how many da
 ## When NOT to invoke
 
 - Writing today's log → `/pm:log`
-- Writing a task record's context table → `/pm:task-draft`
+- Writing a task record's context table → `/pm:task draft`
 - Writing requirements → `/pm:prd`

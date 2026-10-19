@@ -1,12 +1,4 @@
----
-name: task-publish
-description: Files one task record as a ticket in the engineering tracker, or updates the one already there. The ticket carries a summary, links, done conditions and a QA checklist. One grouped interview fills gaps, the parent is resolved first, and the link written into the record is what matching uses. With no tracker attached it says tasks are records only and stops. Many at once is /pm:task-sync. Triggers - "/pm:task-publish", "file this task as a ticket", "깃헙에 일감 등록해줘", "이 일감 티켓 만들어줘", "티켓 갱신해줘".
-allowed-tools: AskUserQuestion, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_design_context, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__add_issue_comment, mcp__plugin_github_github__sub_issue_write, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues
----
-
-# task-publish — one task record into one tracker ticket
-
-**Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install pm@byjunyoung`), rather than improvising what the scripts do.
+# publish — one task record into one tracker ticket
 
 Files a single task record as a ticket in the engineering tracker, or updates the one already there.
 
@@ -62,8 +54,8 @@ A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` 
 
 ## When NOT to invoke
 
-- Filling the record's context table → `/pm:task-draft`
-- Reconciling many tasks across both sides → `/pm:task-sync`
+- Filling the record's context table → `/pm:task draft`
+- Reconciling many tasks across both sides → `/pm:task sync`
 - Writing the requirements → `/pm:prd`
 
 ## Procedure
@@ -453,7 +445,7 @@ Where the tracker already gates on the sections existing — a column a ticket c
 
 `contract.allow_tbd: true` takes the first without asking. It is not permission to file a bare ticket: the note and the seating happen either way, and the only difference is whether the fork is put to a person.
 
-**A placeholder is never filed silently.** The report says what it is, and the run says plainly that `/pm:task-publish` has to be run again before work starts.
+**A placeholder is never filed silently.** The report says what it is, and the run says plainly that `/pm:task publish` has to be run again before work starts.
 
 **Three lighter forks sit alongside it.** None of them blocks — each offers the cheaper fix while the ticket is still cheap to change:
 
@@ -486,7 +478,7 @@ Create it with the assembled title, body, labels and assignee. **Right after the
 - Add it to the board named in `task.mirror_extras`, capturing the returned item id
 - Set the board's custom fields from `task.mirror_extras` — project field, dates
 - Dates go **on the task only**. A parent's schedule is managed separately and is never touched here
-- **Copy the version back to the record**, where `task.properties.version` is named — the milestone now in effect for this task, which under `milestone_on: parent` is the parent's, or `task.properties.version_unset` where there is none. Where this run set or moved a parent's milestone, every other record whose ticket sits under that parent now shows the old one: they are listed in the preview and move in the same "go". A version left behind on one sibling is the drift `/pm:task-sync` would otherwise have to find
+- **Copy the version back to the record**, where `task.properties.version` is named — the milestone now in effect for this task, which under `milestone_on: parent` is the parent's, or `task.properties.version_unset` where there is none. Where this run set or moved a parent's milestone, every other record whose ticket sits under that parent now shows the old one: they are listed in the preview and move in the same "go". A version left behind on one sibling is the drift `/pm:task sync` would otherwise have to find
 - **Seat it in the right column.** Where `task.status_map` has an entry for the record's current
   status, set the board's status field to it. Without an entry, leave the board's own default
   alone rather than guessing a column. **A placeholder ticket overrides this and goes to the
@@ -534,7 +526,7 @@ Link property : written at create
 
 ## Bringing a ticket back to the template
 
-Offered wherever `task.template` names one and the ticket's body does not match it. **It is one ticket, one person, one preview and one "go"** — that is the whole reason it is allowed here and refused in `/pm:task-sync`, where the same edit across a list would rewrite a hundred tickets somebody else wrote on a single approval.
+Offered wherever `task.template` names one and the ticket's body does not match it. **It is one ticket, one person, one preview and one "go"** — that is the whole reason it is allowed here and refused in `/pm:task sync`, where the same edit across a list would rewrite a hundred tickets somebody else wrote on a single approval.
 
 **The case this exists for is a ticket this workflow itself produced.** A ticket filed before the template was named, or by a config that had fallen behind it, carries sections these skills invented — not somebody else's prose, this workflow's own output under the wrong headings. Refusing to touch it on the grounds that the contract writer never touches what it does not own is the right rule applied to the wrong ticket.
 
@@ -565,7 +557,7 @@ Template : {task.template.parent or .task}
   {template's, missing}        → added empty
   {template's, missing, gated} → NOT added — the rules gate {column} on it, and an
                                  empty one passes that gate. Fill it with
-                                 /pm:task-publish --mode contract instead
+                                 /pm:task publish --mode contract instead
   {current, has content}       → asked below
 
 Labels   : + {label} (required by {the rule})
@@ -589,7 +581,7 @@ Taken when the link property was already filled.
 3. **A placeholder being filled is the ordinary second pass.** The note comes out, the two sections go in, `contract.incomplete_label` comes off, and the board seating is handed back to `task.status_map`. Say in the report that the ticket now has a contract, because that is the moment it becomes startable
 4. **A ticket already in progress is the delicate case.** Re-draft the two binding sections from the current materials, then reconcile rather than overwrite: a line that survives unchanged keeps its tick, a line the spec dropped is removed and said so in the preview, and a new line arrives unticked. Silently resetting a checklist somebody has been working down destroys the only record of what was verified
 5. Preview → go → edit the ticket, keeping the record link row intact
-6. **Move the record and the board together, in the same "go".** An update that changes what is ticked has changed how far along the task is, and the two sides read that from different fields. Where `task.properties` names them, set the record's progress from the checklist as counted in this run, its start date where work has begun and the field is empty, and its end date where every condition is now ticked; seat the board column by `task.status_map` and set the board's own date fields to the same days. Put the line in the preview beside the body change rather than making it a second approval — **a separate gate is one that gets skipped**, and a ticket whose body moved while its board did not is precisely the drift `/pm:task-sync` then has to go and find. Dates are the days things happened, not the day this ran
+6. **Move the record and the board together, in the same "go".** An update that changes what is ticked has changed how far along the task is, and the two sides read that from different fields. Where `task.properties` names them, set the record's progress from the checklist as counted in this run, its start date where work has begun and the field is empty, and its end date where every condition is now ticked; seat the board column by `task.status_map` and set the board's own date fields to the same days. Put the line in the preview beside the body change rather than making it a second approval — **a separate gate is one that gets skipped**, and a ticket whose body moved while its board did not is precisely the drift `/pm:task sync` then has to go and find. Dates are the days things happened, not the day this ran
 7. **Where the body still does not match `task.template`, offer the template pass above** — its own preview, its own "go", after this edit has landed. Two changes, two approvals, and the second one starts from what the first actually wrote
 8. Write back into the record — the spec link only where newly given; the link property is already there; the version where it no longer matches the milestone the ticket sits under. Append the new change summary under the existing one
 

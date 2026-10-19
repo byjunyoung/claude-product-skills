@@ -44,7 +44,7 @@ your queries are absent, with nothing marking their absence. Misses are structur
 
 Wrongly *creating* or *closing* something is not, because duplicate detection reads the mirror
 exhaustively and every write waits for approval. So the failure mode is silent under-coverage,
-which is why the coverage line in `/pm:task-sync`'s result is mandatory rather than decorative.
+which is why the coverage line in `/pm:task sync`'s result is mandatory rather than decorative.
 
 Where full reconciliation actually matters, ask for a CSV export of the list and run against
 the file.

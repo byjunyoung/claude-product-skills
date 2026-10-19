@@ -91,7 +91,7 @@ def plant_desc(r, skill, desc, dest=None):
     text = set_description(src.read_text(), desc)
     if dest:
         text = re.sub(r"^name:.*$", f"name: {dest}", text, count=1, flags=re.M)
-        shutil.copytree(src.parent, r / "plugins" / "pm" / "skills" / dest)
+        shutil.copytree(src.parent, r / "plugins" / "pm" / "skills" / dest, dirs_exist_ok=True)   # dest may already be a real skill
         src = r / "plugins" / "pm" / "skills" / dest / "SKILL.md"
     src.write_text(text, encoding="utf-8")
 
@@ -145,6 +145,14 @@ case("team string in a _common document", plant_team_common,
 case("stale reference in a _common script comment",
      lambda r: write(r, "plugins/fig/_common/scripts/deck-base.js", "\n// see /fig:nonexistent\n", append=True),
      1, "→ /fig:nonexistent does not exist")
+
+case("a rename map to a skill that exists passes",
+     lambda r: [write(r, f, "\n`/pm:old-name → /pm:setup`\n", append=True) for f in ("README.md", "README.ko.md")],
+     0)
+
+case("a rename map to a skill that does not exist still fails",
+     lambda r: write(r, "README.md", "\n`/pm:old-name → /pm:nonexistent`\n", append=True),
+     1, "→ /pm:nonexistent does not exist")
 
 print()
 if failures:

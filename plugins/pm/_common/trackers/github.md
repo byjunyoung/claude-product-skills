@@ -3,7 +3,7 @@
 connector: GitHub
 roles: mirror
 
-The calls behind the abstract steps in `/pm:task-publish` and `/pm:task-sync`, for a mirror
+The calls behind the abstract steps in `/pm:task publish` and `/pm:task sync`, for a mirror
 whose `task.mirror.type` is `github`. Every placeholder in braces comes from the config —
 `{repo}` is `task.mirror.ref`, and everything under `{extras.*}` is `task.mirror_extras`.
 
@@ -56,7 +56,7 @@ lives. Use the `--paginate` call above for any read a verdict depends on, and ke
 `--limit` is 30. Raising it does not solve the problem, it moves it: on one real board
 `--limit 400` returned exactly 400 rows — the newest item was not among them — and
 `--limit 2000` did not return inside two minutes. A truncated read is worse than a failed
-one, because `/pm:task-sync` reads the missing rows as *unfiled* and offers to create
+one, because `/pm:task sync` reads the missing rows as *unfiled* and offers to create
 tickets that already exist.
 
 **For a read a verdict depends on, page the board through GraphQL instead.** `--paginate`
@@ -149,7 +149,7 @@ The same caution applies to every write below: on a network-level error, read th
 state before acting on the assumption that nothing happened.
 
 **Never pass `--milestone` on a task** where `task.hierarchy.milestone_on` is `parent`.
-The parent owns the milestone; a task carrying one is the policy violation `/pm:task-sync`
+The parent owns the milestone; a task carrying one is the policy violation `/pm:task sync`
 reports as `Policy`.
 
 ## Creating a parent

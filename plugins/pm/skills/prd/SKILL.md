@@ -27,7 +27,7 @@ A PRD keeps growing. Keep the body thin and push the detail out into the entry l
 - Tidying or auditing a design file → `/fig:prep` · `/fig:lint`
 - Drawing the screens this document describes → `/fig:draw`, which reads the published document as its source for copy rather than inventing any
 - Comparing a shipped screen against the baseline → `/fig:qa`
-- Turning a request into a task record → `/pm:task-draft`; filing or syncing tickets → `/pm:task-publish` · `/pm:task-sync`
+- Turning a request into a task record → `/pm:task draft`; filing or syncing tickets → `/pm:task publish` · `/pm:task sync`
 
 ## Configuration
 

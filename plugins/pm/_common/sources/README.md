@@ -17,7 +17,7 @@ no adapter for that tool, and the skill stops on it.
 
 | Question | Who asks | What the answer carries |
 |---|---|---|
-| **A thread from a link** — the root and every reply, in order | `/pm:task-draft`, `/fig:qa` | How the link resolves to the thread root. What attachments come back as |
+| **A thread from a link** — the root and every reply, in order | `/pm:task draft`, `/fig:qa` | How the link resolves to the thread root. What attachments come back as |
 | **A channel on a day** — every message, in local time | `/pm:log` | The call, and how the day is bounded |
 | **Messages about me on a day** — sent by me, or mentioning me, across channels | `/pm:log` | The search call, and its response cap. Page rather than widen |
 | **My notes channel** — a place only I write in | `/pm:log` | The same channel read, plus how to tell a message an app posted on my behalf from one I typed |

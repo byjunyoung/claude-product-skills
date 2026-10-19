@@ -1,14 +1,6 @@
----
-name: task-draft
-description: Turns a request source — a chat thread, a page, a spoken agreement — into a task record's context table, with fact, inference and undecided labelled apart. Creates a record where none exists, or fills only the empty cells of one that does. Filing it in the tracker is /pm:task-publish. Triggers - "/pm:task-draft", "draft a task from this thread", "fill in the context table", "일감 초안 잡아줘", "맥락표 채워줘", "이 스레드로 일감 만들어줘".
-allowed-tools: AskUserQuestion, Read, Write, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write
----
+# draft — a request source into a task's context table
 
-# task-draft — a request source into a task's context table
-
-**Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install pm@byjunyoung`), rather than improvising what the scripts do.
-
-Takes a **request source** — a chat thread, a document, a conversation someone relayed — and fills the context table of a task record. It sorts what was said into the rows your team uses, and keeps **fact, inference, and undecided** visibly apart. With no existing record it creates one; with one that exists it fills only what is empty. Filing the task in an engineering tracker is out of scope — that is `/pm:task-publish`.
+Takes a **request source** — a chat thread, a document, a conversation someone relayed — and fills the context table of a task record. It sorts what was said into the rows your team uses, and keeps **fact, inference, and undecided** visibly apart. With no existing record it creates one; with one that exists it fills only what is empty. Filing the task in an engineering tracker is out of scope — that is `/pm:task publish`.
 
 ## Principles
 
@@ -119,7 +111,7 @@ Create the record in `task.record`, writing properties and body in a single writ
 | Priority | One of `task.properties.priority` |
 | Status | `task.properties.status_initial` |
 | Version | `task.properties.version_unset`, where `task.properties.version` is named. A new record has no ticket and so no milestone to copy — not asked |
-| Link to mirror | Left empty — `/pm:task-publish` fills it |
+| Link to mirror | Left empty — `/pm:task publish` fills it |
 
 **Markdown records** (`task.record.type` is `markdown`) are one call, with each property as `--set` under the lower-case key the record shape in `trackers/markdown.md` uses, and each context row as `--row`, in `task.context_rows` order. Report the printed path.
 
@@ -149,7 +141,7 @@ Read the record back — for a markdown record, `markdown-tracker.py list --dir 
 
 ## When NOT to invoke
 
-- Filing the task in an engineering tracker → `/pm:task-publish`
-- Reconciling many tasks across two trackers → `/pm:task-sync`
+- Filing the task in an engineering tracker → `/pm:task publish`
+- Reconciling many tasks across two trackers → `/pm:task sync`
 - Writing the requirements themselves → `/pm:prd`
 - Auditing a design file → `/fig:lint`
