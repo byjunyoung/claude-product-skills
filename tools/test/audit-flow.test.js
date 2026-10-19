@@ -141,6 +141,15 @@ test("a straight [state] link between the same two frames reports nothing", () =
   );
 });
 
+test("a [state] link starting beside the frame's x-span is a warning", () => {
+  const D = frame("a_empty", 0, 200);
+  // Vertical, on both y edges, but 150px to the right of both 0-100 frames.
+  const out = run([A, B, D, arrow(...GOOD), arrow("[state] a_default ~ a_empty", [150, 100], [150, 200])]);
+  const f = tagged(out, "[state]").find((i) => /x-span/.test(i.msg));
+  assert.ok(f, JSON.stringify(out));
+  assert.strictEqual(f.grade, "warning");
+});
+
 // ── Nested sections ────────────────────────────────────────────────────────────
 // A section's children are relative to it and nested sections compose: the frames below sit at
 // abs (150, 100) and (350, 100), and the arrow's own x/y are relative to the inner section too.

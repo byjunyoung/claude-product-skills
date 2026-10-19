@@ -159,6 +159,11 @@ for (const { s, ax, ay } of liveSecs) {
       if (Math.abs(p0.y - F.b) > EDGE_TOL) add("[state]", "warning", n.id, `${n.name}: start is ${Math.abs(p0.y - F.b).toFixed(0)}px off from's bottom edge`);
       if (Math.abs(pe.y - T.y) > EDGE_TOL) add("[state]", "warning", n.id, `${n.name}: end is ${Math.abs(pe.y - T.y).toFixed(0)}px off to's top edge`);
 
+      // The y checks above leave the column free: a line on the right row but beside the frame is
+      // not attached to it. Its x has to lie within each frame's x-span, same tolerance as the edges.
+      if (p0.x < F.x - EDGE_TOL || p0.x > F.r + EDGE_TOL) add("[state]", "warning", n.id, `${n.name}: start x is outside from's x-span (${F.x.toFixed(0)}–${F.r.toFixed(0)})`);
+      if (pe.x < T.x - EDGE_TOL || pe.x > T.r + EDGE_TOL) add("[state]", "warning", n.id, `${n.name}: end x is outside to's x-span (${T.x.toFixed(0)}–${T.r.toFixed(0)})`);
+
       const lx = p0.x, top = Math.min(p0.y, pe.y), bot = Math.max(p0.y, pe.y);
       for (const f of frames) {
         if (f.name === a || f.name === b) continue;
