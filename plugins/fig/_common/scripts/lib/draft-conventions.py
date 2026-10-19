@@ -229,7 +229,9 @@ def main():
     # ── This file's pages ─────────────────────────────────────
     # Which page is canonical, strict or read-only is not on the canvas; /fig:setup asks and
     # writes the answers beside these. Only sections that look like scaffolding are observed.
-    excl = sorted({s for s in secnames if re.match(r'^템플릿$|^[Tt]emplate$|^\[?[Aa]rchive|^9\d\.', s)})
+    # Every depth: the scripts skip an excluded section's subtree, so a nested archive counts too.
+    allnames = [s["name"] for p in probes for s in p.get("sections", [])]
+    excl = sorted({s for s in allnames if re.match(r'^템플릿$|^[Tt]emplate$|^\[?[Aa]rchive|^9\d\.', s)})
     if excl:
         L.append("files:")
         L.append(f"  {y(args.file_key)}:")
