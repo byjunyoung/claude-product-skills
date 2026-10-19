@@ -19,6 +19,11 @@
  *   const MODE = "collect";                  or "compare"
  *   const PAGE = "<part of the page name>";
  *   const STAT = {...};                      compare mode only. The collect result as it is
+ *   const SECTION = "<section node id>";     compare mode only, optional. Audit that section and the
+ *                                            sections nested in it, nothing else. Not on the page: one
+ *                                            blocking [section] finding. Inside a section that
+ *                                            pages.exclude_sections excludes: pass with a `note`.
+ *                                            Collect mode ignores it; reference statistics come from reference pages.
  *
  * One reference page leaves components without enough samples. Where the target uses both forms and lists,
  * take one reference of each and sum the STATs. What is still missing is undecidable, not a violation.
@@ -47,6 +52,18 @@ const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
 };
 // </sections-deep>
 
+// SECTION narrows the audit to one section and every section nested in it. `all` is the walk's
+// output; the result is the set of in-scope section ids, or a ready-made early return.
+const SEC = typeof SECTION !== "undefined" && SECTION ? String(SECTION) : null;
+const scopeOf = all => {
+  const t = all.find(d => d.s.id === SEC);
+  const add = (tag, grade, node, msg) => ({ tag, grade, node, msg });
+  if (!t) return { done: { pass: false, findings: [add("[section]", "blocking", null, `section ${SEC} is not on this page`)] } };
+  if (t.skipped) return { done: { pass: true, findings: [], note: `section ${SEC} is excluded by pages.exclude_sections; nothing audited` } };
+  const ids = new Set(), take = n => { ids.add(n.id); for (const c of n.children) if (c.type === "SECTION") take(c); };
+  take(t.s);
+  return { ids };
+};
 const page = figma.root.children.find(p => p.name.indexOf(PAGE) !== -1);
 if (!page) throw new Error(`page not found: ${PAGE}`);
 await figma.setCurrentPageAsync(page);
@@ -86,7 +103,13 @@ if (MODE === "collect") {
 const S = typeof STAT !== "undefined" ? STAT : {};
 const isPatternPage = !!(PATTERN_PAGE && new RegExp(PATTERN_PAGE).test(page.name));
 const issues = [], unknown = {};
-for (const { s } of sectionsDeep(page.children, () => false)) {
+// Without SECTION nothing is excluded here (as before); with it, the exclusion decides the note.
+const exclude = (C.pages || {}).exclude_sections;
+const EXCL = exclude && exclude.length ? new RegExp(exclude.join("|")) : null;
+const walked = sectionsDeep(page.children, SEC ? s => !!(EXCL && EXCL.test(s.name)) : () => false);
+const scope = SEC ? scopeOf(walked) : null;
+if (scope && scope.done) return { ...scope.done, unknown: [] };
+for (const { s } of walked.filter(d => !SEC || (scope.ids.has(d.s.id) && !d.skipped))) {
   for (const f of s.children.filter(c => c.type === "FRAME" && !c.name.startsWith(LABEL))) {
     const fb = f.absoluteBoundingBox;
     if (!fb) continue;

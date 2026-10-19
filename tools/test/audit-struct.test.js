@@ -29,8 +29,8 @@ const frame = (name, x, y, w = 100, h = 100) => ({
 });
 const section = (name, x, y, w, h, children) => ({ type: "SECTION", id: "id:" + name, name, x, y, width: w, height: h, children });
 
-const run = (pageChildren, cfg = baseCfg()) =>
-  new AsyncFunction("CFG", "figma", SRC)(cfg, {
+const run = (pageChildren, cfg = baseCfg(), SECTION) =>
+  new AsyncFunction("CFG", "SECTION", "figma", SRC)(cfg, SECTION, {
     currentPage: { name: "[UI] Fixture", children: pageChildren, findAllWithCriteria: () => [] },
   });
 
@@ -146,4 +146,48 @@ test("no mode anywhere above a nested screen is still reported", async () => {
   assert.ok(f && /Inner \/ A-Default/.test(f.msg), JSON.stringify(out));
   assert.strictEqual(f.grade, "blocking");
   assert.strictEqual(f.node, "id:A-Default");
+});
+
+// ── SECTION — audit one section and the ones nested in it ──
+// Three levels. Every level holds a frame outside its own bounds, and "Other" is a sibling of
+// "L1" that is bad too; only what sits under the chosen section may be reported.
+const levels = () => [
+  section("L1", 0, 0, 3000, 3000, [
+    frame("Bad1-Default", 9000, 9000),
+    section("L2", 50, 50, 2000, 2000, [
+      frame("Bad2-Default", 9000, 9000),
+      section("L3", 50, 50, 500, 300, [frame("Bad3-Default", 9000, 9000)]),
+    ]),
+  ]),
+  section("Other", 5000, 0, 500, 300, [frame("BadO-Default", 9000, 9000)]),
+];
+const boundsOf = (out) => out.findings.filter((i) => i.tag === "[bounds]").map((i) => i.node).sort();
+
+test("SECTION limits the audit to that section and its nested sections", async () => {
+  assert.deepStrictEqual(boundsOf(await run(levels())), ["id:Bad1-Default", "id:Bad2-Default", "id:Bad3-Default", "id:BadO-Default"]);
+  assert.deepStrictEqual(boundsOf(await run(levels(), baseCfg(), "id:L2")), ["id:Bad2-Default", "id:Bad3-Default"]);
+  assert.deepStrictEqual(boundsOf(await run(levels(), baseCfg(), "id:L3")), ["id:Bad3-Default"]);
+});
+
+test("SECTION leaves out page-level findings that belong to no section", async () => {
+  const out = await run([frame("Loose-Default", 0, 0), ...levels()], baseCfg(), "id:L3");
+  assert.ok(!out.findings.some((i) => i.tag === "[membership]"), JSON.stringify(out));
+});
+
+test("unknown SECTION is a blocking [section] finding", async () => {
+  const out = await run(levels(), baseCfg(), "id:nope");
+  assert.deepStrictEqual(out, {
+    pass: false,
+    findings: [{ tag: "[section]", grade: "blocking", node: null, msg: "section id:nope is not on this page" }],
+  });
+});
+
+test("SECTION inside an excluded parent audits nothing and says so", async () => {
+  const cfg = baseCfg();
+  cfg.pages.exclude_sections = ["^L1$"];
+  const out = await run(levels(), cfg, "id:L3");
+  assert.deepStrictEqual(out, {
+    pass: true, findings: [],
+    note: "section id:L3 is excluded by pages.exclude_sections; nothing audited",
+  });
 });

@@ -34,6 +34,7 @@ Takes one design page and **audits structure (placement), flow (arrows), and com
 
 - `figma_url` (required): the page to audit. For several pages, split the calls per page and run them in parallel
 - `scope` (optional): structure only / flow only / components only. Omitted, all three run
+- `section` (optional): a section link or a section name. Only that section and the sections nested in it are audited, at any depth. Omitted, the whole page is. A link carries the section's id in `node-id` (Figma writes `1-2` for `1:2`; use `1:2`). A name is resolved to one id with a read-only `use_figma` call before the scripts run; if it matches no section or several, ask which one rather than choosing. Component collect (C-1) reads reference pages and ignores it
 - `reference_page` (optional): an existing production page to derive component usage conventions from. Omitted, the page in the same file that uses the most of the same components is chosen
 
 ## Where the rules come from — the config file (same source as fig:prep and fig:sync)
@@ -112,7 +113,8 @@ Every violation carries one of two grades. **The grade never changes what is aud
 
 | In the output | Grade | Why |
 |---|---|---|
-| `[duplicate name]` | blocking | A name lookup catches only one of them, so nothing else in the run can be trusted — narrow and re-run before reading the rest |
+| `[duplicate name]` | blocking | A name lookup catches only one of them, so nothing else in the run can be trusted — narrow with the `section` input and re-run before reading the rest |
+| `[section]` | blocking | The section asked for is not on this page, so nothing was audited |
 | `[membership]` | blocking | Not in a section. Handoff marks status on sections, so the screen is not in the handover at all |
 | `[bounds]` | blocking | The frame left its own section |
 | `[frame overlap]` | blocking | Screens cover each other — the one behind is invisible |
@@ -159,8 +161,9 @@ ${CLAUDE_PLUGIN_ROOT}/_common/scripts/audit-component.js    C. components (MODE=
 All three are called the same way.
 
 1. Get the single `const CFG = {...};` line from `resolve-config.py --js <fileKey>`
-2. Concatenate that line and the whole script, and hand it to `use_figma`. If the target page is not the first page, prepend one `setCurrentPageAsync` line (once per script)
-3. The return value is an `AuditResult`: `{ pass, findings }`. Each finding is `{ tag, grade, node, msg }` — `tag` the bracketed tag (`"[arrow]"`), `grade` `"blocking"` or `"warning"`, `node` the offending node's id (or `null` where there is none), `msg` the message without its tag. `pass` is true exactly when `findings` is empty. The component script's compare result carries one more field, `unknown: string[]` — properties the collect pass never saw. Report it as an information line asking for another reference page (see C-1); it is not a finding and never changes `pass`. Read the grade from `grade`; do not infer it from the message text. `pass` is the script's own verdict, so there is no string to look for. A page that does not exist makes the component script throw, which `use_figma` reports as an error
+2. Optionally one input line, `const SECTION = "<section node id>";`, after the CFG line (from the `section` input; leave it out to audit the whole page). Compare mode of the component script takes it too, after `STAT`
+3. Concatenate those lines and the whole script, and hand it to `use_figma`. If the target page is not the first page, prepend one `setCurrentPageAsync` line (once per script)
+4. The return value is an `AuditResult`: `{ pass, findings }`. Each finding is `{ tag, grade, node, msg }` — `tag` the bracketed tag (`"[arrow]"`), `grade` `"blocking"` or `"warning"`, `node` the offending node's id (or `null` where there is none), `msg` the message without its tag. `pass` is true exactly when `findings` is empty. The component script's compare result carries one more field, `unknown: string[]` — properties the collect pass never saw. Report it as an information line asking for another reference page (see C-1); it is not a finding and never changes `pass`. Read the grade from `grade`; do not infer it from the message text. `pass` is the script's own verdict, so there is no string to look for. With `SECTION` set, an id that is not on the page comes back as one blocking `[section]` finding, and an id inside a section that `pages.exclude_sections` excludes comes back as `pass: true` with a `note` (`AuditResult` may carry `note?: string`) saying nothing was audited — print the note instead of a bare PASS. In the flow script, coverage counts only arrows that start or end inside the section, so a frame reached by an arrow from outside it is not an orphan. A page that does not exist makes the component script throw, which `use_figma` reports as an error
 
 For several pages, split the calls per page and **issue them in one message so they run in parallel**. One script never switches pages twice.
 
@@ -176,7 +179,7 @@ After editing a script, check its syntax with `scripts/lib/check.sh`. `use_figma
 - **Never PASS on an isolated screenshot alone** — measured metadata is the first pass, a whole-section screenshot the second. A frame rendered by itself cannot show a parent or canvas-position error
 - Convention-dependent checks (naming and the like) are only decided when the config has a pattern. On `null`, skip the check; if it ran on bundled defaults, say so in the report
 - **Excluded sections are treated three different ways** — dropped from the audit, dropped from coverage, but **kept as pass-through targets.** If a line actually crosses one, it is a broken line whether the section is excluded or not. The list is `pages.exclude_sections`
-- Duplicate frame names make a name lookup return only one of them. Report `[duplicate name]` first, then narrow to a single section and re-run
+- Duplicate frame names make a name lookup return only one of them. Report `[duplicate name]` first, then narrow to a single section with the `section` input and re-run
 - **States managed on a common page are not counted as per-screen omissions or orphans** (see fig:prep, "repeated common elements") — (1) a state present on the common page counts as covered for every screen that does not draw its own, (2) canonical state frames on a page matching `naming.common_page_pattern` are expected not to appear in per-screen flow, so they are dropped from coverage. If the setting is `null`, this exception does not apply
 - **A pattern page is dropped from coverage the same way** — the page `naming.pattern_page_pattern` matches holds arrangements rather than screens (how a row is built, where a badge sits in it), and nobody navigates to one, so requiring its frames to appear in the flow would report each of them as an orphan. `/fig:draw` writes and reads that page. With the setting `null` the exception does not apply, and the page's sections come back as orphans — which is the signal to record it
 - **File patterns in sections, the same as any other page.** Coverage collects frames from sections only, so a pattern sitting directly on the page escapes the exception above — and lands on `[membership]` instead, which the structure script applies to every page-level frame without reading page strictness. Neither is a reason to scatter patterns loose on the canvas: put them in a section, where the coverage exception is what carries them

@@ -14,6 +14,11 @@
  *          "warning", decided here at the emit site; `node` is the offending node's id or null;
  *          `pass` is true exactly when `findings` is empty.
  *
+ * Optional input: `const SECTION = "<section node id>";` — audit that section and the sections nested in
+ * it, at any depth, and nothing else (no page-level membership, top-level order or other sections).
+ * An id not on the page returns one blocking [section] finding; an id inside a section that
+ * pages.exclude_sections excludes returns pass with a `note` and no findings.
+ *
  * A null pattern skips that check — it keeps a file with no convention from reporting everything.
  * Coordinate and parent checks always run regardless of config (geometry holds with or without a rule).
  * ========================================================================== */
@@ -50,17 +55,32 @@ const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
 
 const issues = [];
 const add = (tag, grade, node, msg) => issues.push({ tag, grade, node: node == null ? null : node, msg });
+// SECTION narrows the audit to one section and every section nested in it. `all` is the walk's
+// output; the result is the set of in-scope section ids, or a ready-made early return.
+const SEC = typeof SECTION !== "undefined" && SECTION ? String(SECTION) : null;
+const scopeOf = all => {
+  const t = all.find(d => d.s.id === SEC);
+  const add = (tag, grade, node, msg) => ({ tag, grade, node, msg });
+  if (!t) return { done: { pass: false, findings: [add("[section]", "blocking", null, `section ${SEC} is not on this page`)] } };
+  if (t.skipped) return { done: { pass: true, findings: [], note: `section ${SEC} is excluded by pages.exclude_sections; nothing audited` } };
+  const ids = new Set(), take = n => { ids.add(n.id); for (const c of n.children) if (c.type === "SECTION") take(c); };
+  take(t.s);
+  return { ids };
+};
 const secs = figma.currentPage.children.filter(c => c.type === "SECTION");   // top level: order and the page-level overlap
-const deep = sectionsDeep(figma.currentPage.children, skipSection);          // every depth: the per-section checks
+const deepAll = sectionsDeep(figma.currentPage.children, skipSection);       // every depth, the whole page
+const scope = SEC ? scopeOf(deepAll) : null;
+if (scope && scope.done) return scope.done;
+const deep = SEC ? deepAll.filter(d => scope.ids.has(d.s.id)) : deepAll;     // the per-section checks
 // Section -> the section holding it, built from the walk above (not from `.parent`). A variable
 // mode set on an outer section reaches every screen under it, however deep.
 const parentOf = new Map();
-for (const { s } of deep) for (const c of s.children) if (c.type === "SECTION") parentOf.set(c, s);
+for (const { s } of deepAll) for (const c of s.children) if (c.type === "SECTION") parentOf.set(c, s);
 const chain = s => { const out = []; for (let n = s; n; n = parentOf.get(n)) out.push(n); return out; };
 
 // A screen frame sitting directly on the page = the absorb step was missed.
 // clone() and createFrame default their parent to currentPage, so anything not absorbed leaks out here.
-for (const f of figma.currentPage.children)
+for (const f of SEC ? [] : figma.currentPage.children)
   if (isScreen(f))
     add("[membership]", "blocking", f.id, `directly on page (not absorbed into a section): ${f.name} @abs ${r(f.x)},${r(f.y)}`);
 
@@ -93,7 +113,7 @@ for (const { s, skipped } of deep) {
 // Section overlap — an excluded section on either side is dropped from the check.
 // Only siblings are compared: a nested section lies inside its parent by design, and siblings
 // share the parent's coordinate space, so their own x/y compare directly.
-const siblingGroups = [secs, ...deep.filter(d => !d.skipped).map(d => d.s.children.filter(c => c.type === "SECTION"))];
+const siblingGroups = [...(SEC ? [] : [secs]), ...deep.filter(d => !d.skipped).map(d => d.s.children.filter(c => c.type === "SECTION"))];
 for (const group of siblingGroups)
   for (let i = 0; i < group.length; i++)
     for (let j = i + 1; j < group.length; j++) {
@@ -107,7 +127,7 @@ for (const group of siblingGroups)
 // Protected number ranges are never reassigned, so they are not checked either.
 const BUCKET = (C.layout || {}).row_bucket || 1000;
 const PROT = P.protected_numbers || [];
-const numbered = secs
+const numbered = (SEC ? [] : secs)
   .filter(s => !skipSection(s) && /^\d+\./.test(s.name) && !PROT.some(p => s.name.startsWith(p)))
   .sort((a, b) => (Math.round(a.y / BUCKET) - Math.round(b.y / BUCKET)) || (a.x - b.x));
 numbered.forEach((s, i) => {
@@ -165,7 +185,9 @@ for (const { s, skipped } of deep) {
 // reads as a single component: three states look like one. It survives review because nothing
 // about it looks broken — the top variant renders fine and the ones beneath it are simply gone.
 // An auto-layout set places every new variant on its own, which is why the note points there.
+const inScope = n => { for (let a = n.parent; a; a = a.parent) if (a.type === "SECTION" && scope.ids.has(a.id)) return true; return false; };
 for (const cs of figma.currentPage.findAllWithCriteria({ types: ["COMPONENT_SET"] })) {
+  if (SEC && !inScope(cs)) continue;
   const v = cs.children;
   let hit = null;
   for (let i = 0; i < v.length && !hit; i++)

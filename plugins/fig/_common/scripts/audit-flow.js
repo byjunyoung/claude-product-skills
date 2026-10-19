@@ -3,7 +3,11 @@
  *
  * Checks: transition arrow geometry · entry direction · pass-through · label z-order · [state] dashes · coverage orphans
  *
- * Used the same way as audit-struct.js. Returns: { pass, findings } — each finding is
+ * Used the same way as audit-struct.js, including the optional `const SECTION = "<section node id>";`
+ * input: only that section and the sections nested in it are audited. Name lookups and pass-through
+ * still see the whole page, and coverage counts only arrows that start or end inside the section, so a
+ * frame an arrow from outside reaches is not an orphan. A duplicate name is judged inside the section.
+ * Returns: { pass, findings } — each finding is
  * { tag, grade, node, msg }, graded here at the emit site; `pass` is true exactly when `findings` is empty.
  *
  * Excluded sections (templates, archives, deprecated ranges) are treated three different ways.
@@ -58,8 +62,23 @@ const sectionsDeep = (nodes, skip, ox = 0, oy = 0, inherited = false) => {
 };
 // </sections-deep>
 
+// SECTION narrows the audit to one section and every section nested in it. `all` is the walk's
+// output; the result is the set of in-scope section ids, or a ready-made early return.
+const SEC = typeof SECTION !== "undefined" && SECTION ? String(SECTION) : null;
+const scopeOf = all => {
+  const t = all.find(d => d.s.id === SEC);
+  const add = (tag, grade, node, msg) => ({ tag, grade, node, msg });
+  if (!t) return { done: { pass: false, findings: [add("[section]", "blocking", null, `section ${SEC} is not on this page`)] } };
+  if (t.skipped) return { done: { pass: true, findings: [], note: `section ${SEC} is excluded by pages.exclude_sections; nothing audited` } };
+  const ids = new Set(), take = n => { ids.add(n.id); for (const c of n.children) if (c.type === "SECTION") take(c); };
+  take(t.s);
+  return { ids };
+};
 const allSecs = sectionsDeep(figma.currentPage.children, skipSection);
-const liveSecs = allSecs.filter(d => !d.skipped);
+const scope = SEC ? scopeOf(allSecs) : null;
+if (scope && scope.done) return scope.done;
+const inSec = d => !SEC || scope.ids.has(d.s.id);
+const liveSecs = allSecs.filter(d => !d.skipped && inSec(d));
 
 // Frame dictionary (absolute coordinates). Pass-through checks and name lookups are only
 // accurate with excluded sections included, at any depth.
@@ -67,15 +86,16 @@ const frames = [];
 for (const { s, ax, ay, skipped } of allSecs)
   for (const f of s.children)
     if (isScreen(f))
-      frames.push({ id: f.id, name: f.name, sec: s.name, excluded: skipped,
+      frames.push({ id: f.id, name: f.name, sec: s.name, excluded: skipped, scoped: inSec({ s }),
                     x: ax + f.x, y: ay + f.y, r: ax + f.x + f.width, b: ay + f.y + f.height });
-const byName = Object.fromEntries(frames.map(f => [f.name, f]));
+// In-scope frames come last so a name that also exists elsewhere resolves to the chosen section's.
+const byName = Object.fromEntries([...frames.filter(f => !f.scoped), ...frames.filter(f => f.scoped)].map(f => [f.name, f]));
 
-const dup = frames.map(f => f.name).filter((n, i, a) => a.indexOf(n) !== i);
+const dup = frames.filter(f => f.scoped).map(f => f.name).filter((n, i, a) => a.indexOf(n) !== i);
 const issues = [];
 const add = (tag, grade, node, msg) => issues.push({ tag, grade, node: node == null ? null : node, msg });
 if (dup.length)
-  add("[duplicate name]", "blocking", null, `${[...new Set(dup)].join(", ")} — a name lookup catches only one, so narrow to a single section and re-run`);
+  add("[duplicate name]", "blocking", null, `${[...new Set(dup)].join(", ")} — a name lookup catches only one, so narrow with the section input and re-run`);
 
 for (const { s, ax, ay } of liveSecs) {
   for (const n of s.children) {
@@ -191,14 +211,18 @@ for (const { s, ax, ay } of liveSecs) {
 // ── Coverage orphans — every screen frame must appear in the flow at least once ──────
 // The connected set includes arrows from excluded sections too (a frame an archive points
 // at is still connected). But only frames in live sections are required to be connected.
+// With SECTION set only an arrow that starts or ends on a frame of that section counts; arrows
+// elsewhere on the page are still read, which is how a frame reached from outside stays connected.
 const connected = new Set();
+const scopedNames = new Set(frames.filter(f => f.scoped).map(f => f.name));
+const reach = names => { if (!SEC || names.some(x => scopedNames.has(x))) names.forEach(x => connected.add(x)); };
 for (const { s } of allSecs)
   for (const c of s.children) {
     if (c.type !== "VECTOR") continue;
     if (c.name.startsWith(STATE) && c.name.includes(CHAIN))
-      c.name.slice(STATE.length).split(CHAIN).map(t => t.trim()).forEach(x => connected.add(x));
+      reach(c.name.slice(STATE.length).split(CHAIN).map(t => t.trim()));
     else if (c.name.includes(ARROW))
-      c.name.split(ARROW).map(t => t.trim()).forEach(x => connected.add(x));
+      reach(c.name.split(ARROW).map(t => t.trim()));
   }
 // Canonical state frames on a shared page are expected not to appear in per-screen flow, and
 // neither are the compositions on a pattern page — a pattern is how a row is built, not a screen
@@ -210,7 +234,7 @@ const EXEMPT_PAGE = [N.common_page_pattern, N.pattern_page_pattern]
 const isExemptPage = EXEMPT_PAGE.some(re => re.test(figma.currentPage.name));
 if (!isExemptPage)
   for (const f of frames)
-    if (!f.excluded && !connected.has(f.name))
+    if (!f.excluded && f.scoped && !connected.has(f.name))
       add("[coverage]", "blocking", f.id, `orphan frame (absent from the flow): ${f.name} — ${f.sec}`);
 
 return { pass: issues.length === 0, findings: issues };

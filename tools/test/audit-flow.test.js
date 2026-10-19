@@ -186,3 +186,56 @@ test("a frame inside an excluded section still blocks a line passing through it"
   assert.ok(f, JSON.stringify(out));
   assert.strictEqual(f.grade, "blocking");
 });
+
+// ── SECTION — audit one section and the ones nested in it ──
+const sec = (id, x, children) => ({ type: "SECTION", id, name: id, x, y: 0, children });
+const runSec = (page, SECTION, cfg = CFG) =>
+  new Function("CFG", "SECTION", "figma", SRC)(cfg, SECTION, { currentPage: { name: "[UI] Fixture", children: page } });
+const bad = (n) => arrow(`${n}_a --> ${n}_gone`, [100, 50], [150, 50], [190, 50]);   // orphan arrow: target missing
+const levelsPage = () => [
+  sec("L1", 0, [bad("one"), sec("L2", 10, [bad("two"), sec("L3", 10, [bad("three")])])]),
+  sec("Other", 5000, [bad("other")]),
+];
+const arrowNodes = (out) => out.findings.filter((i) => i.tag === "[arrow]").map((i) => i.node).sort();
+
+test("SECTION limits the audit to that section and its nested sections", () => {
+  const a = (n) => frame(`${n}_a`, 0, 0);
+  const page = [
+    sec("L1", 0, [a("one"), bad("one"), sec("L2", 10, [a("two"), bad("two"), sec("L3", 10, [a("three"), bad("three")])])]),
+    sec("Other", 5000, [a("other"), bad("other")]),
+  ];
+  assert.deepStrictEqual(arrowNodes(runSec(page, undefined)), ["v:one_a --> one_gone", "v:other_a --> other_gone", "v:three_a --> three_gone", "v:two_a --> two_gone"]);
+  assert.deepStrictEqual(arrowNodes(runSec(page, "L2")), ["v:three_a --> three_gone", "v:two_a --> two_gone"]);
+  assert.deepStrictEqual(arrowNodes(runSec(page, "L3")), ["v:three_a --> three_gone"]);
+});
+
+test("unknown SECTION is a blocking [section] finding", () => {
+  assert.deepStrictEqual(runSec(levelsPage(), "nope"), {
+    pass: false,
+    findings: [{ tag: "[section]", grade: "blocking", node: null, msg: "section nope is not on this page" }],
+  });
+});
+
+test("SECTION inside an excluded parent audits nothing and says so", () => {
+  const cfg = { ...CFG, pages: { exclude_sections: ["^L1$"] } };
+  assert.deepStrictEqual(runSec(levelsPage(), "L3", cfg), {
+    pass: true, findings: [],
+    note: "section L3 is excluded by pages.exclude_sections; nothing audited",
+  });
+});
+
+test("a frame reached by an arrow from outside SECTION is not an orphan", () => {
+  const page = [
+    sec("Mine", 0, [frame("m_default", 0, 0), frame("lonely_default", 0, 300)]),
+    sec("Elsewhere", 5000, [frame("e_default", 0, 0), arrow("e_default --> m_default", [100, 50], [150, 50], [190, 50])]),
+  ];
+  const orphans = (out) => tagged(out, "[coverage]").map((i) => i.node);
+  assert.deepStrictEqual(orphans(runSec(page, "Mine")), ["f:lonely_default"], "m_default is reached from outside");
+  assert.deepStrictEqual(orphans(runSec(page, undefined)), ["f:lonely_default"]);
+});
+
+test("SECTION narrows a duplicate frame name to the chosen section", () => {
+  const page = [sec("One", 0, [frame("same_default", 0, 0)]), sec("Two", 5000, [frame("same_default", 0, 0)])];
+  assert.ok(tagged(runSec(page, undefined), "[duplicate name]").length === 1);
+  assert.ok(tagged(runSec(page, "One"), "[duplicate name]").length === 0);
+});

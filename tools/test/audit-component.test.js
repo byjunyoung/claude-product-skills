@@ -37,11 +37,11 @@ const screen = () => {
 };
 const section = (name, children) => ({ type: "SECTION", name, x: 0, y: 0, width: 4000, height: 4000, children });
 
-const run = (pageChildren, bodyOffset = { left: 0, top: 0 }) => {
+const run = (pageChildren, bodyOffset = { left: 0, top: 0 }, SECTION, pages = {}) => {
   const page = { name: "[UI] Fixture", children: pageChildren };
-  return new AsyncFunction("CFG", "MODE", "PAGE", "STAT", "figma", SRC)(
-    { component_audit: { min_samples: 5, dominance: 0.9, body_offset: bodyOffset } },
-    "compare", "Fixture", STAT,
+  return new AsyncFunction("CFG", "MODE", "PAGE", "STAT", "SECTION", "figma", SRC)(
+    { pages, component_audit: { min_samples: 5, dominance: 0.9, body_offset: bodyOffset } },
+    "compare", "Fixture", STAT, SECTION,
     { root: { children: [page] }, setCurrentPageAsync: async () => {} }
   );
 };
@@ -77,4 +77,31 @@ test("compare with an unseen property → pass true, unknown lists it", async ()
   assert.strictEqual(r.pass, true);
   assert.deepStrictEqual(r.findings, []);
   assert.deepStrictEqual(r.unknown, ["Button|Icon x1"]);
+});
+
+// ── SECTION — audit one section and the ones nested in it (compare mode) ──
+const sec = (id, children) => Object.assign(section(id, children), { id });
+const levels = () => [
+  sec("L1", [screen(), sec("L2", [screen(), sec("L3", [screen()])])]),
+  sec("Other", [screen()]),
+];
+
+test("SECTION limits the audit to that section and its nested sections", async () => {
+  assert.strictEqual((await run(levels())).findings.length, 4);
+  assert.strictEqual((await run(levels(), undefined, "L2")).findings.length, 2);
+  assert.strictEqual((await run(levels(), undefined, "L3")).findings.length, 1);
+});
+
+test("unknown SECTION is a blocking [section] finding", async () => {
+  const r = await run(levels(), undefined, "nope");
+  assert.strictEqual(r.pass, false);
+  assert.deepStrictEqual(r.findings, [{ tag: "[section]", grade: "blocking", node: null, msg: "section nope is not on this page" }]);
+});
+
+test("SECTION inside an excluded parent audits nothing and says so", async () => {
+  const r = await run(levels(), undefined, "L3", { exclude_sections: ["^L1$"] });
+  assert.deepStrictEqual(r, {
+    pass: true, findings: [], unknown: [],
+    note: "section L3 is excluded by pages.exclude_sections; nothing audited",
+  });
 });
