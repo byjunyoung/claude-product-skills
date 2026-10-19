@@ -43,11 +43,18 @@ recognises the entry by that exact title.
      "https://api.figma.com/v1/files/{fileKey}/versions?page_size=10"
    ```
 
-   - **No token, or an expired one** (`{"status": 401, "err": "Token has expired"}`) → say so, and
-     ask for the version's link to be pasted instead; `version-id` is in its query string. Never
-     carry on unpinned where the caller pins
+   - **No token, or an expired one** (`{"status": 401, "err": "Token has expired"}`) → say so.
+     Handoff asks for the version's link to be pasted instead; `version-id` is in its query
+     string. Never carry on unpinned where the caller pins. Sync has no link to pin, so it does not
+     ask for one: it reports that the entry could not be confirmed, with the title it saved
    - **Nothing matches** → it was not saved, or was saved under another name. Show what the newest
      few are actually called and stop, rather than taking the wrong entry
+   - **A label with non-ASCII text** can come back as `\uXXXX` escapes, or with a syllable broken.
+     Compare after normalising escapes: parse the response as JSON so the escapes turn back into
+     text, and where the expected label has to be typed into the comparison, substitute a `\u`
+     escape for each non-ASCII character rather than typing it — typing mangles it the same way.
+     A syllable still broken after that was mangled when it was saved: name its code point, and
+     treat the entry as not matching
 
    **Handoff only:** the entry carries the label, its `created_at` — the date in
    `handoff.version.ref` is the version's, not today's, never a substituted one — and its `id`,

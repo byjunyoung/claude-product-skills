@@ -48,6 +48,11 @@ def read(rel):
     return (REPO / rel).read_text(encoding="utf-8")
 
 
+def fm_of_text(text):
+    import yaml
+    return yaml.safe_load(text.split("---")[1])
+
+
 # ---- /fig:diff -----------------------------------------------------------------------------------
 check("diff skill folder is gone", not (REPO / "plugins/fig/skills/diff").exists())
 
@@ -136,6 +141,16 @@ check("draw no longer sends before-and-after to the AS-IS section",
 check("version-pin.md exists", (REPO / "plugins/fig/_common/version-pin.md").exists())
 check("handoff and sync name version-pin.md",
       "version-pin.md" in handoff and "version-pin.md" in sync)
+pin = read("plugins/fig/_common/version-pin.md")
+readback = section_of(pin, "4. **Read it back**", "## The pinned link")
+check("version-pin's no-token branch says what sync does: report the entry unconfirmed",
+      "sync" in readback.split("No token", 1)[-1].split("Nothing matches", 1)[0].lower()
+      and "could not be confirmed" in readback)
+check("version-pin's read-back compares a non-ASCII label after normalising escapes",
+      "\\u" in readback and "non-ASCII" in readback)
+for rel in ("README.md", "README.ko.md"):
+    tok = next((l for l in read(rel).splitlines() if l.startswith("| **") and ("personal access token" in l or "개인 액세스 토큰" in l)), "")
+    check(f"{rel} token row names handoff and sync", "/fig:handoff" in tok and "/fig:sync" in tok, tok[:80])
 holders = [rel for rel, text in tracked_text_files()
            if rel.startswith("plugins/fig") and "api.figma.com/v1/files/{fileKey}/versions" in text]
 check("the versions call lives in exactly one file", holders == ["plugins/fig/_common/version-pin.md"], ", ".join(holders))
@@ -162,10 +177,28 @@ vstep = without_heading(body.split("### 3.", 1)[1].split("### 4.", 1)[0]) if "##
 g, sv = first(r"\bthe go\b", vstep), first(r"\bsave", vstep)
 check("version step: go comes before save", g is not None and sv is not None and g < sv)
 dstep = without_heading(body.split("### 4.", 1)[1].split("### 5.", 1)[0]) if "### 4." in body else ""
-g, w = first(r"\bthe go\b", dstep), first(r"append-under", dstep)
+g, w = first(r"\bthe go\b", dstep), first(r"\{script\} append-under", dstep)
 check("doc-line step has its own go before the write", g is not None and w is not None and g < w)
 check("notion write does not lean on a callout",
       "usually behind an empty callout" not in handoff and "whatever block opens the section" in handoff)
+
+# Where the line lands: after the last hand-over line already there, else after the heading and its
+# opening block — oldest to newest, the way markdown's append-under reads. Every place that says
+# where agrees.
+LAST = "after the last hand-over line"
+spots = {
+    "action table": next((l for l in handoff.splitlines() if l.startswith("| `notion` |") and "Insert" in l), ""),
+    "preview": next((l for l in dstep.splitlines() if "where `action` is not `print`" in l), ""),
+    "method table": next((l for l in dstep.splitlines() if l.startswith("| `notion` |")), ""),
+    "search rule": next((l for l in dstep.splitlines() if "Search for the target section first" in l), ""),
+}
+off = [k for k, l in spots.items() if LAST not in l]
+check("every place handoff says where the line goes agrees: after the last hand-over line", not off, ", ".join(off))
+check("handoff's lines read oldest to newest", "oldest to newest" in handoff)
+check("handoff without a task input prints the line under notion or github",
+      bool(re.search(r"no `task` input.*print", handoff, re.I)))
+h_desc = fm_of_text(handoff)["description"]
+check("handoff's description says it pins a named version", "named version" in h_desc)
 
 # ---- deck-setup folds into deck --------------------------------------------------------------------
 check("deck-setup folder is gone", not (REPO / "plugins/fig/skills/deck-setup").exists())
