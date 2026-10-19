@@ -65,15 +65,16 @@ test("body_offset null examines the whole frame", async () => {
 
 test("a set body_offset still exempts the shell", async () => {
   const r = await run([section("S1", [screen()])], { left: 270, top: 120 });
-  assert.deepStrictEqual(r, { pass: true, findings: [] });
+  assert.deepStrictEqual(r, { pass: true, findings: [], unknown: [] });
 });
 
-test("a property the collect pass never saw is an [unknown] warning, not a pass", async () => {
+test("compare with an unseen property → pass true, unknown lists it", async () => {
   const page = { name: "[UI] Fixture", children: [section("S1", [screen()])] };
   const r = await new AsyncFunction("CFG", "MODE", "PAGE", "STAT", "figma", SRC)(
     { component_audit: { min_samples: 5, dominance: 0.9 } }, "compare", "Fixture", {},
     { root: { children: [page] }, setCurrentPageAsync: async () => {} }
   );
-  assert.strictEqual(r.pass, false);
-  assert.deepStrictEqual(r.findings, [{ tag: "[unknown]", grade: "warning", node: null, msg: "Button|Icon x1" }]);
+  assert.strictEqual(r.pass, true);
+  assert.deepStrictEqual(r.findings, []);
+  assert.deepStrictEqual(r.unknown, ["Button|Icon x1"]);
 });

@@ -11,8 +11,8 @@
  * Two stages. setCurrentPageAsync runs once per call, so a different page means a different call.
  *   MODE="collect" : gather the boolean property distribution per component from a reference page → return STAT
  *   MODE="compare" : compare the working page against STAT → return { pass, findings }; each finding
- *                    is { tag, grade, node, msg }. A property the collect pass never saw comes back as an
- *                    "[unknown]" warning (undecidable, not a violation).
+ *                    is { tag, grade, node, msg }. A property the collect pass never saw is listed
+ *                    in a separate `unknown: string[]` — undecidable, not a violation, never part of `pass`.
  *
  * What to prepend
  *   const CFG  = {...};                      resolve-config.py --js
@@ -113,6 +113,5 @@ for (const { s } of sectionsDeep(page.children, () => false)) {
   }
 }
 // unknown is undecidable rather than a violation — a signal that more reference pages are needed
-for (const k of Object.keys(unknown))
-  issues.push({ tag: "[unknown]", grade: "warning", node: null, msg: k + " x" + unknown[k] });
-return { pass: issues.length === 0, findings: issues };
+// It stays out of `findings`, so `pass` means what it always did: no violation found.
+return { pass: issues.length === 0, findings: issues, unknown: Object.keys(unknown).map(k => k + " x" + unknown[k]) };

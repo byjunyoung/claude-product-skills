@@ -127,7 +127,6 @@ Every violation carries one of two grades. **The grade never changes what is aud
 | `[coverage] orphan frame` | blocking | A screen nothing reaches — engineering cannot tell how the user gets there |
 | `[default]` | blocking | The instance carries a library default this screen does not use, and it ships as an empty slot |
 | Missing required state ✋, **type settled** | blocking | A state nobody designed is a state engineering invents |
-| `[unknown]` | warning | The collect pass never saw this component property, so the compare pass cannot say what the file's convention is — more reference pages are needed, which is undecided rather than wrong |
 | `[naming]` · `[order]` | warning | Reads correctly, filed untidily |
 | `[layer name]` | warning | Reads fine to whoever drew it, and to nobody else |
 | `[annotation]` | warning | Pins that pile up stop being read, and a copied pin states a decision nobody made for this screen |
@@ -161,7 +160,7 @@ All three are called the same way.
 
 1. Get the single `const CFG = {...};` line from `resolve-config.py --js <fileKey>`
 2. Concatenate that line and the whole script, and hand it to `use_figma`. If the target page is not the first page, prepend one `setCurrentPageAsync` line (once per script)
-3. The return value is an `AuditResult`: `{ pass, findings }`. Each finding is `{ tag, grade, node, msg }` — `tag` the bracketed tag (`"[arrow]"`), `grade` `"blocking"` or `"warning"`, `node` the offending node's id (or `null` where there is none), `msg` the message without its tag. `pass` is true exactly when `findings` is empty. Read the grade from `grade`; do not infer it from the message text. `pass` is the script's own verdict, so there is no string to look for. A page that does not exist makes the component script throw, which `use_figma` reports as an error
+3. The return value is an `AuditResult`: `{ pass, findings }`. Each finding is `{ tag, grade, node, msg }` — `tag` the bracketed tag (`"[arrow]"`), `grade` `"blocking"` or `"warning"`, `node` the offending node's id (or `null` where there is none), `msg` the message without its tag. `pass` is true exactly when `findings` is empty. The component script's compare result carries one more field, `unknown: string[]` — properties the collect pass never saw. Report it as an information line asking for another reference page (see C-1); it is not a finding and never changes `pass`. Read the grade from `grade`; do not infer it from the message text. `pass` is the script's own verdict, so there is no string to look for. A page that does not exist makes the component script throw, which `use_figma` reports as an error
 
 For several pages, split the calls per page and **issue them in one message so they run in parallel**. One script never switches pages twice.
 

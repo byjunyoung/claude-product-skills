@@ -48,3 +48,44 @@ test("every tag a script can emit has a row in lint's severity table, and every 
   assert.deepStrictEqual(noRow, [], "emitted but not in lint's severity table");
   assert.deepStrictEqual(noEmit, [], "in lint's severity table but emitted by no script");
 });
+
+// ── The grade in the table equals the grade at every emit site ──
+// [arrow] and [state] split by wording: "orphan" / "passes through" are blocking, geometry is a
+// warning. An emit site is matched to a row by whether its message line says one of those.
+const SPLIT = new Set(["[arrow]", "[state]"]);
+const SPECIAL = /orphan|passes through/;
+const key = (tag, special) => (SPLIT.has(tag) ? tag + (special ? "|orphan-or-passes-through" : "|geometry") : tag);
+
+const expected = new Map();   // key -> the grade the table states
+for (const row of rows) {
+  if (EXEMPT.test(row)) continue;
+  const cells = row.split("|");
+  const grade = cells[2].trim();
+  if (!["blocking", "warning"].includes(grade)) continue;       // the header row
+  for (const m of cells[1].matchAll(/`(\[[^\]`]+\])/g))
+    expected.set(key(m[1], SPLIT.has(m[1]) && SPECIAL.test(cells[1])), grade);
+}
+
+const sites = [];             // { script, tag, grade, key }
+for (const name of SCRIPTS) {
+  const src = readFileSync(join(ROOT, "_common", "scripts", name), "utf8");
+  const lines = src.split("\n");
+  lines.forEach((line, i) => {
+    if (/const add = /.test(line)) return;
+    // add("[tag]", "grade", node, msg…)  or  { tag: "[tag]", grade: "grade", … msg: … }
+    if (!/(^|[^.\w])add\(/.test(line) &&!/\btag:\s*"/.test(line)) return;
+    const m = line.match(/(?:\badd\(\s*|\btag:\s*)"(\[[^"]+\])",\s*(?:grade:\s*)?"(blocking|warning)"/);
+    assert.ok(m, `${name}:${i + 1} has a grade that is not a literal — resolve it or list it in this test by name`);
+    const text = lines.slice(i, i + 3).join(" ");           // the message may start on the next line
+    sites.push({ script: `${name}:${i + 1}`, tag: m[1], grade: m[2], key: key(m[1], SPECIAL.test(text)) });
+  });
+}
+
+test("the grade in lint's table equals the grade at every emit site of that tag", () => {
+  assert.ok(sites.length >= 30, "the emit-site parse found its sites: " + sites.length);
+  const bad = sites.filter((s) => expected.get(s.key) !== s.grade)
+    .map((s) => `${s.script} ${s.key}: script says ${s.grade}, table says ${expected.get(s.key)}`);
+  assert.deepStrictEqual(bad, []);
+  const seen = new Set(sites.map((s) => s.key));
+  assert.deepStrictEqual([...expected.keys()].filter((k) => !seen.has(k)), [], "a table row no emit site matches");
+});
