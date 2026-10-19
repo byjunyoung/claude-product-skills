@@ -127,6 +127,39 @@ check("doc-line step has its own go before the write", g is not None and w is no
 check("notion write does not lean on a callout",
       "usually behind an empty callout" not in handoff and "whatever block opens the section" in handoff)
 
+# ---- deck-setup folds into deck --------------------------------------------------------------------
+check("deck-setup folder is gone", not (REPO / "plugins/fig/skills/deck-setup").exists())
+stale = [f"{rel}:{n}" for rel, text in tracked_text_files()
+         for n, line in enumerate(text.splitlines(), 1)
+         if "deck-setup" in line and " → " not in line]
+check("no tracked file names deck-setup (outside history and the README map)", not stale, ", ".join(stale))
+for rel in ("README.md", "README.ko.md"):
+    check(f"{rel} maps deck-setup to deck", "`/fig:deck-setup` → /fig:deck" in read(rel))
+
+deck_dir = "plugins/fig/skills/deck/"
+deck = read(deck_dir + "SKILL.md")
+check("deck names setup.md and pitfalls.md", "setup.md" in deck and "pitfalls.md" in deck)
+setup = read(deck_dir + "setup.md") if (REPO / (deck_dir + "setup.md")).exists() else ""
+mirror = setup.split("## 1.", 1)[1].split("## 2.", 1)[0] if "## 1." in setup else ""
+build = setup.split("## 5.", 1)[1] if "## 5." in setup else ""
+check("setup checks the seat with whoami before the mirror file",
+      "whoami" in mirror and first(r"whoami", mirror) < first(r"create_new_file", mirror))
+check("setup's mirror step waits for a go", bool(re.search(r"\bgo\b", mirror)))
+check("setup's build step waits for a go", bool(re.search(r"\bgo\b", build)))
+check("setup's report names the mirror file",
+      "mirror file" in build.split("Report", 1)[-1] if "Report" in build else False)
+tools = deck.split("allowed-tools:", 1)[1].split("\n", 1)[0]
+check("deck lists the tools setup calls",
+      all(t in tools for t in ("create_new_file", "whoami", "get_screenshot", "use_figma")))
+dm = re.search(r"^description: (.*)$", deck, re.M)
+check("deck description carries setup's triggers and stays under 700",
+      bool(dm) and len(dm.group(1)) <= 700 and "덱 템플릿 뽑아줘" in dm.group(1)
+      and "extract the slide template" in dm.group(1))
+check("deck's structural step reads margins from the spec", "1792" not in deck and "128 /" not in deck)
+
+pit = read(deck_dir + "pitfalls.md") if (REPO / (deck_dir + "pitfalls.md")).exists() else ""
+check("pitfalls read from the template", bool(pit) and not any(x in pit for x in ("1920", "1792", "128 /")))
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

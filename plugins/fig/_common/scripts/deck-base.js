@@ -2,7 +2,7 @@
  * DECK BASE — shared helpers for Figma Slides builds
  *
  * Put this file at the top of a build script, and below it the template.js that
- * /fig:deck-setup produced (palette C · type T · layout constants · archetype builders).
+ * the measuring step of /fig:deck (setup.md) produced (palette C · type T · layout constants · archetype builders).
  * The order has to be this way round — the functions here are declarations and hoist,
  * while C and T are read only at call time, so they may be defined below.
  *

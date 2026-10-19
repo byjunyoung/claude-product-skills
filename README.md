@@ -186,7 +186,7 @@ there if something required is absent, rather than running on and coming back th
 |---|---|---|
 | `fig` | `/fig:setup <your figma file URL>` | how your file already names frames, spaces sections and draws arrows |
 | `pm` | `/pm:setup` | where your specs and tasks live — local files by default — and a tracker's schema where you name one |
-| `fig`, and you will use `/fig:deck` | `/fig:deck-setup` | your team's slide template |
+| `fig`, and you will use `/fig:deck` | nothing to run first — `/fig:deck` measures it on first use | your team's slide template |
 
 **What the first run is like.** Each setup opens by saying what it will produce and how long it
 takes, shows its steps, and names each one as it begins — read-only until it writes, and what
@@ -246,7 +246,7 @@ settings and it writes the support from what is connected. What it could not try
 unverified, and the mark comes off the first time a `/pm:task` run makes that call work; a marked
 write that fails stops the run and names the call.
 
-**deck.** `/fig:deck-setup` measures your team's slide template into `~/.claude/deck-assets`.
+**deck.** On first use, `/fig:deck` measures your team's slide template into `~/.claude/deck-assets`.
 The plugin ships no template values at all, because deck backgrounds carry company wordmarks
 and can't be distributed. Run it once before `/fig:deck`, and again when the template is revised.
 
@@ -313,12 +313,12 @@ Neither touches the file. Run one when you inherit a file someone else has been 
 /fig:proto    Before engineering starts, rebuild the design as a single HTML page that really accepts input and saves
 /fig:code     Apply the design to a frontend repo
 /fig:qa       Audit a shipped screen against the spec and report defects
-/fig:deck     Turn a document into a deck (run deck-setup first)
+/fig:deck     Turn a document into a deck (measures the template on first use)
 ```
 
 `proto` isn't a click-through demo. Enter a value, save it, and it shows up in the list. Clicking through surfaces ordering problems that a static design hides.
 
-`deck` moves one source document into a presentation flow and builds a Figma Slides deck. It uses the team template's coordinates, colors and type as-is — when a content shape isn't in the catalog it never invents a layout, it fits the nearest archetype by trimming content or splitting the slide. `/fig:deck-setup` measures those values into local assets, which stay out of the published plugin since template backgrounds carry company wordmarks.
+`deck` moves one source document into a presentation flow and builds a Figma Slides deck. It uses the team template's coordinates, colors and type as-is — when a content shape isn't in the catalog it never invents a layout, it fits the nearest archetype by trimming content or splitting the slide. `/fig:deck` measures those values into local assets on first use (a new mirror file in Figma, which it names at the end so you can delete it, and a go before each Figma write), and they stay out of the published plugin since template backgrounds carry company wordmarks.
 
 `qa` audits what actually shipped against the spec. `draw` and `sketch` take a document passed to the run; `qa` takes none and starts at `qa.baseline.prd`; left unset, that means `pm`'s PRD where `pm` is installed. The rule is that a finding reads "this breaks rule X in document Y", never "this looks off" — anything without a baseline is filed as needs-checking rather than a defect.
 
@@ -374,10 +374,11 @@ flowchart TD
 | `/fig:proto` | Working single-file HTML prototype |
 | `/fig:code` | Apply the design to a frontend repo |
 | `/fig:qa` | Audit a shipped screen against the PRD (a markdown file, a Notion page, or `pm`'s) and the design, and report defects, each with screenshots |
-| `/fig:deck-setup` | Measure a team slide template into local deck assets |
 | `/fig:deck` | Turn a source document into a Figma Slides deck |
 
 `/fig:diff` → (removed — Dev Mode's *Compare changes* shows what changed; no written AS-IS/TO-BE record)
+
+`/fig:deck-setup` → /fig:deck (measuring the slide template is now its first step)
 
 ### What `/fig:lint` looks at
 
@@ -639,7 +640,7 @@ Without a token it can only see what the desktop app has open. To list every pag
 <details>
 <summary><b>`/fig:deck` says there are no assets.</b></summary>
 
-The slide template has not been measured yet. Run `/fig:deck-setup` once — it reads your team's template into `~/.claude/deck-assets`. The plugin ships no template, because template backgrounds carry company wordmarks.
+The slide template has not been measured yet. Run `/fig:deck` — its first step reads your team's template into `~/.claude/deck-assets`. The plugin ships no template, because template backgrounds carry company wordmarks.
 
 </details>
 
@@ -771,7 +772,7 @@ plugins/
     skills/
       setup   read  prep   arrows  lint
       handoff sync  tokens
-      proto   code  qa     deck    deck-setup     one SKILL.md each
+      proto   code  qa     deck           one SKILL.md each (plus setup.md, pitfalls.md)
     _common/
       conventions.example.yaml           config schema + bundled defaults
       scripts/

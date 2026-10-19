@@ -56,8 +56,7 @@ claude plugin install fig@byjunyoung
 | `/fig:proto` | A working single-file HTML prototype |
 | `/fig:code` | Applies the design to the front-end code |
 | `/fig:qa` | Compares what actually shipped against the PRD and the design, and writes up the defects with a screenshot for each |
-| `/fig:deck-setup` | Measures a team presentation template into deck assets |
-| `/fig:deck` | Turns a source into a presentation deck (Figma Slides) |
+| `/fig:deck` | Turns a source into a presentation deck (Figma Slides); measures the team template into local assets the first time |
 
 ## How draw draws
 
