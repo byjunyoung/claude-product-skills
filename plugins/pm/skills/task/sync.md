@@ -31,10 +31,10 @@ On top of *Rules every mode follows* and *The tracker's own rules* in `SKILL.md`
 
 ### 0. Scope
 
-Ask, or take it from the argument.
+Taken from the argument. A request that asks in words for the person's own tasks counts as `mine`.
 
-- **all** — the whole list. For whoever administers it
-- **mine** — filtered to one assignee
+- **No argument** — every record in scope, the whole list. For whoever administers it
+- **`mine`** — narrowed to the person's own records, filtered to one assignee
 
 **A narrower scope is safer.** Most of the damage this skill could do is to someone else's task, and scope is what prevents it. `task.record.scope` sits underneath both: with `members`, a ticket held wholly by people outside `task.assignee_map` is out of the run whichever scope was asked for.
 

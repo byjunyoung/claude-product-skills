@@ -15,7 +15,7 @@ Read this file first, then the mode's file, and follow both. What the three mode
 ```
 /pm:task draft <source> [<record>]
 /pm:task publish <record> [--contract | --template]
-/pm:task sync [all | mine]
+/pm:task sync [mine]
 ```
 
 Without a mode word, the request decides: a thread, page or conversation to turn into a task → `draft`; "file / publish / update the ticket" → `publish`; "reconcile / sync" → `sync`. Ask only when it is still unclear.

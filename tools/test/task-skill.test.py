@@ -80,7 +80,7 @@ for s in SHARED:
 check("each shared block once", not bad, "; ".join(bad))
 
 # argument grammar
-GRAMMAR = ["/pm:task draft <source> [<record>]", "/pm:task publish <record> [--contract | --template]", "/pm:task sync [all | mine]"]
+GRAMMAR = ["/pm:task draft <source> [<record>]", "/pm:task publish <record> [--contract | --template]", "/pm:task sync [mine]"]
 absent = [g for g in GRAMMAR if g not in ROUTER]
 old_input = [f"{p.name}: {s}" for p in MODE_FILES for s in ("--mode contract", "`mode` (optional)")
              if s in p.read_text(encoding="utf-8")]
