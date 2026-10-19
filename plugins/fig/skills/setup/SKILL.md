@@ -137,8 +137,8 @@ Some things never come out of observation. Show the full list first so the scale
 | `layout.reference_frame_width` | The screen width. The probe measures sections, not the screens inside them |
 | the `arrows.trunk` family | Only shows up along elbow paths, so inference is unreliable |
 | `component_audit.body_offset` | You have to open one screen and measure nav width and top bar height |
-| `qa.baseline.prd` | Lives outside the file. Where is the PRD? pm's (installed alongside: leave it unset, fig reads it) · a markdown file · a Notion page · none |
-| `task_tracker` | Lives outside the file. Where does the handover line go? pm's task files (installed alongside: leave it unset) · Notion · GitHub · nowhere |
+| `qa.baseline.prd` | Lives outside the file. Where is the PRD? pm's (installed alongside, where pm writes markdown: leave it unset, fig reads it) · a markdown file · a Notion page · none |
+| `task_tracker` | Lives outside the file. Where does the handover line go? pm's task files (installed alongside, where pm keeps its records as markdown: leave it unset) · Notion · GitHub · nowhere |
 
 **Do not invent a value to fill the blank.** Offer "leave it blank" on every question, out loud — a blank is a complete answer. Where the draft wrote the key as `null`, a blank keeps it there, with the question beside it. Where the draft did not write the key — the page rules, `component_audit.body_offset`, the PRD, the handover line — a blank leaves it out, and the bundled default answers. Writing `null` there is not the same thing: it replaces an empty page list with nothing, and a written `qa.baseline.prd: null` says this team has no PRD, while left out, the PRD and the handover line both read pm's where pm is installed.
 

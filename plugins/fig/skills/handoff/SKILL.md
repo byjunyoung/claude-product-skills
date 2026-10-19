@@ -132,10 +132,10 @@ Then the go.
 
 ### 5. Write
 
-The task-doc line, where `action` writes one — nothing in the Figma file. For `write`, after the go:
+The task-doc line, where `action` writes one — nothing in the Figma file. For `write`, after the go, with the heading and the line passed single-quoted and every `'` inside them written as `'\''` — a `"`, `$` or backtick in a version label then reaches the file as it is, rather than ending the argument or being expanded by the shell:
 
 ```bash
-python3 {script} append-under --path {file} --heading "{heading}" --line "{line}"
+python3 {script} append-under --path {file} --heading '{heading}' --line '{line}'
 ```
 
 It adds the heading when it is missing, and a second run gives one heading. Exit 4 means the file named in the preview is missing — stop and say so. Under `print` the line goes in the response instead.

@@ -252,7 +252,7 @@ deck:
 qa:
   # Where the basis for a judgement is found. null skips that collection.
   baseline:
-    # Where the PRD is, as { type, ref }.
+    # Where the PRD is, as { type, ref }. Write type beside ref; a ref alone reads as markdown.
     #   type  markdown | notion | none
     #   ref   a file, a folder holding one file per product, or a Notion page or collection url
     # A plain string is read as { type: notion, ref: <string> }, so an older config keeps working.
