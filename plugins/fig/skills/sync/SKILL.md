@@ -213,7 +213,7 @@ const canonPage = await figma.getNodeByIdAsync(CANON_PAGE_ID);   // the canonica
 await figma.setCurrentPageAsync(canonPage);
 const canon = {};   // frame name -> every canonical frame carrying it (a repeated name is kept, not overwritten)
 for (const f of frames(canonPage, []))
-  (canon[f.name] = canon[f.name] || []).push({ id: f.id, set: new Set(texts(f)), height: Math.round(f.height), masters: await masters(f) });
+  (canon[f.name] = canon[f.name] || []).push({ id: f.id, node: f, set: new Set(texts(f)), height: Math.round(f.height) });
 const page = await figma.getNodeByIdAsync(PAGE_ID);   // the working or archive page being judged
 await figma.setCurrentPageAsync(page);
 const out = [];
@@ -226,12 +226,11 @@ for (const f of frames(page, [])) {
   const onlyWorking = [...W].filter(x => !c.set.has(x));     // must reach canonical
   const onlyCanonical = [...c.set].filter(x => !W.has(x));   // may be later work on canonical: never removed without a confirm
   const height = { working: Math.round(f.height), canonical: c.height };
-  const sameMasters = (await masters(f)) === c.masters;
-  let bucket, why;
+  let bucket, why, sameMasters = null;   // masters are read only where they decide: identical text, same height
   if (onlyWorking.length) [bucket, why] = ['not applied', 'working-only text missing from canonical'];
   else if (onlyCanonical.length) [bucket, why] = ['needs checking', 'only canonical-only text differs — may be later work'];
   else if (height.working !== height.canonical) [bucket, why] = ['needs checking', 'identical text, height differs (signal 2)'];
-  else if (!sameMasters) [bucket, why] = ['needs checking', 'identical text, component master differs (signal 3)'];
+  else if (!(sameMasters = (await masters(f)) === (await masters(c.node)))) [bucket, why] = ['needs checking', 'identical text, component master differs (signal 3)'];
   else [bucket, why] = ['applied', 'text, height and component masters all agree'];
   out.push({ frame: f.name, mode: onlyWorking.length || onlyCanonical.length ? 'differs' : 'identical', bucket, why,
     onlyWorking, onlyCanonical, ...(onlyCanonical.length ? { confirm: LATER } : {}), height, sameMasters });

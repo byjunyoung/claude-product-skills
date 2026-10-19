@@ -325,9 +325,9 @@ for f in sorted(glob.glob(str(REPO / "plugins/fig/skills/*/SKILL.md"))):
         and rest.startswith('"/fig:' + sk + '"')
     check(f"fig descriptions in one shape: {sk}", ok,
           f"{len(desc)} chars (limit {limit}), {len(sentences)} sentences before Triggers")
-    if sk in ("lint", "read", "tokens", "sync"):
-        check(f"{sk}'s description says when, not only what",
-              bool(re.search(r"\b(when|whenever|before|after|once)\b", head)), head)
+    # The CHANGELOG says every description says what the skill does and when
+    check(f"{sk}'s description says when, not only what",
+          bool(re.search(r"\b(when|whenever|before|after|once)\b", head)), head)
     if sk == "deck":
         check("deck's description does not glue setup's job on with ', and'", ", and it measures" not in head, head)
 

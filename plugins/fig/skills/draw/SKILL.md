@@ -1,6 +1,6 @@
 ---
 name: draw
-description: Draws a screen, or fills a stub `/fig:prep` left behind, inside the file's conventions by cloning the nearest canonical screen so the whole screen comes out with the change in it, with copy taken from the PRD, the running system or the file's precedent and never invented. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "이 화면 그려줘", "placeholder 채워줘".
+description: Draws a screen, or fills a stub `/fig:prep` left behind, once its direction is agreed, cloning the nearest canonical screen inside the file's conventions so the whole screen comes out with the change in it, with copy taken from the PRD, the running system or the file's precedent and never invented. Triggers - "/fig:draw", "draw this screen", "fill this placeholder", "이 화면 그려줘", "placeholder 채워줘".
 allowed-tools: AskUserQuestion, Bash, Read, Glob, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__search_design_system, mcp__claude_ai_Notion__notion-fetch, mcp__plugin_figma_figma__whoami
 ---
 
