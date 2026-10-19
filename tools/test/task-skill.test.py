@@ -196,6 +196,13 @@ for sk in sorted(p.name for p in (REPO / "plugins/pm/skills").iterdir() if (p / 
     check(f"descriptions in one shape ({sk})", len(d) <= limit and "Triggers" in d and lead.strip().count(". ") == 0,
           f"{len(d)} chars; sentences before Triggers: {lead.strip().count('. ') + 1}")
 
+# publish reads the last of several handover lines (fig appends oldest to newest) and says so
+pub = read("plugins/pm/skills/task/publish.md")
+check("publish reads the last handover line",
+      "the last handover line" in pub and "from the last of N handover lines" in pub
+      and "oldest to newest" in pub and not re.search(r"\b(a|the) handover line\b", pub, re.I),
+      str(re.findall(r"(?i)\b(?:a|the) handover line", pub)))
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)

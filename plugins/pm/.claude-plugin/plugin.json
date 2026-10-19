@@ -1,7 +1,7 @@
 {
   "name": "pm",
   "description": "Product specs, the tasks that come out of them, and a daily record of the work — on local markdown files, with nothing else connected. Write a spec against a format and verify it; turn a request into a task's context table; keep a work log and turn a period of it into accomplishment statements. Notion or an issue tracker attaches through config when you want one.",
-  "version": "0.39.1",
+  "version": "0.40.0",
   "author": {
     "name": "Junyoung Kim",
     "url": "https://www.linkedin.com/in/byjunyoung/"
