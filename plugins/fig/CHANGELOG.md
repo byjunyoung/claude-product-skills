@@ -3,6 +3,8 @@
 ## 3.28.2 — 2026-10-19
 
 - **In `pm`'s markdown records the handover line goes under `pm`'s `task.design_heading`, not `task_tracker.ui_section_heading`.** One heading read by both plugins, so what `/fig:handoff` writes is what `/pm:task publish` reads. When `ui_section_heading` is set and differs, `borrow-pm.py task` says so in its note; that setting now applies to Notion and GitHub only. An older `pm` without the key gets the same "Design changes" as before
+- `/fig:handoff` shows that note beside the line it writes and in its report's task-doc row, not only when it prints, and where `pm` sets no heading the note names "Design changes" as `pm`'s default rather than as a value somebody chose
+- **`pm` 0.39.0 merged its three task skills into `/pm:task`, and the names `fig` points at follow.** `/fig:handoff`'s pointers — where filing a ticket goes, and the note when no task file exists yet — name `/pm:task publish` and `/pm:task draft`, and the shared machine check (`preflight.py`, held byte for byte identical with `pm`'s) names `/pm:task draft` in `pm`'s Slack row. The old names no longer answer
 
 ## 3.28.1 — 2026-10-19
 
