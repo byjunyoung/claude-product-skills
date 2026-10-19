@@ -79,7 +79,7 @@ Gather the documents the verdicts will rest on. **Internal assets first.** Where
 | Source | What to pull |
 |---|---|
 | The PRD (from the lookup above) | Detailed behaviour (Given/When/Then), states and cases, rules and exceptions |
-| The design | Screen composition, state variants, copy — read from the live file; the version a handover pinned is not yet compared (see CHANGELOG) |
+| The design | Screen composition, state variants, copy — read from the live file; the version a handover pinned is not yet compared (see the fig CHANGELOG, 3.31.0) |
 | Existing tickets (`qa.baseline.tasks`, as `{ type, ref }`) | Past decisions and reversals, undecided items. Where the type or ref is `null`, this row is skipped |
 | The request itself | What is newly asked for in this round |
 

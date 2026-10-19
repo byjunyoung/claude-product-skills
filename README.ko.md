@@ -146,6 +146,8 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 | `/fig:handoff` `/fig:sync` | **Claude in Chrome** — 선택. 피그마 웹앱에서 이름 붙인 버전을 저장할 때만 씁니다. 없으면 그 단계를 쓸 이름과 함께 사용자에게 넘깁니다 |
 | `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — 설정이 Notion 페이지를 가리킬 때만 |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — `task_tracker.type` / `task.mirror.type`이 `github`일 때만. 로그인이 둘입니다 — Claude의 연결 하나, 트래커를 읽는 `gh` 명령 하나. `/pm:task`는 `gh`만 씁니다. 점검이 둘 다 보고 `gh`가 어느 계정인지 알려줍니다 |
+| `/fig:handoff` | **Notion 검색, 또는 GitHub 이슈 검색** — 읽기 전용이고, 실행에 일감 페이지를 넘기지 않았을 때만. `task_tracker.ref`가 가리키는 트래커에서 일감을 찾아보고, 없거나 여럿이면 찾은 것을 보여 주며 묻습니다 |
+| `/fig:qa` | **폴더 쓰기 권한** — `qa.report_dir`이 폴더를 가리킬 때만, 보고서를 go 뒤에 마크다운 파일로 거기 저장합니다. `null`이면 보고서는 응답으로만 가고 아무것도 쓰지 않습니다 |
 | `/fig:qa` `/pm:task draft` | **채팅 도구** — 요청 출처가 스레드일 때만. `pm`은 `sources.chat_type`이 지목하고, `/fig:qa`는 링크에서 도구를 압니다. Slack이 딸려 옵니다 |
 | `/pm:log` | **캘린더와 채팅 도구** — 둘 다 선택. `sources.calendar_type`·`sources.chat_type`이 지목하고, Google Calendar·Slack이 딸려 옵니다. `none`이면 건너뛰고 일지가 그렇게 말합니다. 무인으로 돌리려면 내 컴퓨터의 스케줄러 |
 | `/pm:prd` | **Notion** — `prd.target`이 `notion`일 때만. **웹 검색** — `prd.precedent.enabled`가 true일 때만(기본값), 그것도 기능 항목을 처음 쓸 때만. **화면 레퍼런스 연결** — 선택, `prd.precedent.reference_sources`가 지목한 서비스만. **Slack과 Figma** — 선택, 넘긴 재료 가운데 스레드나 시안 파일을 읽을 때만 |

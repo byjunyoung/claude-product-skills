@@ -1,7 +1,7 @@
 {
   "name": "fig",
   "description": "Skills for a Figma file several people share: work out its conventions, stub the screens still missing, draw them inside those conventions, wire the flow arrows, audit a page before handoff, hand sections over pinned to a version, QA what shipped, and bring the canonical page current. Installed with pm, it reads pm's PRD and writes into its task files.",
-  "version": "3.30.0",
+  "version": "3.31.0",
   "author": {
     "name": "Junyoung Kim",
     "url": "https://www.linkedin.com/in/byjunyoung/"
