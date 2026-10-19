@@ -63,6 +63,64 @@ for rel in ("plugins/pm/README.md", "README.md", "README.ko.md"):
     rows = [l for l in read(rel).splitlines() if re.match(r"^\|\s*`/pm:task`\s*\|", l)]
     check(f"the skill table lists task once ({rel})", len(rows) == 1, f"{len(rows)} rows")
 
+# --- the router holds what the three modes share ---
+ROUTER = (TASK / "SKILL.md").read_text(encoding="utf-8")
+MODE_FILES = sorted(TASK.glob("*.md"))
+
+# each shared block once — a lifted block is deleted from the mode files, not copied
+SHARED = ["**Part of a plugin.**", "Exit 3 means no adapter exists", "Matching runs on `task.link_property`",
+          "These tasks are kept as records only", "Never invent a mapping", "before the first write of the session",
+          "Written for the people who will act on it"]
+bad = []
+for s in SHARED:
+    where = {p.name: p.read_text(encoding="utf-8").count(s) for p in MODE_FILES}
+    total = sum(where.values())
+    if total != 1 or where.get("SKILL.md") != 1:
+        bad.append(f"{s!r}: " + ", ".join(f"{k}×{v}" for k, v in where.items() if v) if total else f"{s!r}: nowhere")
+check("each shared block once", not bad, "; ".join(bad))
+
+# argument grammar
+GRAMMAR = ["/pm:task draft <source> [<record>]", "/pm:task publish <record> [--contract | --template]", "/pm:task sync"]
+absent = [g for g in GRAMMAR if g not in ROUTER]
+old_input = [f"{p.name}: {s}" for p in MODE_FILES for s in ("--mode contract", "`mode` (optional)")
+             if s in p.read_text(encoding="utf-8")]
+check("argument grammar", not absent and not old_input, f"missing {absent}; old input still named {old_input}")
+
+
+def first_command(text, needle):
+    """The first command line holding `needle`, with its backslash continuations joined."""
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if needle in line:
+            cmd = [line]
+            while cmd[-1].rstrip().endswith("\\") and i + 1 < len(lines):
+                i += 1
+                cmd.append(lines[i])
+            return " ".join(l.rstrip().rstrip("\\") for l in cmd)
+    return None
+
+
+# record-only check comes before the mode's --need
+first = first_command(ROUTER, "resolve-config.py")
+msg_at = ROUTER.find("These tasks are kept as records only")
+need_at = ROUTER.find("--need task.record.ref,task.link_property")
+check("record-only check comes before the mode's --need",
+      first is not None and "--need" not in first and 0 <= msg_at < need_at,
+      f"first call {first!r}; message at {msg_at}, first --need at {need_at}")
+
+# unverified marks are cleared by a run — and setup's promise names a run that does it
+paragraphs = re.split(r"\n\s*\n", ROUTER)
+described = any("(unverified)" in p and "remove" in p for p in paragraphs)
+setup = read("plugins/pm/skills/setup/SKILL.md")
+promise = [l for l in setup.splitlines() if "(unverified)" in l and "/pm:task publish" in l]
+check("unverified marks are cleared by a run",
+      described and promise and all("sync" in l for l in promise),
+      f"router paragraph with remove + (unverified): {described}; setup lines {promise}")
+
+# the router stays short
+n = len(ROUTER.splitlines())
+check("the router stays short", n < 200, f"{n} lines")
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)

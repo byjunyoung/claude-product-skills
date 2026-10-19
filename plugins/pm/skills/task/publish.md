@@ -10,45 +10,13 @@ Files a single task record as a ticket in the engineering tracker, or updates th
 
 ## What decides where things go
 
-Config is read in two stages, because a team with no tracker attached is not missing a setting — it has nothing to file into, and the answer to that is not "a property is unset".
-
-**Stage 1 — is there a tracker at all?**
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
-  --authored task.record.type,task.record.ref
-```
-
-Where `task.mirror.type` is `none`, stop with this, and nothing else:
-
-> These tasks are kept as records only — nothing is set up to file them into. `task.mirror` is the setting that attaches a tracker; `/pm:setup` reads its schema and fills it in.
-
-**Stage 2 — a tracker is attached, so the rest must be named.**
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
-  --need task.record.ref,task.link_property,task.mirror.ref \
-  --authored task.record.type,task.record.ref,task.link_property,task.contract.level
-```
-
-A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than interviewing for the value here.
-
-**`--authored` is the other half, and `--need` cannot see what it sees.** A key no config of theirs mentions still resolves — to the bundled floor — so it reads as answered. `task.contract.level` is the one that decides which ticket carries the binding sections, and the floor says `task`: a team whose tracker reviews at the parent, running on a config that never named it, gets a contract filed onto the wrong ticket and no sign that anything was assumed. Where the stop fires, the message names the key and says where the copy came from — a config that has fallen behind a shared one is the usual cause, and the lines underneath say by how much. Do not interview for the value and do not proceed on the default: neither answers who chose it.
-
-`task.record` is where the task lives, `task.mirror` is the tracker it is filed into. **With `mirror.type: none` this skill has nothing to do** — stage 1 above says so and stops, rather than inventing a destination.
-
-**Matching runs on `task.link_property` alone** — the property on the record that holds the ticket's url. A back-link written in the ticket body is for a human to click, never for matching: it can point at a source that was already discarded, which is how duplicates and resurrected tickets happen.
-
-**Where `task.policy.doc` names a rule document, read it before the first write of the session.** It holds the tracker's own conventions — what may carry a version, who may close what, how a ticket with no parent is treated — and where it disagrees with a default in the config or in this file, **it wins**. Read it once and work from it for the rest of the session; read it again only where a write is refused, or where a ticket comes back changed by whatever enforces those rules. The mirror's adapter says how to fetch it. With the key null there is no such document and the config alone decides.
-
-**Where `task.template` names a ticket template, read it before assembling a body — `template.task` for a task, `template.parent` for whatever `hierarchy.parent_kind` calls its level.** It is the skeleton everyone filing by hand already gets, so it decides **which sections exist and in what order**; `task.ticket.sections` and `task.contract.sections` decide only which slot each of those headings is. Read it once per session, the same as the rule document. Fetch it the way the mirror's adapter says. Where the template is a form rather than a document, its field labels are its headings, in the order the form declares them.
-
-**Where a configured section name is not in the template, stop and name both.** One of the two has gone stale, and the run cannot tell which — the config may be behind a template somebody renamed, or the template may be a draft nobody adopted. What it must not do is write its own heading next to the template's: two sections then hold the same thing, the tracker's gates read one of them, and nothing about the ticket looks wrong. Where the template cannot be fetched at all, say so and fall back to the configured names — a ticket still has to get filed, and a fetch that failed is not a reason to hold up the work. With the key null the tracker publishes no template and the configured names decide alone.
+Config, the adapters, and the rules every mode follows — matching, the rule document and the template, titles, mappings, preview → go — are in `SKILL.md`, read before this file. What follows is publish's own.
 
 ## Inputs
 
 - `record` (required): the task record's url
-- `mode` (optional): `task` files or updates the task's ticket — the default. `contract` writes only the contract's own sections — the two binding ones, plus the requirements section where `contract.sections.requirements` is set — to whichever level `task.contract.level` names. Omitted with `level: parent`, a run that files a task says at the end whether its parent already has a contract, and offers to write it as a separate run
+- `--contract` (optional): writes only the contract's own sections — the two binding ones, plus the requirements section where `contract.sections.requirements` is set — to whichever level `task.contract.level` names. Without it the run files or updates the task's ticket. Omitted with `level: parent`, a run that files a task says at the end whether its parent already has a contract, and offers to write it as a separate run
+- `--template` (optional): runs *Bringing a ticket back to the template* below on the ticket the record links to, and nothing else. A record with no link yet has no ticket to bring back, and with `task.template` null there is no template to bring it to — either way, say so and stop
 
 **Why the contract is its own run at `level: parent`.** One parent holds many tasks. Rewriting its contract every time a sibling is filed puts a large diff behind a preview nobody reads closely, and the moment the contract is actually written is a different moment — it is what lets the parent leave the planning column. Keeping it separate makes that moment visible.
 
@@ -65,6 +33,8 @@ A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` 
 Take the record's URL from the argument, or ask for it.
 
 ### 1. Read the record and its materials (zero writes)
+
+Read both adapters first — *Adapters* in `SKILL.md`. Every call to either side from here on, the parent search and the duplicate check included, is the one they give.
 
 Read the record's properties — title, project, group, priority, assignee, status, schedule, the link property, and any link to a published spec.
 
@@ -269,33 +239,7 @@ With the key null there is no template, and headings come from `task.ticket.sect
 
 **No pointer to the parent is written either.** Where the tracker links a task to its parent, the parent is already on the screen, and a line naming it only adds a second thing to keep correct. It is also where an in-house word for the two binding sections tends to get invented — the ticket is read by people who were not in the conversation that coined it. Link rows come from `task.ticket.link_rows`, and a row whose value is missing is dropped rather than written as an empty bullet.
 
-#### Written for the people who will act on it
-
-A ticket is read by whoever picks the work up, and by everyone downstream who has to know what it
-covers — the person drawing the screens, the one deciding what is in scope this release, the one
-answering for it once it ships. Most of them do not read the system it is built on. So the title and
-the sentences under it say **what somebody will see or do**, not what the machine does underneath.
-
-- **The title names the work, as a noun phrase.** A word only the internals use — a layer, a gate, a
-  flag, a surface — reads as precise to whoever coined it and as nothing at all to everybody else.
-  Where the plain name is longer, it is still the shorter path to somebody knowing what the ticket is
-- **Plain wording is not licence to write a sentence.** *The setting nobody can reach* states a
-  symptom; it is what a defect is called, and a task named that way stops reading as something
-  somebody is doing. The work is named, and what it is being done to — the grammar the list already
-  uses for that is right there in the neighbours
-- **Read the sibling titles before writing one.** A list that has been kept by hand has a shape —
-  most often `<what> <verb-as-noun>`, and a dash before the part that narrows it. Matching that shape
-  is what makes a new row look like it belongs; a title in a grammar of its own reads as an import
-  even when every word in it is plain
-- **The record's title is the default, not a verdict.** Where it was written in that vocabulary, say
-  so in the preview and offer a plainer one beside it. Never change it quietly: the title is the
-  record's under `task.field_owner`, and a rename nobody saw is how the two sides start disagreeing
-  about what a ticket is called
-- **The grounds go under the notes heading.** A clause number, a spec path, a decision id — these say
-  why a condition is what it is, and whoever chases the reasoning looks for them there. Inside a done
-  condition they crowd out the thing being confirmed
-- **Plain is not simplified.** The reader knows the product better than anyone, just not its
-  internals, so nothing is rounded off to make a sentence read easily
+**The title and the sentences under it follow the title rules in `SKILL.md`** — what somebody will see or do, not what the machine does underneath.
 
 #### The summary is a scope boundary, not a restated title
 
@@ -491,15 +435,6 @@ lands in the backlog column otherwise, and the mirror's readers act on that.
 
 Anything under `task.mirror_extras` is read verbatim. This skill does not interpret it, which is what lets a tracker it has never seen still work.
 
-**The calls themselves live per tracker**, not in this document. Two copies of a command means one gets fixed. Read the mirror's adapter before this step and the record's before step 9:
-
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.mirror.type} --role mirror
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.record.type} --role record
-```
-
-It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; `/pm:setup` 4c drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
-
 ### 9. Write back into the record
 
 The link property is not here: step 7 wrote it the moment the ticket existed.
@@ -526,7 +461,7 @@ Link property : written at create
 
 ## Bringing a ticket back to the template
 
-Offered wherever `task.template` names one and the ticket's body does not match it. **It is one ticket, one person, one preview and one "go"** — that is the whole reason it is allowed here and refused in `/pm:task sync`, where the same edit across a list would rewrite a hundred tickets somebody else wrote on a single approval.
+Offered wherever `task.template` names one and the ticket's body does not match it, and run on its own with `--template` — the way out `/pm:task sync` names for a ticket it finds off template. **It is one ticket, one person, one preview and one "go"** — that is the whole reason it is allowed here and refused in `/pm:task sync`, where the same edit across a list would rewrite a hundred tickets somebody else wrote on a single approval.
 
 **The case this exists for is a ticket this workflow itself produced.** A ticket filed before the template was named, or by a config that had fallen behind it, carries sections these skills invented — not somebody else's prose, this workflow's own output under the wrong headings. Refusing to touch it on the grounds that the contract writer never touches what it does not own is the right rule applied to the wrong ticket.
 
@@ -557,7 +492,7 @@ Template : {task.template.parent or .task}
   {template's, missing}        → added empty
   {template's, missing, gated} → NOT added — the rules gate {column} on it, and an
                                  empty one passes that gate. Fill it with
-                                 /pm:task publish --mode contract instead
+                                 /pm:task publish <record> --contract instead
   {current, has content}       → asked below
 
 Labels   : + {label} (required by {the rule})
@@ -589,7 +524,8 @@ Taken when the link property was already filled.
 
 ## Constraints
 
-- **Never invent a mapping.** A project, priority or assignee with no entry in the config stops the run with a message. A wrong label is harder to find later than a missing ticket
+On top of *Rules every mode follows* in `SKILL.md`:
+
 - **Never overrule the tracker's own rule document.** Where `task.policy.doc` disagrees with a default here, the document wins, and a write it forbids is reported rather than attempted
 - **Never name a milestone for a project whose naming somebody else owns.** No `milestone_format` entry means offering what is already open, and nothing more
 - **Never write the contract at two levels.** `task.contract.level` names one. A copy on the other side is the drift the whole design avoids
@@ -607,7 +543,6 @@ Taken when the link property was already filled.
 - **Never file a task whose done conditions are defaults only.** A list that would fit any sibling says nothing about this one
 - **Read the tracker's current schema before writing** rather than trusting ids pinned in the config — options get renamed
 - **Never edit a checklist and leave the progress and the dates behind.** The tick is what a progress figure is counted from, so an edit that moves one without the other puts the record and the ticket in disagreement the moment it lands. They move in the same approval
-- **Every external write waits for "go"**, including the write-back into the record
 - **Never decide a version on the record side.** It is copied from the milestone the ticket sits under, and a different version is set there, on the tracker
 - **Never copy the body across.** The record stays the single source, and the ticket links to it — apart from the two binding sections, which have no copy on the other side
 - Verify after writing, and report what was actually written rather than what was intended
