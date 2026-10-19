@@ -3,6 +3,7 @@
 ## 3.27.1 — 2026-10-19
 
 - **The shared config reader and machine check carry `pm`'s paired-key guard.** `resolve-config.py` and `preflight.py` are held byte for byte identical across the two plugins, and `pm` 0.38.0 changed both: a config writing `task.record.ref` without `task.record.type`, or a type other than `markdown` without `task.link_property`, now stops under `--authored`, the first of those also fails the machine check, and `node` reads as absent rather than missing on the `pm` side. None of it touches a `fig` key, so nothing changes for `fig` configs — and `node` is still required here, since the Figma scripts are checked with it. `fig`'s own pair arrives with the change that makes its tracker type unset
+- The same copies also stop a `pm` config that writes a tracker type other than `markdown` or `none` without `task.record.ref`, and each paired stop gives its own reason. Still no `fig` key is involved
 
 ## 3.27.0 — 2026-10-19
 

@@ -22,7 +22,7 @@ Takes a **request source** — a chat thread, a document, a conversation someone
 ## Configuration
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml --need task.record.ref --authored task.record.type
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml --need task.record.ref --authored task.record.type,task.record.ref
 ```
 
 A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than interviewing for the value here.
@@ -104,7 +104,7 @@ Rewrite a filled cell **only where new information arrived** — another source,
 
 ### Create
 
-Before creating, look for a record that already carries the source link. For a markdown record: `grep -rlF "{link}" {task.record.ref}`. For any other type, the adapter's search. Where one is found, offer fill or revise on it instead.
+Before creating, look for a record that already carries the source link — only where the source is a link: pasted text has none, and an empty pattern matches every file. For a markdown record: `grep -rlF "{link}" {task.record.ref}`; a folder that does not exist yet means no match, not an error. For any other type, the adapter's search. Where one is found, offer fill or revise on it instead.
 
 Create the record in `task.record`, writing properties and body in a single write.
 
@@ -121,10 +121,14 @@ Create the record in `task.record`, writing properties and body in a single writ
 | Version | `task.properties.version_unset`, where `task.properties.version` is named. A new record has no ticket and so no milestone to copy — not asked |
 | Link to mirror | Left empty — `/pm:task-publish` fills it |
 
-**Markdown records** (`task.record.type` is `markdown`) are one call, with each property as `--set` and each context row as `--row`, in `task.context_rows` order. Report the printed path.
+**Markdown records** (`task.record.type` is `markdown`) are one call, with each property as `--set` under the lower-case key the record shape in `trackers/markdown.md` uses, and each context row as `--row`, in `task.context_rows` order. Report the printed path.
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py new --dir {task.record.ref} --title "{title}" --set "Project={project}" --row "Request source={link}" --row "Initial request={text}"
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/markdown-tracker.py new --dir {task.record.ref} \
+  --title "{title}" --set project="{project}" --set status="{task.properties.status_initial}" \
+  --set priority="{priority}" \
+  --link-key {task.link_property} \
+  --row "Request source={source}" --row "Initial request={text}"
 ```
 
 Every other type: the calls are in the adapter for `task.record.type`:

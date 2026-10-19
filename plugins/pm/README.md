@@ -59,7 +59,7 @@ How to work with one tool is written in one file, and the tool's name in your se
 
 ## Starting from nothing
 
-It is the default. With no settings file at all, a task is a markdown file under `./tasks`, a spec is one under `./docs/prd`, and the daily log is on. `/pm:setup` lays this out as one repository — `docs/prd/`, `tasks/`, `logs/`, `highlights/` and a README saying what lives where — that needs no other tool, with git as the audit trail. The settings file goes into that repository as `pm-conventions.yaml`, and it carries only what you answered: a setting nobody asked about stays out, so the plugin's own defaults keep applying, later changes to them included.
+It is the default. With no settings file at all, a task is a markdown file under `./tasks`, a spec is one under `./docs/prd`, and the daily log is on. `/pm:setup` lays this out as one repository — `docs/prd/`, `tasks/`, `logs/`, `highlights/` and a README saying what lives where — that needs no other tool, with git as the audit trail. The settings file goes into that repository as `pm-conventions.yaml`, and it carries only what you answered: a setting nobody asked about stays out, so the plugin's own defaults keep applying, later changes to them included. From then on, run the skills in Claude Code opened in that repository — the settings file is read only there.
 
 A tracker attaches later as the mirror, on whichever machine can see it, with the task files untouched. Until one does, `/pm:task-publish` and `/pm:task-sync` say the tasks are kept as records only, and stop.
 

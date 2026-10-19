@@ -216,7 +216,8 @@ are the recommended answer: it lays out one markdown repository — specs, tasks
 a README saying what lives where — that needs no other tool, with git as the audit trail. The
 settings file goes into that repository as `pm-conventions.yaml` (pass `out` to put it
 elsewhere), and it holds only what you answered. A setting nobody asked about stays out of the
-file, so the plugin's own defaults keep applying, later changes to them included.
+file, so the plugin's own defaults keep applying, later changes to them included. From then on,
+run the skills in Claude Code opened in that repository — the settings file is read only there.
 
 Then a tracker, only where you named one. It reads the schemas of your doc tool and your
 tracker, and asks only what no schema answers. Property names, select options, labels, board

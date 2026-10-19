@@ -24,7 +24,7 @@ Config is read in two stages, because a team with no tracker attached is not mis
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
-  --authored task.record.type
+  --authored task.record.type,task.record.ref
 ```
 
 Where `task.mirror.type` is `none`, stop with this, and nothing else:
@@ -36,7 +36,7 @@ Where `task.mirror.type` is `none`, stop with this, and nothing else:
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
   --need task.record.ref,task.link_property,task.mirror.ref \
-  --authored task.record.type,task.link_property,task.contract.level
+  --authored task.record.type,task.record.ref,task.link_property,task.contract.level
 ```
 
 A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than interviewing for the value here.

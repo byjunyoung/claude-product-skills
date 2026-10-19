@@ -1,6 +1,6 @@
 ---
 name: task-sync
-description: Reconciles a planning-side task list against the engineering tracker it mirrors. Reads both, diagnoses how they drifted (unfiled, duplicated, wrong parent, broken link, resurrected, field mismatch), then proposes, waits for approval, and only then writes. Reports its coverage. With no tracker attached it says the tasks are records only and stops. One task is /pm:task-publish. Triggers - "/pm:task-sync", "reconcile the tasks", "일감 동기화해줘", "노션 깃헙 맞춰줘", "정합화 돌려줘".
+description: Reconciles a planning-side task list against the engineering tracker it mirrors. Reads both, diagnoses how they drifted (unfiled, duplicated, wrong parent, broken link, resurrected, field mismatch), then proposes, waits for approval, and only then writes. Reports its coverage. With no tracker attached it says the tasks are records only and stops. One task is /pm:task-publish. Triggers - "/pm:task-sync", "reconcile the tasks", "sync notion and github", "일감 동기화해줘", "노션 깃헙 맞춰줘", "정합화 돌려줘".
 allowed-tools: AskUserQuestion, Bash, Agent, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__sub_issue_write, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues
 ---
 
@@ -20,7 +20,7 @@ Config is read in two stages. A team with no tracker attached is not missing a s
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
-  --authored task.record.type
+  --authored task.record.type,task.record.ref
 ```
 
 Where `task.mirror.type` is `none`, stop with this, and nothing else:
@@ -32,7 +32,7 @@ Where `task.mirror.type` is `none`, stop with this, and nothing else:
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
   --need task.record.ref,task.link_property,task.mirror.ref \
-  --authored task.record.type,task.link_property,task.contract.level
+  --authored task.record.type,task.record.ref,task.link_property,task.contract.level
 ```
 
 Add `task.progress_source` to that `--authored` list only where `task.properties.progress` is named (non-null in the resolved config) — the progress checks are inert without the property, so a config that never mentions the key must not be stopped on the floor's copy of it.

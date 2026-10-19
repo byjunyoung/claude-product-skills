@@ -30,7 +30,7 @@ The `pm` skills read every value from `pm-conventions.yaml`. This is where that 
 
 - `record` (optional): the planning-side list — a database url, a repo, or a directory
 - `mirror` (optional): the engineering tracker — usually `owner/repo`
-- `out` (optional): where to write. Defaults to `~/.claude/pm-conventions.yaml`; pass `./pm-conventions.yaml` for a project-local one. On the local start it is `<repo>/pm-conventions.yaml` unless one was passed — the paths in it are relative to that repository
+- `out` (optional): where to write. Defaults to `~/.claude/pm-conventions.yaml`; pass `./pm-conventions.yaml` for a project-local one. On the local start — specs or tasks kept local — it is `<repo>/pm-conventions.yaml` unless one was passed, and the paths in it are relative to that repository
 - `side` (optional): `record`, `mirror`, or `both` (the default). For when the two sides are reachable from different machines — the doc tool from one, the tracker from another. A run with a side writes only that side's keys into `out` and leaves the other side's byte for byte, so two runs on two machines finish one file
 
 Anything omitted is asked for at the start, together, in one round.
@@ -171,7 +171,7 @@ Why this and not a tool: it needs nothing installed, git is the audit trail (`/p
 
 Ask two things: where the repository is (an existing directory, or one to create), and whether to `git init` where it is not one. Then interview only what markdown cannot supply — `task.properties.projects` (the products, one file each under `docs/prd/`), `task.context_rows` (the defaults, in `meta.language`), `task.properties.priority` (the defaults unless the team says otherwise). **The config carries only what ② and ③ settled.** A key nobody was asked about stays out of the file, so the plugin's own default keeps applying — and a later change to that default reaches this file too. ②'s answers are always written, even where they match the default: where tasks and specs live is a decision, and `task.record.ref` goes with `task.record.type`. Only "the defaults" as an answer to `task.context_rows` or `task.properties.priority`, taken as they ship, is left out the same way.
 
-**The config goes into the repository.** On this start `out` is `<repo>/pm-conventions.yaml` unless one was passed: `./tasks`, `./logs` and `./docs/prd` are relative to the repository, and in the user-wide `~/.claude` file they would point wherever a session happened to start.
+**The config goes into the repository.** On this start `out` is `<repo>/pm-conventions.yaml` unless one was passed: `./tasks`, `./logs` and `./docs/prd` are relative to the repository, and in the user-wide `~/.claude` file they would point wherever a session happened to start. That holds where specs or tasks stay local. Where ② sent both to tools, ③ lays out only `logs/`, and `out` keeps `~/.claude/pm-conventions.yaml`.
 
 Preview the tree and the README, with the config lines ② and ③ settled beside them, and on a go create the folders and the README. The config itself is written once, in ⑥, after ⑤ has asked its questions. Nothing here is an external write, but it is somebody's working directory: create only what is listed, and inside a directory that already has content of its own, say which files are new. Where ⑤ turns the log off, remove `logs/` while it is still empty, and the README's line for it.
 
@@ -339,7 +339,7 @@ It prints the strongest layer — the file every skill will actually read. Where
 Every key that has to be written beside another was:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml --authored task.record.type,task.link_property
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml --authored task.record.type,task.record.ref,task.link_property
 ```
 
 Exit 0. Exit 3 names the half ⑥ left out — write it, and run this again.
@@ -382,6 +382,8 @@ Say that publishing and syncing arrive with a tracker, and that `task.mirror` is
     /pm:task-draft <message or link>     a request → a task with this table
     /pm:task-publish <task url or file>  a task → a ticket where engineering looks
     /pm:task-sync                        both sides reconciled — any time
+
+Where the config went into `<repo>`, say that these run in Claude Code opened in `<repo>`: the settings there are read only by a session started in it.
 
 ### 9. Share it — only where somebody else runs these too
 
@@ -436,4 +438,4 @@ fill it, what to run next. The lists below are the detail.
 - Which side this run wrote, and what was left for another machine
 - Where the mirror is GitHub, the account `gh` was on — so a later 404 can be read against it
 - Adapters drafted in 4c — where each was written, and which of its answers are still `(unverified)`
-- For the local start: the tree ③ created, and which parts ② sent to a tool instead
+- For the local start: the tree ③ created, and which parts ② sent to a tool instead. Where the config went into `<repo>`, that the next commands run in Claude Code opened in `<repo>` — the settings there are read only by a session started in it

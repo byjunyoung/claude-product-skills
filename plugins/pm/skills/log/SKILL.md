@@ -28,8 +28,10 @@ Built for a scheduler. It runs with nobody watching, so the rules below lean har
 ## Configuration
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml --authored task.record.type,task.record.ref
 ```
+
+**Exit 3 stops the run** with the message naming the line to add to the settings — this is the one skill that runs unattended and it runs no machine check (preflight), so a tracker setting written half-way is caught here rather than read from the wrong place.
 
 `log.enabled` is on unless it says `false`; `false` means stop immediately and say so — that is a correct outcome, not an error. This skill runs only when called by name, so a scheduler calls `/pm:log` itself. `task.record` gives the tracker; `log` gives everything else. A `null` source is skipped and named in the summary.
 
@@ -64,7 +66,7 @@ Query rows the day actually touched, split by whether they are yours.
 
 **Where `log.me.tracker_user_id` is null, nothing says whose a row is.** Put every row under *My tasks*, leave *Team tasks (reference)* to items discussed that have no row, and say in the summary that rows were not split between yours and the team's, naming `log.me.tracker_user_id` as the key that would split them. Never guess ownership from a name or from who last edited.
 
-**A markdown record** (`task.record.type: markdown`) is read with the adapter's `moved --dir {task.record.ref} --date {date}`, not a last-edited filter. It returns `{"paths": [...], "method": ...}`: the files committed on that date, plus, for today, files edited and not yet committed (`git+uncommitted`). Read each path's front matter for its row. A path that no longer exists was removed that day, or renamed away where git shows the rename — report it under that wording in the summary and never open it as a record. The summary names the `method` `moved` returned; for a backfilled day that is "commits only", because the work tree of a past day is not recoverable. An `mtime` day came from modification times, which a clone or checkout rewrites — say so. A task folder that does not exist (`method` `none`) is "no task records yet ({dir})" in the summary: it is not a failure, and the section reads `log.empty_line`.
+**A markdown record** (`task.record.type: markdown`) is read with the adapter's `moved --dir {task.record.ref} --date {date}`, not a last-edited filter. It returns `{"paths": [...], "method": ...}`: the files committed on that date, plus, for today, files edited and not yet committed (`git+uncommitted`). Read each path's front matter for its row. A path that no longer exists was removed or renamed since — `moved` cannot tell which; report it under that wording in the summary and never open it as a record. The summary names the `method` `moved` returned; for a backfilled day that is "commits only", because the work tree of a past day is not recoverable. An `mtime` day came from modification times, which a clone or checkout rewrites — say so. A task folder that does not exist (`method` `none`) is "no task records yet ({dir})" in the summary: it is not a failure, and the section reads `log.empty_line`.
 
 Query on **last edited or last updated**, never on created. Work in progress was created weeks ago; a created-date filter returns a nearly empty day and looks like a correct answer.
 
