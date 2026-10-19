@@ -55,8 +55,8 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/borrow-pm.py prd {fileKey}
 
 This skill takes no `spec_url`. The script answers `{type, ref, from, split, candidates, note}`; act on it, do not re-derive it.
 
-- `markdown`, one candidate → `Read` it. Several → ask which, offering the products. Split `domain` → `Read` `index.md` and the domain file the target belongs to
-- `markdown`, no candidates → pm's PRD folder exists but holds no document yet. Treat it as `none` and say so
+- `markdown`, one candidate → `Read` it; a `#…` in `ref` names the entry to start from. Several → ask which, offering the products. Split `domain` → `Read` `index.md` and the domain file the target belongs to
+- `markdown`, no candidates → no document to read: pm's PRD folder holds no document yet, or the named file is missing. Show the `note` if there is one, and handle it as `none`
 - `notion` → `notion-fetch` the `ref`
 - `none` → no PRD: every item that would rest on it is marked `needs confirmation`. A `note` is shown in one line
 - Exit 1 (fig's own config cannot be read) → say what it printed and stop; the config needs fixing first

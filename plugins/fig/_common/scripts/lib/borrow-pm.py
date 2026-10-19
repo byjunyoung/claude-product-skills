@@ -20,11 +20,13 @@ could not be read at all — a malformed figma-conventions.yaml, or its reader t
 that reader's stderr passed through.
 
 The PRD is looked for in this order, and the first step that answers is the answer:
-    1. --spec-url, read by spec_kind.
+    1. --spec-url, read by spec_kind. A .md file is answered as the one candidate.
     2. qa.baseline.prd in fig's config. null, or type none: no PRD, and pm is not asked. A ref:
-       that document. A type other than markdown with no ref: none, with a note asking for the
-       link — the config says the PRD lives somewhere pm's files are not, so pm's files are not
-       a stand-in for it. A plain string is an older config's Notion page, an empty one included.
+       that document — a markdown folder's PRD files, or a .md file as the one candidate, with
+       any `#…` kept in the ref. A type other than markdown with no ref: none, with a note asking
+       for the link — the config says the PRD lives somewhere pm's files are not, so pm's files
+       are not a stand-in for it. A plain string is an older config's Notion page, an empty one
+       included.
     3. pm's prd.markdown.dir — only where the type is markdown (written, or the floor's) and the
        ref is null, and pm is installed, new enough, and keeps its PRD in markdown or git.
     4. none.
@@ -276,6 +278,20 @@ def candidates(ref, split, cwd):
     return sorted(out, key=lambda c: c["path"])
 
 
+def one_file(ref, cwd):
+    """The .md file `ref` names — the part before `#` — as the one candidate, [] where there is
+    none. The path keeps the form `ref` was given in; the `#…` stays in the answer's ref, where it
+    names the entry to start from."""
+    given = ref.strip().split("#", 1)[0]
+    path = os.path.expanduser(given)
+    full = path if os.path.isabs(path) else os.path.join(cwd, path)
+    if not given.lower().endswith(".md") or not os.path.isfile(full):
+        return []
+    fm = front_matter(full)
+    return [{"path": given, "product": named(fm, "product", os.path.splitext(os.path.basename(given))[0]),
+             "domain": named(fm, "domain", None)}]
+
+
 def guess_split(base):
     """For a folder nobody's config describes: domain where a product folder holds index.md."""
     return "domain" if any(os.path.isfile(os.path.join(base, n, "index.md")) for n in listing(base)) else "product"
@@ -453,7 +469,9 @@ def decide_prd(cfg, pm, cwd):
                 out["candidates"] = candidates(ref, out["split"], cwd)
                 if not out["candidates"]:
                     out["note"] = f"{ref} holds no PRD files yet."
-            elif not os.path.isfile(full):
+            elif os.path.isfile(full):
+                out["candidates"] = one_file(ref, cwd)
+            else:
                 out["note"] = f"{ref} does not exist here."
         else:
             out["note"] = (f"qa.baseline.prd.type {prd.get('type')} is not one fig reads "
@@ -525,8 +543,8 @@ def main(argv):
                 sys.stderr.write(f"{a.spec_url}: cannot tell what kind of document this is — pass a .md "
                                  "file that exists here, or a Notion page url or id.\n")
                 sys.exit(6)
-            res = {"type": kind, "ref": value, "from": "spec_url", "split": None, "candidates": [],
-                   "note": None}
+            res = {"type": kind, "ref": value, "from": "spec_url", "split": None,
+                   "candidates": one_file(value, cwd) if kind == "markdown" else [], "note": None}
         else:
             cfg = fig_config(cwd, a.file_key)
             res = decide_prd(cfg, find_pm(env, cwd), cwd)

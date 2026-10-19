@@ -240,11 +240,31 @@ with tempfile.TemporaryDirectory() as tmp:
     check("prd: pm below PM_MIN → none, note",
           out.get("type") == "none" and "update" in (out.get("note") or ""), r.stdout + r.stderr)
 
+    r = run(cfg_ok, project(fig="qa:\n  baseline:\n    prd: {type: markdown, ref: ./docs/x.md}\n",
+                            files={"docs/x.md": store}), "prd")
+    out = parse(r)
+    cands = out.get("candidates") or []
+    check("prd: config ref names a file → one candidate",
+          out.get("type") == "markdown" and out.get("ref") == "./docs/x.md"
+          and out.get("from") == "qa.baseline.prd" and out.get("split") is None and len(cands) == 1
+          and cands[0].get("path") == "./docs/x.md" and cands[0].get("product") == "Store App"
+          and "domain" in cands[0] and cands[0]["domain"] is None and out.get("note") is None,
+          r.stdout + r.stderr)
+
+    r = run(cfg_ok, project(fig="qa:\n  baseline:\n    prd: {type: markdown, ref: ./docs/gone.md}\n"), "prd")
+    out = parse(r)
+    check("prd: config ref names a missing file → no candidates, the note says so",
+          out.get("type") == "markdown" and out.get("candidates") == []
+          and "does not exist" in (out.get("note") or ""), r.stdout + r.stderr)
+
     r = run(cfg_ok, project(files={"docs/x.md": "# X\n"}), "prd", "--spec-url", "docs/x.md#entry-3")
     out = parse(r)
+    cands = out.get("candidates") or []
     check("prd: spec_url .md → markdown",
           out.get("type") == "markdown" and out.get("ref") == "docs/x.md#entry-3"
-          and out.get("from") == "spec_url", r.stdout + r.stderr)
+          and out.get("from") == "spec_url" and len(cands) == 1
+          and cands[0].get("path") == "docs/x.md" and cands[0].get("product") == "x"
+          and "domain" in cands[0] and cands[0]["domain"] is None, r.stdout + r.stderr)
 
     r = run(cfg_ok, project(), "prd", "--spec-url", HEX)
     check("prd: spec_url 32-hex → notion", parse(r).get("type") == "notion", r.stdout + r.stderr)

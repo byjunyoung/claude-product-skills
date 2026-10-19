@@ -42,8 +42,8 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/borrow-pm.py prd [--spec-url {
 
 The script answers `{type, ref, from, split, candidates, note}`; act on it, do not re-derive it.
 
-- `markdown`, one candidate → `Read` it. Several → ask which, offering the products. Split `domain` → `Read` `index.md` and the domain file the screen belongs to
-- `markdown`, no candidates → pm's PRD folder exists but holds no document yet. Go on without one and say so
+- `markdown`, one candidate → `Read` it; a `#…` in `ref` names the entry to start from. Several → ask which, offering the products. Split `domain` → `Read` `index.md` and the domain file the screen belongs to
+- `markdown`, no candidates → no document to read: pm's PRD folder holds no document yet, or the named file is missing. Show the `note` if there is one, and handle it as `none`
 - `notion` → `notion-fetch` the `ref`
 - `none` → go on without one and say so. A `note` is shown in one line
 - Exit 6 (the `--spec-url` is a Figma link or a kind the script cannot tell) → say what it printed and ask for another source
