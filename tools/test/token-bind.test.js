@@ -98,8 +98,8 @@ const fakeFigma = (pageChildren, { vars = [], local = [], published = [], collec
 
 // Strict mode, with every fixture paint and paint array frozen (see node()): a write into either in
 // place throws instead of passing quietly, so "rebuilt and reassigned, never edited" is asserted directly.
-const bind = (figma, MAPPING, { cfg = baseCfg(), SECTION } = {}) =>
-  new AsyncFunction("CFG", "MAPPING", "SECTION", "figma", '"use strict";\n' + BIND)(cfg, MAPPING, SECTION, figma);
+const bind = (figma, MAPPING, { cfg = baseCfg(), SECTION, DRY_RUN } = {}) =>
+  new AsyncFunction("CFG", "MAPPING", "SECTION", "DRY_RUN", "figma", '"use strict";\n' + BIND)(cfg, MAPPING, SECTION, DRY_RUN, figma);
 const audit = (figma, { cfg = baseCfg(), SECTION, MODE } = {}) =>
   new AsyncFunction("CFG", "SECTION", "MODE", "figma", AUDIT)(cfg, SECTION, MODE, figma);
 
@@ -205,8 +205,8 @@ test("a visible change — colour or opacity — is skipped unless the entry acc
     frame("Near-Default", { fills: [solid("#3B66FF")] }),                              // grade 2: a colour change
   ])];
   const MAP = (accept) => [
-    { hex: "#3366FF33", variableKey: "key:primary", ...(accept ? { accept: true } : {}) },
-    { hex: "#3B66FF", variableKey: "key:primary", ...(accept ? { accept: true } : {}) },
+    { hex: "#3366FF33", variableKey: "key:primary", ...(accept ? { accept: true, nodes: ["id:Soft-Default", "id:Glow-Default"] } : {}) },
+    { hex: "#3B66FF", variableKey: "key:primary", ...(accept ? { accept: true, nodes: ["id:Near-Default"] } : {}) },
     { hex: "#00000080", variableKey: "key:scrim" },
   ];
 
@@ -255,7 +255,11 @@ test("a token that renders another colour in a node's mode is skipped there, and
     assert.match(s.reason, /fill #FFFFFF — token surface renders #1E1E1E here \(mode Dark\), not #FFFFFF — binding changes what you see; accept: true binds it anyway/, s.reason);
 
   const p2 = page();
-  const accepted = await bind(fakeFigma(p2, lib), [{ hex: "#FFFFFF", variableKey: "key:surface", accept: true }]);
+  // The rows that render the same bind as they are; the accepted entry covers only the nodes it names.
+  const accepted = await bind(fakeFigma(p2, lib), [
+    { hex: "#FFFFFF", variableKey: "key:surface" },
+    { hex: "#FFFFFF", variableKey: "key:surface", accept: true, nodes: ["id:Dark-Default", "id:Card"] },
+  ]);
   assert.deepStrictEqual(accepted, { bound: 4, skipped: [] });
 });
 
@@ -389,4 +393,88 @@ test("collect, bind the exact rows, audit: the counts agree and nothing exact is
   assert.deepStrictEqual(after.findings.map((f) => f.node).sort(), ["id:Near", "id:Shade"]);
   // What the bind passed over is exactly what collect counted inside instances, plus the styled paint.
   assert.deepStrictEqual(out.skipped.map((s) => s.node).sort(), ["id:Chip", "id:Chip label", "id:Styled"]);
+});
+
+test("accept: true without nodes is rejected before anything is written; nodes limit an entry to those ids", async () => {
+  const page = () => [section("01. Home", [
+    frame("Near-A", { fills: [solid("#3B66FF")] }),
+    frame("Near-B", { fills: [solid("#3B66FF")] }),
+    frame("Exact-A", { fills: [solid("#3366FF")] }),
+    frame("Exact-B", { fills: [solid("#3366FF")] }),
+  ])];
+
+  const p1 = page();
+  await assert.rejects(bind(fakeFigma(p1, LIB()), [{ hex: "#3366FF", variableKey: "key:primary" }, { hex: "#3B66FF", variableKey: "key:primary", accept: true }]),
+    /MAPPING entry for #3B66FF has accept: true but no nodes/);
+  await assert.rejects(bind(fakeFigma(p1, LIB()), [{ hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: [] }]), /accept: true but no nodes/);
+  await assert.rejects(bind(fakeFigma(p1, LIB()), [{ hex: "#3B66FF", variableKey: "key:primary", accept: true }], { DRY_RUN: true }), /accept: true but no nodes/,
+    "a dry run holds to the same rule");
+  await assert.rejects(bind(fakeFigma(p1, LIB()), [{ hex: "#3366FF", variableKey: "key:primary", nodes: "id:Exact-A" }]), /nodes is a list of node ids/);
+  assert.deepStrictEqual(p1[0].children.map((f) => boundTo(f.fills[0])), [null, null, null, null], "the rejected runs wrote nothing");
+
+  const p2 = page();
+  const out = await bind(fakeFigma(p2, LIB()), [
+    { hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: ["id:Near-A"] },
+    { hex: "#3366FF", variableKey: "key:primary", nodes: ["id:Exact-B"] },
+  ]);
+  assert.deepStrictEqual(out, { bound: 2, skipped: [] }, "a node no entry names is neither bound nor reported");
+  assert.deepStrictEqual(p2[0].children.map((f) => boundTo(f.fills[0])), ["primary", null, null, "primary"]);
+});
+
+test("a dry run writes nothing and returns, per node, what would bind, what would change and what is skipped", async () => {
+  const modal = { id: "c1", defaultModeId: "m1", modes: [{ modeId: "m1", name: "Light" }, { modeId: "dark", name: "Dark" }] };
+  const lib = {
+    vars: [colorVar("primary", { m1: value("#3366FF"), dark: value("#3366FF") }), colorVar("surface", { m1: value("#FFFFFF"), dark: value("#1E1E1E") })],
+    local: ["primary", "surface"],
+    collections: [modal],
+  };
+  const page = () => [section("01. Home", [
+    frame("Home-Default", { fills: [solid("#FFFFFF")], strokes: [solid("#3366FF")] }, [
+      node("RECTANGLE", "Near", { fills: [solid("#3B66FF")] }),
+      node("INSTANCE", "Chip", { fills: [solid("#3366FF")] }),
+    ]),
+    frame("Dark-Default", { fills: [solid("#FFFFFF")], resolvedVariableModes: { c1: "dark" } }),
+  ])];
+  const first = [
+    { hex: "#FFFFFF", variableKey: "key:surface" },
+    { hex: "#3366FF", variableKey: "key:primary" },
+    { hex: "#3B66FF", variableKey: "key:primary" },
+  ];
+
+  // 1. The plain mapping: what binds as it is, and what would change if accepted
+  const p1 = page();
+  const dry = await bind(fakeFigma(p1, lib), first, { DRY_RUN: true });
+  assert.deepStrictEqual(Object.keys(dry).sort(), ["skipped", "wouldBind"]);
+  assert.deepStrictEqual(dry.wouldBind, [
+    { node: "id:Home-Default", name: "Home-Default", kind: "fill", hex: "#FFFFFF", variable: "surface", variableKey: "key:surface" },
+    { node: "id:Home-Default", name: "Home-Default", kind: "stroke", hex: "#3366FF", variable: "primary", variableKey: "key:primary" },
+  ]);
+  const changes = dry.skipped.filter((s) => s.change);
+  assert.deepStrictEqual(changes.map((s) => [s.node, s.variableKey, s.change]), [
+    ["id:Near", "key:primary", "#3B66FF → #3366FF"],
+    ["id:Dark-Default", "key:surface", "#FFFFFF → #1E1E1E (mode Dark)"],
+  ]);
+  assert.match(dry.skipped.find((s) => s.node === "id:Chip").reason, /inside an instance/);
+  assert.strictEqual(dry.skipped.find((s) => s.node === "id:Chip").change, undefined, "a skip accept cannot lift carries no change");
+  assert.deepStrictEqual([p1[0].children[0].fills[0], p1[0].children[0].strokes[0], p1[0].children[1].fills[0]].map(boundTo), [null, null, null],
+    "nothing written");
+
+  // 2. The mapping the person said go to: accepted rows name their nodes, and the dry run shows each change
+  const final = [...first, { hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: ["id:Near"] }];
+  const p2 = page();
+  const preview = await bind(fakeFigma(p2, lib), final, { DRY_RUN: true });
+  assert.deepStrictEqual(preview.wouldBind.find((w) => w.node === "id:Near"),
+    { node: "id:Near", name: "Near", kind: "fill", hex: "#3B66FF", variable: "primary", variableKey: "key:primary", change: "#3B66FF → #3366FF" });
+  assert.ok(preview.skipped.some((s) => s.node === "id:Dark-Default"), "the mode node was not accepted, so it stays skipped");
+
+  // 3. The real run writes exactly what that preview listed
+  const real = await bind(fakeFigma(p2, lib), final);
+  assert.strictEqual(real.bound, preview.wouldBind.length);
+  assert.deepStrictEqual(real.skipped, preview.skipped);
+  assert.deepStrictEqual(["Home-Default", "Near", "Dark-Default"].map((n) => boundTo(find(p2, n).fills[0])), ["surface", "primary", null]);
+
+  // An opacity change reads as one
+  const p3 = [section("01. Home", [frame("Soft-Default", { fills: [solid("#3366FF", { opacity: 0.2 })] })])];
+  const soft = await bind(fakeFigma(p3, lib), [{ hex: "#3366FF33", variableKey: "key:primary" }], { DRY_RUN: true });
+  assert.deepStrictEqual(soft.skipped.map((s) => s.change), ["opacity 20% → 100%"]);
 });

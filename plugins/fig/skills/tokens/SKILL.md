@@ -99,29 +99,32 @@ A colour at full opacity is written `#RRGGBB` and any other `#RRGGBBAA`, in ever
 ### 2. Settle the mapping (user's choice)
 
 - Present grade 1 as a table: hex → token (name and key), count, a few nodes. **When one colour matches two tokens with different meanings equally** (white matching both a static white and a background token, say), do not pick — present the difference in meaning and let the user choose
-- Show grade 2 with what binding changes — a near colour, or **the same colour at another opacity, which is an opacity change** ("the 20% shadow becomes opaque", in the two values it has) — and ask about each such row on its own. Only a row the person accepts goes into the mapping, with `accept: true`. **`accept: true` means the person saw that visible change and said go to it**; without it the bind skips any paint whose look would change
+- Show grade 2 with what binding changes — a near colour, or **the same colour at another opacity, which is an opacity change** ("the 20% shadow becomes opaque", in the two values it has) — and ask about each such row on its own. A row the person wants goes into the draft mapping as it is; the dry run in step 3 shows, node by node, what it would change
 - Grade 3 is reported only; the user decides whether to proceed
-- The settled mapping is `MAPPING = [{ hex, variableKey, accept? }]`, with each hex written as the scan wrote it
+- The draft mapping is `MAPPING = [{ hex, variableKey }]`, with each hex written as the scan wrote it — no `accept` yet
 
-### 3. Bind (preview → go, split into steps)
+### 3. Bind (dry run → preview → go → the same run)
 
-- Show the settled mapping as a **preview** — the page or section, each hex → token with its count, every row carrying `accept: true` with the change it accepts, and what stays as it is (colours inside instances, grade 2 and 3 rows not chosen) — and get a **go**
-- With a lot to do, **split by section (`SECTION`) or by colour (part of `MAPPING`)** — never write it all at once. A run binds exactly what its preview showed, so a split run gets **its own preview and go**
-- Run `token-bind.js` with `const MAPPING = [...];`, and `SECTION` where the preview named one. It binds the colours the scan reported whose colour and opacity equal a mapped hex, and returns `{ bound, skipped }`: `bound` in paints, and `skipped` as `[{ node, reason }]` — inside an instance, scaffolding, applied through a style or text with part of it in one, a token that renders something on that node other than the colour it replaces without `accept: true`, a token not scoped for that property, a token that could not be imported. A section that is not on the page throws before anything is written
-- **The bind reads what the token renders on each node, in that node's mode.** A frame set to another mode can render a grade-1 token as another colour — "renders #1E1E1E here (mode Dark), not #FFFFFF" — and that node comes back in `skipped` with what it would show. Show those rows and ask; a yes reruns the bind for that colour with `accept: true`, behind its own preview and go
+1. **Dry run the draft.** Run `token-bind.js` with `const MAPPING = [...];`, `const DRY_RUN = true;`, and `SECTION` where a section was given. Nothing is written. It returns `wouldBind` — `[{ node, name, kind, hex, variable, variableKey, change? }]`, one row per paint that would bind — and `skipped`. A skip that carries `change` is a visible difference the person can accept on that node: a near colour (`#3B66FF → #3366FF`), another opacity (`opacity 20% → 100%`), or a token that renders something else in the mode the node is set to (`#FFFFFF → #1E1E1E (mode Dark)`) — a grade-1 colour included, since the grade was read in the default mode
+2. **Ask about each visible change, node by node.** For the nodes the person accepts, add an entry `{ hex, variableKey, accept: true, nodes: [those ids] }` after that colour's plain one. **`accept: true` means the person saw that change on those nodes and said go to it**, so it always names them — the script rejects an `accept` without `nodes` before anything is written, and a go never covers a node its preview did not list
+3. **Dry run the final mapping, and build the preview from it** — the page or section; each hex → token with its count; every `wouldBind` row that carries a `change`, listed node by node with what changes there; and what stays as it is (`skipped` by reason, colours inside instances, grade 2 and 3 rows not chosen). Get a **go**
+4. **Run the same `MAPPING` and `SECTION` without `DRY_RUN`.** It writes exactly what that preview listed and returns `{ bound, skipped }` — `bound` in paints, `skipped` as `[{ node, reason }]`: inside an instance, scaffolding, applied through a style or text with part of it in one, a visible change not accepted on that node, a token not scoped for that property, a token that could not be imported. A section that is not on the page, or an `accept` without `nodes`, throws before anything is written
+
+- With a lot to do, **split by section (`SECTION`) or by colour (part of `MAPPING`)** — never write it all at once. Each part is a run of its own, so it gets its own dry run and **its own preview and go**
+- **The bind reads what the token renders on each node, in that node's mode**, which is why the preview is built from the dry run and not from the scan. Binding a mode node the person declined at first takes a new dry run with an `accept` entry naming exactly those nodes, then its own preview and go
 
 ### 4. Verify (required)
 
 - **Run `audit-tokens.js` again in its default mode** on the same scope and confirm no mapped colour is left as `[unbound]`, except on the nodes `skipped` named
-- Where `skipped` names no token problem (a visible change, scope, import), `bound` equals the sum of the mapped rows' `count` from the scan — both scripts walk the same paints, so a gap is a fault to report, not a rounding to explain
+- `bound` equals the number of `wouldBind` rows in the dry run that was previewed — the real run follows the same `MAPPING` over the same paints, so a gap is a fault to report, not a rounding to explain
 - Report `skipped` by reason, `inInstance`, and the grade 2 and 3 rows not chosen, as out of scope for this pass
 
 ## Constraints
 
-- **Preview → go before writing.** Settling the mapping and running the binding are separate; binding is split by section or by colour, each run behind its own preview and go
+- **Dry run → preview → go before writing.** Settling the mapping and running the binding are separate; binding is split by section or by colour, each run behind its own dry run, preview and go, and the real run takes the `MAPPING` that was previewed, unchanged
 - **Never touch colors inside instances or scaffolding, or a paint applied through a style** — report only
 - Only bind where the property and the token's scope agree — the bind script holds to it and returns the rest in `skipped`
-- Any mapping that changes the colour or the opacity says so in the preview, and carries `accept: true` only after the person said go to that change — never assume the color is unchanged from the token's name
+- Any mapping that changes the colour or the opacity says so in the preview, node by node, and carries `accept: true` — with exactly the `nodes` the preview listed — only after the person said go to that change. Never assume the color is unchanged from the token's name
 - Keep each call small, verifying between steps with the audit or a screenshot
 - Never write "done" without verification — prove zero remaining with the audit
 

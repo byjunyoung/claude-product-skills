@@ -336,6 +336,11 @@ check("tokens scans, binds and verifies through the scripts",
       and "acceptAlpha" not in tokens)
 check("a request only to check stops after the scan", "stops before binding" in tokens)
 check("each bind run gets its own preview and go", "its own preview and go" in tokens)
+check("tokens builds its preview from a dry run, and accept names its nodes",
+      "DRY_RUN" in tokens and "nodes" in tokens and "every remaining node" not in tokens
+      and "reruns the bind for that colour with `accept: true`" not in tokens)
+check("no fig document says an instance's colours are fixed at the component's source",
+      not [rel for rel, text in tracked_text_files() if rel.startswith("plugins/fig") and "fixed at the component" in text])
 t_head = fm_of_text(tokens)["description"].partition(" Triggers - ")[0]
 check("tokens' description says it binds, not that it audits",
       "binds" in t_head.lower() and "audit" not in t_head.lower(), t_head)

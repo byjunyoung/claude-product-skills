@@ -2,29 +2,39 @@
  * token-bind.js — binds hand-typed colours to the design system's tokens (WRITES)
  *
  * The bind half of /fig:tokens. Its scan is audit-tokens.js with MODE "collect", and the check after it
- * is audit-tokens.js in its default mode. Run only after the person has seen the mapping and said go.
+ * is audit-tokens.js in its default mode. Its preview is this file with DRY_RUN; the real run follows
+ * only the go to that preview, with the same MAPPING.
  *
- * Usage — the CFG line, the MAPPING line, optionally a SECTION line, then this file, to use_figma.
+ * Usage — the CFG line, the MAPPING line, optionally SECTION and DRY_RUN lines, then this file, to use_figma.
  *
  * Inputs
  *   CFG      naming.arrow_delimiter / label_prefix / state_chain_prefix and placeholder_style (the
  *            <scaffolding> block), pages.exclude_sections
- *   MAPPING  [{ hex, variableKey, accept? }] — hex in collect's form ("#RRGGBB" where alpha is 1,
+ *   MAPPING  [{ hex, variableKey, nodes?, accept? }] — hex in collect's form ("#RRGGBB" where alpha is 1,
  *            "#RRGGBBAA" otherwise), variableKey one of the keys collect's dictionary lists. Several
- *            entries may share a hex: each paint takes the first that can be bound to it, so one colour
- *            can go to a fill token on fills and a text token on text.
- *            accept: true means the person saw, in the preview, that binding this row changes what the
- *            screen shows — a near colour (grade 2), another opacity, or a token that renders another
- *            value in the mode a node is set to — and said go to that change. Without it, any such
- *            difference is skipped.
+ *            entries may share a hex: each paint takes the first entry that names its node and can be
+ *            bound to it, so one colour can go to a fill token on fills and a text token on text.
+ *            nodes: [ids] limits the entry to those nodes; without it, every node in scope. A node no
+ *            entry for its colour names is neither bound nor reported.
+ *            accept: true means the person saw, in the preview, that binding this entry changes what
+ *            those nodes show — a near colour (grade 2), another opacity, or a token that renders another
+ *            value in the mode a node is set to — and said go to that change, node by node. It needs
+ *            nodes: an entry with accept and no nodes is rejected before anything is written, so a go
+ *            never covers a node its preview did not list. Without accept, any such difference is skipped.
  *   SECTION  optional — that section and the sections nested in it; without it, the whole page
+ *   DRY_RUN  optional — true writes nothing (a library token is still imported to be read; no node or
+ *            paint changes) and returns what the same MAPPING would do, for the preview:
+ *            { wouldBind: [{ node, name, kind, hex, variable, variableKey, change? }], skipped }
+ *            one entry per paint that would bind — variable the token's name, change set where the
+ *            screen would show something else there ("#3B66FF → #3366FF", "opacity 20% → 100%",
+ *            "#FFFFFF → #1E1E1E (mode Dark)"), which happens only on an accepted node
  *
  * What it binds: exactly the colours audit-tokens.js reports — the <paint-scope> block, shared with it
  * byte for byte — whose colour and alpha equal a MAPPING hex. A fill, stroke or text colour is bound with
  * setBoundVariableForPaint, an effect colour with setBoundVariableForEffect; the node's array is rebuilt
  * and reassigned, every other entry left as it was. The paint's own opacity is left as Figma returns it.
  *
- * What it leaves, and returns in `skipped` with the reason — only for a colour MAPPING names:
+ * What it leaves, and returns in `skipped` with the reason — only for a colour, on a node, MAPPING names:
  *   - inside an instance, including overrides on its layers, and an instance's own paint on a property
  *     it does not override
  *   - working scaffolding (the <scaffolding> block)
@@ -43,10 +53,13 @@
  * Tokens: a local colour variable with that key is used as it is (an unpublished one cannot be
  * imported); any other is imported with importVariableByKeyAsync. Every one is found before the first write.
  *
- * Returns { bound, skipped } — bound counts paints, as collect's `count` does; skipped is
- *   [{ node, reason }], one per node and reason, the reason opening "<node name>: <kind> <hex> — ".
- *   MAPPING empty or malformed, or SECTION not on the page → throws before anything is written.
- *   SECTION inside an excluded section → { bound: 0, skipped: [{ node: SECTION, reason }] }.
+ * Returns { bound, skipped } (DRY_RUN: { wouldBind, skipped }) — bound counts paints, as collect's
+ *   `count` does; skipped is [{ node, reason, change?, variableKey? }], one per node and reason, the
+ *   reason opening "<node name>: <kind> <hex> — ". change and variableKey are set where the skip is a
+ *   visible difference that accept: true with that node would lift — the rows a preview asks about.
+ *   MAPPING empty or malformed, accept without nodes, or SECTION not on the page → throws before
+ *   anything is written. SECTION inside an excluded section → { bound: 0 (or wouldBind: []),
+ *   skipped: [{ node: SECTION, reason }] }.
  * ========================================================================== */
 
 const C = typeof CFG !== "undefined" ? CFG : {};
@@ -204,7 +217,8 @@ const scopeOf = all => {
 
 // ── MAPPING: colour key → its entries, in the order given ──
 if (typeof MAPPING === "undefined" || !Array.isArray(MAPPING) || !MAPPING.length)
-  throw new Error("MAPPING is a non-empty array of { hex, variableKey, accept? }");
+  throw new Error("MAPPING is a non-empty array of { hex, variableKey, nodes?, accept? }");
+const DRY = typeof DRY_RUN !== "undefined" && DRY_RUN === true;
 const keyOf = h => {
   const s = String(h == null ? "" : h).replace(/^#/, "").toUpperCase();
   if (!/^[0-9A-F]{6}([0-9A-F]{2})?$/.test(s)) throw new Error(`MAPPING hex "${h}" is not #RRGGBB or #RRGGBBAA`);
@@ -213,23 +227,32 @@ const keyOf = h => {
 const wanted = new Map();
 for (const m of MAPPING) {
   if (!m || !m.variableKey) throw new Error(`MAPPING entry ${JSON.stringify(m)} has no variableKey`);
-  const k = keyOf(m.hex);
+  const k = keyOf(m.hex), has = m.nodes !== undefined && m.nodes !== null;
+  if (m.accept === true && !(Array.isArray(m.nodes) && m.nodes.length))
+    throw new Error(`MAPPING entry for ${k} has accept: true but no nodes — accept covers only the nodes a preview listed, so name them`);
+  if (has && !(Array.isArray(m.nodes) && m.nodes.length && m.nodes.every(x => typeof x === "string" && x)))
+    throw new Error(`MAPPING entry for ${k}: nodes is a list of node ids`);
   if (!wanted.has(k)) wanted.set(k, []);
-  wanted.get(k).push({ variableKey: String(m.variableKey), accept: m.accept === true });
+  wanted.get(k).push({ variableKey: String(m.variableKey), accept: m.accept === true, nodes: has ? new Set(m.nodes) : null });
 }
+// Whether an entry, or any entry for a colour, names this node.
+const covers = (e, n) => !e.nodes || e.nodes.has(n.id);
+const named = (n, key) => wanted.has(key) && wanted.get(key).some(e => covers(e, n));
 
 // ── Scope, then the walk (reads only) ──
 const page = figma.currentPage;
 const allSecs = sectionsDeep(page.children, skipSection);
 const scope = SEC ? scopeOf(allSecs) : null;
 if (scope && scope.missing) throw new Error(`section ${SEC} is not on this page`);
-if (scope && scope.excluded)
-  return { bound: 0, skipped: [{ node: SEC, reason: `section ${SEC} is excluded by pages.exclude_sections; nothing bound` }] };
+if (scope && scope.excluded) {
+  const skippedAll = [{ node: SEC, reason: `section ${SEC} is excluded by pages.exclude_sections; nothing bound` }];
+  return DRY ? { wouldBind: [], skipped: skippedAll } : { bound: 0, skipped: skippedAll };
+}
 
 const skipped = [], skipSeen = new Set();
-const skip = (n, c, why) => {
+const skip = (n, c, why, extra) => {
   const reason = `${n.name}: ${c.kind} ${c.key} — ${why}`;
-  if (!skipSeen.has(n.id + "\n" + reason)) { skipSeen.add(n.id + "\n" + reason); skipped.push({ node: n.id, reason }); }
+  if (!skipSeen.has(n.id + "\n" + reason)) { skipSeen.add(n.id + "\n" + reason); skipped.push({ node: n.id, reason, ...(extra || {}) }); }
 };
 const LEFT = {
   instance: "inside an instance, including overrides on its layers",
@@ -245,16 +268,16 @@ const S = scaffoldingCfg(C);
 const targets = [];   // { n, c }
 for (const { n } of rootsOf(page, allSecs, scope ? scope.ids : null))
   walkColours(n, S, (m, c) => {
-    if (!wanted.has(c.key)) return;
+    if (!named(m, c.key)) return;
     if (partStyled(m, c)) skip(m, c, "part of this text uses a style; binding it could detach that part");
     else targets.push({ n: m, c });
-  }, (m, c, why) => { if (wanted.has(c.key)) skip(m, c, LEFT[why]); });
+  }, (m, c, why) => { if (named(m, c.key)) skip(m, c, LEFT[why]); });
 
 // ── Every token the targets name, found before the first write ──
 const local = new Map();
 for (const v of await figma.variables.getLocalVariablesAsync("COLOR")) local.set(v.key, v);
 const tokens = new Map();   // variableKey → { v } or { error }
-for (const key of new Set(targets.flatMap(t => wanted.get(t.c.key).map(e => e.variableKey)))) {
+for (const key of new Set(targets.flatMap(t => wanted.get(t.c.key).filter(e => covers(e, t.n)).map(e => e.variableKey)))) {
   if (local.has(key)) { tokens.set(key, { v: local.get(key) }); continue; }
   try {
     const v = await figma.variables.importVariableByKeyAsync(key);
@@ -301,27 +324,42 @@ const changeOn = async (v, n, rk, ck) => {
     ? `token ${v.name} is ${pct(alphaOf(rk))} opaque${here} and the colour ${pct(alphaOf(ck))}`
     : `token ${v.name} renders ${rk}${here}, not ${ck}`) + ACCEPT;
 };
+// The same difference, short, for the preview: "#3B66FF → #3366FF", "opacity 20% → 100%", plus the mode.
+const changeText = async (v, n, rk, ck) => {
+  if (rk === null) return "unknown — what the token renders here could not be read";
+  const mode = await modeOn(v, n);
+  return (rk.slice(0, 7) === ck.slice(0, 7) ? `opacity ${pct(alphaOf(ck))} → ${pct(alphaOf(rk))}` : `${ck} → ${rk}`)
+    + (mode ? ` (mode ${mode})` : "");
+};
 
-// ── Choose a token per colour: the first entry that can be bound to it ──
+// ── Choose a token per colour: the first entry that names the node and can be bound to it ──
 const plan = new Map();   // node id → { n, props: Map(prop → [{ i, v }]) }
+const wouldBind = [];
 for (const { n, c } of targets) {
-  let chosen = null, why = null;
+  let chosen = null, first = null;
   for (const e of wanted.get(c.key)) {
+    if (!covers(e, n)) continue;
     const t = tokens.get(e.variableKey);
-    if (t.error) { why = why || t.error; continue; }
+    if (t.error) { first = first || { why: t.error }; continue; }
     const v = t.v;
-    if (!fits(v, n, c.kind)) { why = why || `token ${v.name} is not scoped for ${c.kind} colours`; continue; }
-    const rk = renderedOn(v, n);
-    if (rk !== c.key && !e.accept) { why = why || await changeOn(v, n, rk, c.key); continue; }
+    if (!fits(v, n, c.kind)) { first = first || { why: `token ${v.name} is not scoped for ${c.kind} colours` }; continue; }
+    const rk = renderedOn(v, n), change = rk === c.key ? null : await changeText(v, n, rk, c.key);
+    if (change && !e.accept) {
+      first = first || { why: await changeOn(v, n, rk, c.key), extra: { change, variableKey: e.variableKey } };
+      continue;
+    }
     chosen = v;
+    wouldBind.push({ node: n.id, name: n.name, kind: c.kind, hex: c.key, variable: v.name, variableKey: e.variableKey, ...(change ? { change } : {}) });
     break;
   }
-  if (!chosen) { skip(n, c, why); continue; }
+  if (!chosen) { skip(n, c, first.why, first.extra); continue; }
   if (!plan.has(n.id)) plan.set(n.id, { n, props: new Map() });
   const props = plan.get(n.id).props;
   if (!props.has(c.prop)) props.set(c.prop, []);
   props.get(c.prop).push({ i: c.i, v: chosen });
 }
+
+if (DRY) return { wouldBind, skipped };
 
 // ── Write: rebuild each array and reassign it — a paint array is read-only in place ──
 let bound = 0;
