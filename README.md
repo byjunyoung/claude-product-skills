@@ -295,7 +295,7 @@ Before it draws anything, though, it asks a question that is easy to skip: **how
 /fig:sync     Full audit of what made it into canonical → apply → archive
 ```
 
-Working copies and the canonical page use identical screen names, so a name alone cannot say whether a change made it across. The audit pairs each working screen with the canonical one of the same `[screen]-[state]` name and judges on three signals together: the text inside the pair, the screen's height, and its component links. A working screen whose name does not follow `[screen]-[state]` is asked about rather than guessed at; `/fig:prep` normalises names first.
+Working copies and the canonical page use identical screen names, so a name alone cannot say whether a change made it across. The audit pairs each working screen with the canonical one of the same name and judges on three signals together: the text inside the pair, the screen's height, and its component links. Text only the working screen has, missing from canonical, means the change did not make it. Text only canonical has may be later work that landed there since, so it is marked for checking rather than counted as missing, and applying never removes it without asking. A change none of the three can see — a colour that leaves the height and the components as they were — goes undetected, and the report says so. A working screen whose name fails the file's own frame rule (`naming.frame_pattern`) is asked about rather than guessed at; `/fig:prep` normalises names first. With no rule set (`null` — deliberately left empty), screens pair by exact name.
 
 When the structure matches, it edits values rather than replacing the whole screen. Node ids survive, so deep links from specs and tickets keep working.
 

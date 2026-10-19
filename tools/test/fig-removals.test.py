@@ -87,6 +87,46 @@ step16 = sync.split("Record the confirmed convention", 1)[1].split("### Step 2",
 check("sync previews its config write",
       "preview" in step16.lower() and "~/.claude/figma-conventions.yaml" in step16
       and "./figma-conventions.yaml" in step16 and "symlink" in step16.lower())
+check("sync's config write shows the block and edits in place",
+      "files.<fileKey>" in step16 and "`Edit`" in step16 and "never a whole-file rewrite" in step16)
+
+# Which side a difference sits on decides the bucket (review D1): working-only text missing from
+# canonical is not applied; text only canonical has may be later work there, so it is needs checking.
+def section_of(text, start, end):
+    return text.split(start, 1)[1].split(end, 1)[0] if start in text else ""
+
+
+def row(table, bucket):
+    return next((l for l in table.splitlines() if l.startswith(f"| {bucket} |")), "")
+
+
+buckets = section_of(sync, "**The result has exactly three buckets**", "### Step 3")
+applied, not_applied, needs = row(buckets, "Applied"), row(buckets, "Not applied"), row(buckets, "Needs checking")
+check("Applied needs all three signals to agree",
+      bool(applied) and all(s in applied for s in ("signal 1", "signal 2", "signal 3")))
+check("canonical-only text alone is needs checking, never not applied",
+      "canonical-only" in needs and "may be later work" in needs and "canonical-only" not in not_applied.split("—")[0])
+check("a mixed frame lists its canonical-only strings to confirm",
+      "may be later work — confirm" in not_applied)
+check("the stale identical-means-needs-checking row is gone",
+      "text is identical and heights match" not in sync)
+canon_only = next((l for l in sig1.splitlines() if "only in the canonical frame" in l), "")
+check("signal 1: the canonical-only bullet grades needs checking",
+      "Needs checking" in canon_only and "Not applied" not in canon_only, canon_only)
+step3 = section_of(sync, "### Step 3", "### Step 4")
+check("step 3's preview lists every canonical-only string the apply would remove",
+      "may be later work — confirm" in step3 and "archive" in step3 and "queue" in step3)
+step4 = section_of(sync, "### Step 4", "### Step 5")
+unseen = "not detected by any signal"
+check("report and archive preview both say a visual-only change goes unseen",
+      unseen in section_of(sync, "## Reporting", "## Implementation") and unseen in step4)
+
+# The name test is the file's own pattern, and null means exact names
+snippet = section_of(sync, "**Name-matched text comparison", "**Finding the keywords")
+check("sync tests names with naming.frame_pattern, not a hardcoded shape",
+      "frame_pattern" in snippet and "\\S-\\S" not in sync and "naming.frame_pattern" in sig1)
+check("null frame_pattern matches by exact name", "exact" in sig1 and "null" in sig1)
+check("sync's snippet skips excluded sections on both pages", "exclude_sections" in snippet)
 
 draw = read("plugins/fig/skills/draw/SKILL.md")
 check("draw no longer sends before-and-after to the AS-IS section",
@@ -184,7 +224,7 @@ def tools_of(skill):
 FIG = "mcp__plugin_figma_figma__"
 want = {
     "tokens": ["Bash", "Read"], "read": [FIG + "use_figma"],
-    "arrows": ["Skill"], "sync": ["Skill"], "setup": ["Edit", "Skill"], "prep": ["Skill"],
+    "arrows": ["Skill"], "sync": ["Skill", "Edit"], "setup": ["Edit", "Skill"], "prep": ["Skill"],
 }
 gone = {
     "lint": ["mcp__claude_ai_Notion__notion-fetch"], "sync": ["mcp__claude_ai_Notion__notion-fetch"],
