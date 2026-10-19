@@ -63,43 +63,13 @@ Moving it "as drawn" means securing the labels, the structure, and the visuals a
 - **Structure** — `get_design_context` on the target screen. It gives the frame tree, field placement, and the component skeleton. But **large frames come back sparse with text masked as `text`**, so the real labels are missing (layout only).
 - **Exact labels** — so a read-only `use_figma` script collects `characters`, absolute coordinates, and hidden status for every TEXT in the frame in one pass (far cheaper in tokens than repeating get_design_context for each sublayer). Map fields to labels by coordinate, and read **required markers (*), defaults, branching hints, and helper text out of the hidden text**. **Harvest the example rows and values** of lists and detail views here too, as the prototype's seed data.
 
-```js
-// Collect characters + absolute coordinates for every TEXT in a frame (read-only, return only)
-const page = figma.root.children.find(p => p.id === "<PAGE_ID>");
-await figma.setCurrentPageAsync(page);
-const g = (n,k)=>{try{return n[k]}catch(e){return undefined}};   // phantom-safe
-const collect = async (id) => {
-  const root = await figma.getNodeByIdAsync(id), out = [];
-  const walk = (n) => { if(!n) return;
-    if (n.type==="TEXT") { const ch=g(n,"characters");
-      if (ch && ch.trim()) { const b=n.absoluteBoundingBox;
-        out.push({ y:b?Math.round(b.y):0, x:b?Math.round(b.x):0, t:ch, h:!n.visible?1:0 }); } }
-    const kids=g(n,"children"); if(kids) for(const k of kids) walk(k); };
-  walk(root); out.sort((a,b)=> a.y-b.y || a.x-b.x); return out;
-};
-return { form: await collect("<FRAME_ID>") };   // for several frames, bundle them into one script's return
-```
+Run `${CLAUDE_PLUGIN_ROOT}/_common/scripts/text-walk.js` (read-only): the single `const CFG = {...};` line from `python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --js <fileKey>`, then `const ROOT_ID = "<FRAME_ID>";`, then the whole file, handed to `use_figma`. It returns `[{ id, text, x, y, hidden }]` for every TEXT, sorted by y then x, with absolute coordinates. For several frames, run it once per frame in parallel calls.
 
 - **Visual tokens** — do not shoot every screen; take **one or two representatives only** with `get_screenshot` (maxDimension set for legibility) → save with `curl` → `Read`. Pull nothing but colour, spacing, corner radius, component look, and button styles (the labels are already secured by the TEXT walk). One list-type and one form-type screen is usually enough.
 
 - **The image-asset list** — scan for **nodes carrying an IMAGE fill** the same way as the TEXT walk, and build a list. This becomes the settled list of "fetch, do not draw". Check alongside it whether that node has **overlays laid on as children** (markers, numbers, badges) — if it does, exporting the node whole brings the overlays along exactly as they are.
 
-```js
-// Scan for IMAGE fill nodes (read-only) — the result is the asset list to inline in step 3
-const g=(n,k)=>{try{return n[k]}catch(e){return undefined}};
-const scan = async (frameId) => {
-  const root = await figma.getNodeByIdAsync(frameId), hits = [];
-  const walk = n => { if(!n) return;
-    const fills = g(n,"fills");
-    if (Array.isArray(fills) && fills.some(f => f.type === "IMAGE"))
-      hits.push({ id:n.id, name:n.name, type:n.type,
-                  w:Math.round(n.width), h:Math.round(n.height),
-                  kids:(g(n,"children")||[]).length });   // kids>0 = has overlays
-    for (const k of (g(n,"children")||[])) walk(k); };
-  walk(root); return hits;
-};
-return await scan("<FRAME_ID>");
-```
+Run `${CLAUDE_PLUGIN_ROOT}/_common/scripts/image-fills.js` (read-only) the same way, with the same `ROOT_ID` line. It returns `[{ id, name, type, w, h, kids }]` for every node carrying an IMAGE fill; `kids` above 0 means overlays are laid on it. The result is the asset list to inline in step 3.
 
 ### 3. Build the single working HTML (vanilla, no build, no dependencies)
 
