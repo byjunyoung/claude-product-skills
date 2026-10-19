@@ -1,6 +1,6 @@
 ---
 name: arrows
-description: Generates and re-syncs flow arrows and their labels on a Figma design page, keeping the flow in each node name (`source --> target`) so one command re-syncs the whole page after frames move. Triggers - "/fig:arrows", "draw the flow arrows", "connect these screens", "re-sync the arrows", "화살표 그려줘", "흐름 화살표 추가", "화살표 sync", "플로우 연결해줘".
+description: Draws flow arrows and their labels between the screens of a Figma design page once the screens are placed, and redraws them all in one go whenever frames move. Triggers - "/fig:arrows", "draw the flow arrows", "connect these screens", "re-sync the arrows", "화살표 그려줘", "흐름 화살표 추가", "화살표 sync", "플로우 연결해줘".
 allowed-tools: AskUserQuestion, Bash, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__whoami
 ---
 

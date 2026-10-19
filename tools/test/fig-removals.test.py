@@ -134,6 +134,20 @@ check("signal 1: the canonical-only bullet grades needs checking",
 step3 = section_of(sync, "### Step 3", "### Step 4")
 check("step 3's preview lists every canonical-only string the apply would remove",
       "may be later work — confirm" in step3 and "archive" in step3 and "queue" in step3)
+check("a frame differing only in height or master takes the move path in step 3",
+      bool(re.search(r"height or (a )?(component )?master[^.\n]*\*\*move", step3, re.I)))
+check("step 3's confirm is per frame, and a declined frame stays in its bucket",
+      "declined" in step3 and "as a whole" in step3)
+report = section_of(sync, "## Reporting", "## Implementation")
+check("the report counts declined frames and gives a new frame's before line",
+      "declined" in report and "(new screen)" in report and "which the person confirmed" not in report)
+# Every string is compared; the length key only shortens how a long one is shown
+check("signal 1 compares every string whatever its length",
+      not re.search(r"length\s*<\s*CFG\.sync\.text_diff_max_len", sync) and "whatever its length" in sig1)
+ex_cfg = next((l for l in read("plugins/fig/_common/conventions.example.yaml").splitlines()
+               if l.strip().startswith("text_diff_max_len:")), "")
+check("the example config says text_diff_max_len only shortens display",
+      "not used as diff keys" not in ex_cfg and "compared" in ex_cfg and "…" in ex_cfg, ex_cfg)
 step4 = section_of(sync, "### Step 4", "### Step 5")
 unseen = "not detected by any signal"
 check("report and archive preview both say a visual-only change goes unseen",
@@ -330,6 +344,8 @@ for f in sorted(glob.glob(str(REPO / "plugins/fig/skills/*/SKILL.md"))):
           bool(re.search(r"\b(when|whenever|before|after|once)\b", head)), head)
     if sk == "deck":
         check("deck's description does not glue setup's job on with ', and'", ", and it measures" not in head, head)
+    if sk in ("handoff", "code", "sync", "arrows"):   # the ones a review found running on clause after clause
+        check(f"{sk}'s description reads as one sentence, not a chain of clauses", head.count(",") <= 3, head)
 
 print()
 if failures:

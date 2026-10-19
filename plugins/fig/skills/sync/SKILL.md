@@ -1,6 +1,6 @@
 ---
 name: sync
-description: Audits whether changes finished on working and update pages made it into the canonical page, applies what did not and archives the working copies, each step behind its own preview and go, after a release or whenever working pages have piled up. Triggers - "/fig:sync", "find what never made it into canonical", "bring the canonical page current", "정본 반영 안 된 것 찾아줘", "운영 페이지 최신화", "교체 안 된 화면 찾아줘".
+description: Brings the canonical page current after a release by auditing which finished changes on working pages never made it there, applying them and archiving the working copies, each step behind its own preview and go. Triggers - "/fig:sync", "find what never made it into canonical", "bring the canonical page current", "정본 반영 안 된 것 찾아줘", "운영 페이지 최신화", "교체 안 된 화면 찾아줘".
 allowed-tools: AskUserQuestion, Bash, Read, Write, Edit, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__whoami, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__select_browser, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find
 ---
 
@@ -34,7 +34,7 @@ The canonical page is supposed to be "what is running right now", but shipping a
 
 The rules are set by **`figma-conventions.yaml`**, read through `resolve-config.py --js <fileKey>`.
 
-Sections read: `pages` (the three axes, excluded sections) · `sync` (diff length limit, version pages) · `naming` (`frame_pattern`, the file's frame rule that names are matched by).
+Sections read: `pages` (the three axes, excluded sections) · `sync` (how much of a long string is shown, version pages) · `naming` (`frame_pattern`, the file's frame rule that names are matched by).
 
 **There are two ways to apply a change, and a structure comparison decides which.** Moving the frame is the default, but when the layer composition is identical and only values differ, edit the values instead — node ids have to survive or the deep links in specs and tickets break. Step 3 executes that decision, and the report says which was used and why.
 
@@ -85,7 +85,7 @@ Check each piece of work in the archive and queue against canonical.
 
 **Signal 1 — text diff (the main one)**
 
-Compare each finished working frame directly with the canonical frame of the same name — the `[screen]-[state]` name `/fig:prep` normalises: take the text set of each and difference them. Identical text means applied, as far as this signal goes; the bucket table below adds what signals 2 and 3 must say. Any difference is shown as it stands, never summarised, and **which side a string sits on decides what it means**:
+Compare each finished working frame directly with the canonical frame of the same name — the `[screen]-[state]` name `/fig:prep` normalises: take the text set of each and difference them. Identical text means applied, as far as this signal goes; the bucket table below adds what signals 2 and 3 must say. Every string is compared whatever its length; `sync.text_diff_max_len` only shortens how a long string is shown in the report and the previews, cut with an ellipsis (…), never whether it is compared. Any difference is shown as it stands, never summarised, and **which side a string sits on decides what it means**:
 
 - A string only in the working frame → it **must be present** on the canonical page to count as applied. Missing there, the frame is **Not applied**
 - A string only in the canonical frame → it may be what this work removed or reworded, or what canonical gained from other work since, and the file cannot tell which. A frame whose only differences are of this kind goes under **Needs checking**, labelled "may be later work"
@@ -114,7 +114,7 @@ Component-level changes (a state added, hierarchy tidied) do not show up in fram
 
 **Not detected by any signal:** a visual-only change — a colour, a font, a position — inside the same height, with the same components and the same text, is graded Applied. The report says so in plain words every run, and Step 4's archive preview repeats it.
 
-**Never decide the needs-checking cases.** Collect them, report them, and ask whether to run a screenshot comparison — it costs per item, so it does not run automatically. Where the person answers that canonical-only text is this work's own removal, the frame goes on to Step 3; where it is later work on canonical, the frame is left as it is.
+**Never decide the needs-checking cases.** Collect them, report them, and ask whether to run a screenshot comparison — it costs per item, so it does not run automatically. Where the person answers that the difference is this work's own — canonical-only text it removed, or a height or master it changed — the frame goes on to Step 3; where it is later work on canonical, the frame is left as it is.
 
 ### Step 3 — apply (structure comparison decides the method)
 
@@ -122,12 +122,13 @@ Only the not-applied cases, and needs-checking ones the person has since confirm
 
 List the text nodes of the canonical frame and the working frame in document order as `parent name|characters` and compare.
 
+- **Identical text, confirmed for its height or master alone** (signal 2 or 3) → the text comparison has nothing to edit, so the frame takes the **move** path below, whatever the text structure says
 - **Order, count, and parent names all match** → only the values differ. **Edit the values.** Node ids survive, so external deep links hold. Count the intended edits in advance and put a guard in the script that aborts when the count differs from expected
 - **Anything differs** → the structure changed. **Move the frame** as the convention prescribes, and note in the report that external links pointing at the old canonical frame id will break (see the deep link audit)
 
 Value edits are text edits, so **read the target node's current fonts with `getStyledTextSegments(['fontName'])` and load them** before writing. Never assume a default font.
 
-**Preview → go.** State the target frames, what will change and how many, the method (value edit or move), and the reasoning. **List every canonical-only string the apply would remove, each labelled "may be later work — confirm"** — for frames from archive pages and queue pages alike, since both are judged against the same canonical page. Nothing is removed silently: where the person does not confirm a string, it stays, and the frame it sits in is left out of this apply and reported under needs checking. With several pieces, split them and pass a gate per piece.
+**Preview → go.** State the target frames, what will change and how many, the method (value edit or move), and the reasoning. **List every canonical-only string the apply would remove, each labelled "may be later work — confirm"** — for frames from archive pages and queue pages alike, since both are judged against the same canonical page. The person confirms or declines each frame as a whole, with its strings in view. Nothing is removed silently: a declined frame is left out of this apply, keeps its canonical-only text, and stays in the bucket the audit gave it, marked declined in the report. With several pieces, split them and pass a gate per piece.
 
 Right after applying, run the same comparison again and confirm the result matches the working frame.
 
@@ -164,16 +165,19 @@ audited N  →  applied X · not applied Y · needs checking Z · unmatched by n
 
 [not applied — handled]
 · name (owner)
-  before: what canonical looked like
+  before: what canonical looked like — "(new screen)" for a frame with no canonical twin
   applied: what changed and how / method (value edit or move) and why
-  may be later work — confirm: the canonical-only strings, and which the person confirmed
+  canonical-only text removed: the strings step 3's preview listed, confirmed with this frame
+
+[declined at the apply preview]
+· name — the bucket it stays in, and the canonical-only text kept
 
 [unmatched by name — asked]
 · name — fails naming.frame_pattern; run /fig:prep to normalise names first
 
 [needs checking]
 · name — why: canonical-only text (may be later work) · name repeats on canonical
-  · identical text with a different height or component master — and whether a screenshot comparison is needed
+  · identical text with a different height, or a different component master (each side's named) — and whether a screenshot comparison is needed
 
 [not detected by any signal]
 · a visual-only change inside the same height, with the same components and the same text, is graded applied
@@ -184,6 +188,8 @@ audited N  →  applied X · not applied Y · needs checking Z · unmatched by n
 [handoff]
 · version saved: {title}   (or: off — sync.named_version · or: saved as {title}, not confirmed — no Figma token)
 ```
+
+A declined frame is counted on the first line in the bucket the audit gave it (not applied, or needs checking), never as applied. Long strings are shown cut to `sync.text_diff_max_len` characters with an ellipsis (…), or whole where that key is `null`.
 
 If nothing was un-applied, report just that, briefly, with the not-detected line.
 
@@ -196,11 +202,12 @@ const N = CFG.naming || {}, P = CFG.pages || {};
 const NAME_RE = N.frame_pattern ? new RegExp(N.frame_pattern) : null;   // null: match by exact name, never "unmatched"
 const EXCLUDE = P.exclude_sections && P.exclude_sections.length ? new RegExp(P.exclude_sections.join('|')) : null;
 const LATER = 'may be later work — confirm';
-const texts = n => [...new Set(n.findAll(x => x.type === 'TEXT').map(t => t.characters.trim()).filter(s => s && s.length < CFG.sync.text_diff_max_len))];
-async function masters(n) {   // signal 3: every instance's component master, as one sorted key
-  const ids = new Set();
-  for (const i of n.findAll(x => x.type === 'INSTANCE')) { const m = await i.getMainComponentAsync(); if (m) ids.add(m.id); }
-  return [...ids].sort().join(',');
+// Every string is compared whatever its length; sync.text_diff_max_len only shortens how the report shows it
+const texts = n => [...new Set(n.findAll(x => x.type === 'TEXT').map(t => t.characters.trim()).filter(Boolean))];
+async function masters(n) {   // signal 3: every instance's component master, by id, with its name for the report
+  const seen = new Map();
+  for (const i of n.findAll(x => x.type === 'INSTANCE')) { const m = await i.getMainComponentAsync(); if (m) seen.set(m.id, `${m.name} (${m.id})`); }
+  return seen;
 }
 function frames(n, acc) {   // dig through the section hierarchy, collect screen frames only; excluded sections are skipped on both pages
   for (const c of n.children || []) {
@@ -226,14 +233,20 @@ for (const f of frames(page, [])) {
   const onlyWorking = [...W].filter(x => !c.set.has(x));     // must reach canonical
   const onlyCanonical = [...c.set].filter(x => !W.has(x));   // may be later work on canonical: never removed without a confirm
   const height = { working: Math.round(f.height), canonical: c.height };
-  let bucket, why, sameMasters = null;   // masters are read only where they decide: identical text, same height
+  let bucket, why, sameMasters = null, differ = null;   // masters are read only where they decide: identical text, same height
   if (onlyWorking.length) [bucket, why] = ['not applied', 'working-only text missing from canonical'];
   else if (onlyCanonical.length) [bucket, why] = ['needs checking', 'only canonical-only text differs — may be later work'];
   else if (height.working !== height.canonical) [bucket, why] = ['needs checking', 'identical text, height differs (signal 2)'];
-  else if (!(sameMasters = (await masters(f)) === (await masters(c.node)))) [bucket, why] = ['needs checking', 'identical text, component master differs (signal 3)'];
-  else [bucket, why] = ['applied', 'text, height and component masters all agree'];
+  else {
+    const mw = await masters(f), mc = await masters(c.node);
+    differ = { working: [...mw].filter(([id]) => !mc.has(id)).map(([, n]) => n), canonical: [...mc].filter(([id]) => !mw.has(id)).map(([, n]) => n) };
+    sameMasters = !differ.working.length && !differ.canonical.length;
+    [bucket, why] = sameMasters ? ['applied', 'text, height and component masters all agree']
+                                : ['needs checking', 'identical text, component master differs (signal 3)'];
+  }
   out.push({ frame: f.name, mode: onlyWorking.length || onlyCanonical.length ? 'differs' : 'identical', bucket, why,
-    onlyWorking, onlyCanonical, ...(onlyCanonical.length ? { confirm: LATER } : {}), height, sameMasters });
+    onlyWorking, onlyCanonical, ...(onlyCanonical.length ? { confirm: LATER } : {}), height, sameMasters,
+    ...(sameMasters === false ? { masters: differ } : {}) });   // both sides' masters, named, where they differ
 }
 return out;
 ```
@@ -312,4 +325,4 @@ return figma.currentPage.children.filter(c => c.type === 'SECTION' && c.id !== t
 - **Page deletion is an independent gate** — never folded into another confirmation
 - Any judgement the config does not cover (value edit versus move) has its reasoning written into the report each time
 - Archive pages are never renamed or moved by this skill — only named as candidates
-- Never "improve" canonical in a direction the working frame does not have. Applying means matching the working frame, and stopping there — except that a canonical-only string goes only once the person has confirmed it in step 3's preview
+- Never "improve" canonical in a direction the working frame does not have. Applying means matching the working frame, and stopping there — except that a canonical-only string goes only once the person has confirmed its frame in step 3's preview

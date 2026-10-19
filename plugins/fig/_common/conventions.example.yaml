@@ -183,7 +183,7 @@ references:
 
 # --- Canonical sync ------------------------------------------------------------
 sync:
-  text_diff_max_len: 40                       # strings longer than this are not used as diff keys
+  text_diff_max_len: 40                       # display only: sync's report and previews cut a longer string to this many characters with "…". Every string is still compared whole, whatever its length. null shows every string whole
   version_page_pattern: null                  # e.g. '^\[Update\] v[\d.]+'
   named_version: null                         # title of the version saved after apply. null saves none — the default,
                                               # because saveVersionHistoryAsync is not exposed to use_figma (see handoff below)

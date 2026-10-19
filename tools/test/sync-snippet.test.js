@@ -31,7 +31,7 @@ const walk = (n, pred, acc = []) => {
 const text = (characters) => ({ type: "TEXT", id: `t${++seq}`, characters, children: [] });
 const instance = (masterId) => ({
   type: "INSTANCE", id: `i${++seq}`, children: [],
-  getMainComponentAsync: async () => ({ id: masterId }),
+  getMainComponentAsync: async () => ({ id: masterId, name: `Master ${masterId}` }),
 });
 const frame = (name, strings, { height = 800, masters = [] } = {}) => {
   const f = {
@@ -175,4 +175,52 @@ test("a repeated canonical name outside excluded sections stays ambiguous → ne
   const r = one(out, "Login-Default");
   assert.strictEqual(r.mode, "ambiguous");
   assert.strictEqual(r.bucket, "needs checking");
+});
+
+test("a working page's excluded section is skipped too", async () => {
+  const cfg = baseCfg({ pages: { exclude_sections: ["^Reference$"] } });
+  const out = await run(
+    [section("01. Account", [frame("Login-Default", ["Log in"])])],
+    [section("01. Account", [frame("Login-Default", ["Log in"])]), section("Reference", [frame("Draft-Default", ["Old copy"])])],
+    cfg
+  );
+  assert.ok(!one(out, "Draft-Default"), JSON.stringify(out));
+  assert.strictEqual(one(out, "Login-Default").bucket, "applied", JSON.stringify(out));
+});
+
+// ---- every string is compared, whatever its length --------------------------------------------------
+const LONG_NOTICE = "Accounts inactive for twelve months are closed after a notice email.";
+test("a long canonical-only string is listed, never dropped from the comparison", async () => {
+  assert.ok(LONG_NOTICE.length > 40);
+  const out = await run(
+    [frame("Login-Default", ["Log in", "Email", LONG_NOTICE])],
+    [frame("Login-Default", ["Sign in", "Email"])]
+  );
+  const r = one(out, "Login-Default");
+  assert.strictEqual(r.bucket, "not applied", JSON.stringify(r));
+  assert.deepStrictEqual([...r.onlyCanonical].sort(), [LONG_NOTICE, "Log in"].sort(), JSON.stringify(r));
+});
+
+test("a reworded long string is not applied", async () => {
+  const before = "Your password must be at least eight characters long.";
+  const after = "Your password must be at least twelve characters long.";
+  const out = await run(
+    [frame("Signup-Default", ["Email", before], { height: 812 })],
+    [frame("Signup-Default", ["Email", after], { height: 812 })]
+  );
+  const r = one(out, "Signup-Default");
+  assert.notStrictEqual(r.bucket, "applied", JSON.stringify(r));
+  assert.deepStrictEqual(r.onlyWorking, [after], JSON.stringify(r));
+});
+
+// ---- signal 3 names both masters --------------------------------------------------------------------
+test("a master difference names the master on each side", async () => {
+  const out = await run(
+    [frame("Login-Default", ["Log in"], { height: 812, masters: ["M1", "M2"] })],
+    [frame("Login-Default", ["Log in"], { height: 812, masters: ["M9", "M2"] })]
+  );
+  const r = one(out, "Login-Default");
+  assert.strictEqual(r.bucket, "needs checking", JSON.stringify(r));
+  assert.strictEqual(r.sameMasters, false);
+  assert.deepStrictEqual(r.masters, { working: ["Master M9 (M9)"], canonical: ["Master M1 (M1)"] }, JSON.stringify(r));
 });
