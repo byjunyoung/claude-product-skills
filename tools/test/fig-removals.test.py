@@ -109,12 +109,21 @@ handoff = read("plugins/fig/skills/handoff/SKILL.md")
 h_tools = handoff.split("allowed-tools:", 1)[1].split("\n", 1)[0]
 check("handoff lists Skill", "Skill" in [t.strip() for t in h_tools.split(",")])
 body = handoff.split("## Procedure", 1)[1]
-vstep = body.split("### 3.", 1)[1].split("### 4.", 1)[0] if "### 3." in body else ""
-check("version step: go comes before save",
-      re.search(r"\bgo\b", vstep) and re.search(r"\bsave", vstep, re.I) and re.search(r"\bgo\b", vstep).start() < re.search(r"\bsave", vstep, re.I).start())
-dstep = body.split("### 4.", 1)[1].split("### 5.", 1)[0] if "### 4." in body else ""
-check("doc-line step has its own go before the write",
-      "go" in dstep and "append-under" in dstep and dstep.index("go") < dstep.index("append-under"))
+def first(pat, text):
+    m = re.search(pat, text, re.I)
+    return m.start() if m else None
+
+
+def without_heading(step):
+    return step.split("\n", 1)[1] if "\n" in step else ""
+
+
+vstep = without_heading(body.split("### 3.", 1)[1].split("### 4.", 1)[0]) if "### 3." in body else ""
+g, sv = first(r"\bthe go\b", vstep), first(r"\bsave", vstep)
+check("version step: go comes before save", g is not None and sv is not None and g < sv)
+dstep = without_heading(body.split("### 4.", 1)[1].split("### 5.", 1)[0]) if "### 4." in body else ""
+g, w = first(r"\bthe go\b", dstep), first(r"append-under", dstep)
+check("doc-line step has its own go before the write", g is not None and w is not None and g < w)
 check("notion write does not lean on a callout",
       "usually behind an empty callout" not in handoff and "whatever block opens the section" in handoff)
 

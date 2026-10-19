@@ -80,7 +80,7 @@ Call `/fig:lint` (via the Skill tool) on the page. **No audit lives here**; the 
 The gate reads **blocking only** (lint, "Severity"). A section is not held back by how it is filed — it is held back by what engineering would build wrong.
 
 - A section with zero blocking is a candidate, warnings and all
-- **Warnings never remove a candidate.** They ride along to step 3 and into the report, so the handover happens knowing what is still untidy
+- **Warnings never remove a candidate.** They ride along to the step 4 preview and into the report, so the handover happens knowing what is still untidy
 - A section carrying any blocking is out, with those reasons beside its name. It is not offered, and if the person names it anyway, say why it cannot go and leave it out — "hand it over now and fix it later" is what the gate is meant to prevent
 
 ### 2. Choose
@@ -91,7 +91,7 @@ Show the candidates as a table — name and warnings still open (`—` where non
 
 Only where `handoff.version.enabled`. With it off, skip to step 4 and the doc line carries the links and a date alone.
 
-This is the first write, so it has its own preview. Ask which release this handover belongs to, settle the name `handoff.version.name` produces, and show that name as the one entry about to be added to the file's version history. After the go, follow `${CLAUDE_PLUGIN_ROOT}/_common/version-pin.md` to save it and read it back. Nothing is saved before the go.
+This is the first write, so it has its own preview. Ask which release this handover belongs to, settle the name `handoff.version.name` produces, and show that name as the one entry about to be added to the file's version history. After the go, follow `${CLAUDE_PLUGIN_ROOT}/_common/version-pin.md` from its save step (step 3) — the preview and go are already done here — to save it and read it back. Nothing is saved before the go.
 
 Every section link from here on carries `&version-id={version id}`, and the date in `handoff.version.ref` is the version's own.
 
@@ -149,5 +149,5 @@ Re-read the task doc where the line went and confirm it landed under the heading
 - The writes are the version entry (through the web app) and the one doc line, each behind its own preview and go, in that order. Frames, sections, names, positions and Dev Mode status are never touched
 - A section carrying a lint **blocking** is never handed over, whoever asks. A warning alone never withholds one
 - **Never hand over unpinned where `handoff.version.enabled`.** An unpinned handover reads as pinned to whoever gets it, and that is worse than stopping
-- Never save a version, rename one, or write a date that is not the version's own
+- Never save a version without the go, rename one, or write a date that is not the version's own
 - Never offer to set *Ready for dev* or *Completed*, and never list it as remaining work

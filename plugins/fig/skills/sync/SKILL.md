@@ -136,7 +136,7 @@ Move working pages whose changes are now in canonical into the archive.
 
 ### Step 6 — name the version
 
-Only after Step 5 passed, and only where `sync.named_version` is set — `null` saves none, and `null` is the default. Follow `${CLAUDE_PLUGIN_ROOT}/_common/version-pin.md` with `sync.named_version`, `{date}` and `{n}` (screens applied) filled in: saved behind its own preview → go, then read back.
+Only after Step 5 passed, and only where `sync.named_version` is set — `null` saves none, and `null` is the default. Follow `${CLAUDE_PLUGIN_ROOT}/_common/version-pin.md` with `sync.named_version`, `{date}` and `{n}` (screens applied) filled in. This step shows no preview of its own, so it uses the procedure's steps 1–2 (preview → go) before the save, then reads it back by the exact title it saved.
 
 Dev Mode status (*Completed*) is not set and not offered: `use_figma` cannot write it and nothing else here can either (removed in 3.26.0).
 
