@@ -252,6 +252,25 @@ with tempfile.TemporaryDirectory() as tmp:
     check("no plugin.json → path fallback",
           "Traceback" not in r.stderr and r.returncode in (0, 2), f"rc={r.returncode} {r.stderr.strip()}")
 
+    # 11. fig's own floor and its paired key. Run fig's copy; the pm one is identical.
+    FIG = REPO / "plugins" / "fig" / "_common" / "scripts" / "lib" / "resolve-config.py"
+    FIG_NAME = "figma-conventions.yaml"
+    r = run_script(FIG, empty, bare, "--name", FIG_NAME)
+    fcfg = parse(r) or {}
+    check("fig floor: the local defaults", r.returncode == 0
+          and fcfg.get("component_audit", {}).get("body_offset") is None
+          and fcfg.get("task_tracker", {}).get("type") is None
+          and fcfg.get("qa", {}).get("baseline", {}).get("prd") == {"type": "markdown", "ref": None},
+          r.stderr)
+
+    fig_proj = Path(tmp) / "fig-proj"
+    fig_proj.mkdir()
+    (fig_proj / FIG_NAME).write_text("task_tracker:\n  ref: x\n")
+    r = run_script(FIG, fig_proj, bare, "--name", FIG_NAME, "--authored", "task_tracker.type")
+    check("fig paired: task_tracker.ref without type → --authored stops",
+          r.returncode == 3 and "task_tracker.type is not set in figma-conventions.yaml, while "
+          "task_tracker.ref is" in r.stderr, f"rc={r.returncode} {r.stderr.strip()}")
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures))

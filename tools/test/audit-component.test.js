@@ -23,7 +23,7 @@ const STAT = { "Button|Icon": { t: 10, f: 0 } };
 
 const instance = (iconOn) => ({
   type: "INSTANCE", name: "Button",
-  absoluteBoundingBox: { x: 500, y: 500, width: 80, height: 40 },
+  absoluteBoundingBox: { x: 10, y: 10, width: 80, height: 40 },
   componentProperties: { "Icon#1:2": { type: "BOOLEAN", value: iconOn } },
   getMainComponentAsync: async () => ({ name: "Button", parent: null }),
 });
@@ -37,10 +37,10 @@ const screen = () => {
 };
 const section = (name, children) => ({ type: "SECTION", name, x: 0, y: 0, width: 4000, height: 4000, children });
 
-const run = (pageChildren) => {
+const run = (pageChildren, bodyOffset = { left: 0, top: 0 }) => {
   const page = { name: "[UI] Fixture", children: pageChildren };
   return new AsyncFunction("CFG", "MODE", "PAGE", "STAT", "figma", SRC)(
-    { component_audit: { min_samples: 5, dominance: 0.9, body_offset: { left: 0, top: 0 } } },
+    { component_audit: { min_samples: 5, dominance: 0.9, body_offset: bodyOffset } },
     "compare", "Fixture", STAT,
     { root: { children: [page] }, setCurrentPageAsync: async () => {} }
   );
@@ -52,4 +52,15 @@ test("a frame in a nested section yields the same findings as in a top-level sec
   assert.ok(Array.isArray(flat.component) && flat.component.length === 1, "the fixture must produce a finding");
   assert.match(flat.component[0], /\[default\] Home-Default \/ Button Icon=false/);
   assert.deepStrictEqual(deep, flat);
+});
+
+test("body_offset null examines the whole frame", async () => {
+  const r = await run([section("S1", [screen()])], null);
+  assert.strictEqual(r.component.length, 1);
+  assert.match(r.component[0], /\[default\]/);
+});
+
+test("a set body_offset still exempts the shell", async () => {
+  const r = await run([section("S1", [screen()])], { left: 270, top: 120 });
+  assert.strictEqual(r.component, "COMPONENT PASS");
 });
