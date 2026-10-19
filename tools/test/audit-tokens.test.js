@@ -110,7 +110,7 @@ test("instance children, scaffolding, excluded sections and bound paints are not
   const page = [
     section("01. Home", [
       frame("Home-Default", { fills: [bound("#3366FF", "primary")] }, [            // bound: fine
-        node("INSTANCE", "Button", { fills: blue() }, [                              // the instance's own override counts
+        node("INSTANCE", "Button", { fills: blue(), overrides: [{ id: "id:Button", overriddenFields: ["fills"] }] }, [   // the instance overrides its own fill: that counts
           node("TEXT", "Button label", { fills: blue() }),                           // fixed at the component source
           frame("Icon slot", { strokes: blue() }, [node("VECTOR", "Glyph", { fills: blue() })]),
         ]),
@@ -156,19 +156,90 @@ test("an unbound effect colour is reported", async () => {
   const out = await run([section("01. Home", [
     frame("Card-Default", {
       effects: [
-        { type: "DROP_SHADOW", visible: true, color: { ...rgb("#3366FF"), a: 0.2 }, offset: { x: 0, y: 2 }, radius: 4, spread: 0 },
+        { type: "DROP_SHADOW", visible: true, color: value("#3366FF"), offset: { x: 0, y: 2 }, radius: 4, spread: 0 },
         { type: "INNER_SHADOW", visible: true, color: value("#3366FF"), offset: { x: 0, y: 1 }, radius: 2, spread: 0,
           boundVariables: { color: alias("primary") } },
         { type: "LAYER_BLUR", visible: true, radius: 4 },
       ],
     }),
+    // The same colour at 20%: an effect's alpha is part of its colour, so this is near, never exact.
+    frame("Soft-Default", { effects: [{ type: "DROP_SHADOW", visible: true, color: { ...rgb("#3366FF"), a: 0.2 }, offset: { x: 0, y: 2 }, radius: 4, spread: 0 }] }),
   ])]);
-  assert.strictEqual(out.findings.length, 1, JSON.stringify(out));
-  const f = out.findings[0];
-  assert.strictEqual(f.tag, "[unbound]");
-  assert.strictEqual(f.grade, "blocking");
-  assert.strictEqual(f.node, "id:Card-Default");
-  assert.match(f.msg, /effect #3366FF/);
+  assert.deepStrictEqual(out.findings.map((f) => [f.tag, f.grade, f.node]),
+    [["[unbound]", "blocking", "id:Card-Default"], ["[unbound]", "warning", "id:Soft-Default"]], JSON.stringify(out));
+  assert.match(out.findings[0].msg, /effect #3366FF —/);
+  assert.match(out.findings[1].msg, /effect #3366FF33 — near a token \(#3366FF, 0 off per channel, opacity off by 80%\)/);
+});
+
+test("an opaque fill against a translucent token is not exact", async () => {
+  const lib = { collections: [C1], vars: [colorVar("scrim", { m1: { ...rgb("#000000"), a: 0.5 } })], local: ["scrim"] };
+  const page = [section("01. Home", [
+    frame("Opaque-Default", { fills: [solid("#000000")] }),                          // same RGB, alpha 1 against 0.5
+    frame("Scrim-Default", { fills: [solid("#000000", { opacity: 0.5 })] }),           // RGBA agrees
+  ])];
+  const out = await run(page, lib);
+  assert.deepStrictEqual(out.findings.map((f) => [f.node, f.grade]), [["id:Opaque-Default", "warning"], ["id:Scrim-Default", "blocking"]], JSON.stringify(out));
+  assert.match(out.findings[0].msg, /fill #000000 — near a token \(#00000080/);
+  assert.match(out.findings[1].msg, /fill #00000080 — an exact token/);
+  const col = await run(page, lib, { MODE: "collect" });
+  assert.deepStrictEqual(col.dictionary, { "#00000080": ["key:scrim"] }, "alpha 1 writes #RRGGBB, anything else #RRGGBBAA");
+  assert.deepStrictEqual(col.unbound.map((u) => [u.hex, u.grade, u.nearest]), [["#000000", 2, "#00000080"], ["#00000080", 1, "#00000080"]]);
+});
+
+test("paints and effects applied through a style are not reported", async () => {
+  const blue = () => [solid("#3366FF")];
+  const shadow = () => [{ type: "DROP_SHADOW", visible: true, color: value("#3366FF"), offset: { x: 0, y: 2 }, radius: 4, spread: 0 }];
+  const out = await run([section("01. Home", [
+    frame("Styled-Default", { fills: blue(), fillStyleId: "S:fill,1:2", strokes: blue(), strokeStyleId: "S:stroke,1:3", effects: shadow(), effectStyleId: "S:fx,1:4" }),
+    frame("Half-Default", { fills: blue(), strokes: blue(), strokeStyleId: "S:stroke,1:3" }),          // the fill has no style: reported
+    frame("Empty-Default", { fills: blue(), fillStyleId: "" }),                                        // an empty id is no style
+    node("TEXT", "Mixed styles", { fills: blue(), fillStyleId: MIXED }),                              // figma.mixed is not a style id
+  ])]);
+  assert.deepStrictEqual(out.findings.map((f) => f.node), ["id:Half-Default", "id:Empty-Default", "id:Mixed styles"], JSON.stringify(out));
+  assert.match(out.findings[0].msg, /: fill #3366FF/, "only the unstyled property is named");
+});
+
+test("an instance's own paint counts only where the instance overrides it", async () => {
+  const blue = () => [solid("#3366FF")];
+  const out = await run([section("01. Home", [
+    node("INSTANCE", "Plain", { fills: blue() }),                                                       // the source's colour
+    node("INSTANCE", "Child override", { fills: blue(), overrides: [{ id: "I:child", overriddenFields: ["fills"] }] }),
+    node("INSTANCE", "Stroke override", { fills: blue(), strokes: blue(), overrides: [{ id: "id:Stroke override", overriddenFields: ["strokes"] }] }),
+  ])]);
+  assert.deepStrictEqual(out.findings.map((f) => f.node), ["id:Stroke override"], JSON.stringify(out));
+  assert.match(out.findings[0].msg, /: stroke #3366FF/, "the fill it did not override is the component's");
+});
+
+test("hidden nodes and what they hold are not reported", async () => {
+  const blue = () => [solid("#3366FF")];
+  const out = await run([
+    section("01. Home", [
+      frame("Shown-Default", { fills: blue() }),
+      frame("Hidden-Default", { fills: blue(), visible: false }, [node("RECTANGLE", "Inside hidden", { fills: blue() })]),
+    ]),
+    section("02. Hidden section", [frame("In hidden section", { fills: blue() }), section("Nested in hidden", [frame("Deeper", { fills: blue() })])], { visible: false }),
+  ]);
+  assert.deepStrictEqual(out.findings.map((f) => f.node), ["id:Shown-Default"], JSON.stringify(out));
+});
+
+test("a library token whose collection cannot be read is taken from the paint bound to it", async () => {
+  // The variable is there, its collection lookup returns null: the bound paint's colour stands in.
+  const lib = { collections: [], vars: [colorVar("lib-blue", { light: value("#3366FF") }, "c-lib")], local: [] };
+  const page = [section("01. Home", [
+    frame("Bound-Default", { fills: [bound("#3366FF", "lib-blue")] }),
+    frame("Typed-Default", { fills: [solid("#3366FF")] }),
+  ])];
+  const out = await run(page, lib);
+  assert.deepStrictEqual(out.findings.map((f) => [f.node, f.grade]), [["id:Typed-Default", "blocking"]], JSON.stringify(out));
+  assert.strictEqual(out.note, undefined);
+  const col = await run(page, lib, { MODE: "collect" });
+  assert.deepStrictEqual(col.dictionary, { "#3366FF": ["key:lib-blue"] });
+});
+
+test("colour variables that all fail to resolve skip the check and say so", async () => {
+  const lib = { collections: [], vars: [colorVar("a", { m1: value("#3366FF") }, "gone"), colorVar("b", { m1: value("#FF0000") }, "gone")], local: ["a", "b"] };
+  const out = await run([section("01. Home", [frame("Home-Default", { fills: [solid("#3366FF")] })])], lib);
+  assert.deepStrictEqual(out, { pass: true, findings: [], note: "2 colour variables found, none could be resolved; [unbound] skipped" });
 });
 
 test("no colour tokens → pass with note, no findings", async () => {
