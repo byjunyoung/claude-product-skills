@@ -275,7 +275,7 @@ That's setup done. [**fig**](#fig--the-design-file) covers the loop from here.
 /fig:sketch   Agree the direction in text first — when a screen looks or behaves differently
 /fig:draw     Fill each stub — following your file's own pattern, cloned from canonical
 /fig:arrows   Wire transition arrows and state groups
-/fig:lint     Audit structure, flow, and components in one pass
+/fig:lint     Audit structure, flow, components, and colour tokens in one pass — the whole page, or one section you name
 /fig:handoff  Gate the passing sections, hand over the links, leave one line in the task
 ```
 
@@ -389,7 +389,7 @@ flowchart TD
 | Area | What it catches |
 |---|---|
 | Structure | Screens outside any section · screens past section bounds · overlapping screens · naming violations · section number vs. placement mismatch · a screen whose colours resolve in a light/dark mode nobody set · a control cut off by its own container or hanging off the screen |
-| Flow | Arrows cutting through unrelated screens · arrowheads pointing at empty space · screens on no flow at all · labels covering an arrowhead or another line |
+| Flow | Arrows cutting through unrelated screens · arrowheads pointing at empty space · screens on no flow at all · labels covering an arrowhead or another line · a dashed state link that leans sideways instead of running straight down |
 | Components | Variants stacked on top of one another inside a set · a component buried under the one placed beside it · settings that tagged along in a duplicate, leaving an empty slot rendered |
 | Colour tokens | A colour typed in by hand where the design system already has a token for it |
 
@@ -398,6 +398,8 @@ flowchart TD
 Arrowhead direction isn't catchable by distance alone. An arrow can sit 12px away and still point into empty space if its last segment runs parallel to the target edge. So the audit checks perpendicularity separately. The start of an arrow is held to the same standard: it is measured to the frame's edge itself, so a start point floating out in empty space no longer passes for being "on" the edge.
 
 Sections nested inside other sections are read too — frames and arrows in a sub-section go through the same checks as the rest. Only the section-name checks (numbering and pattern) look at top-level sections alone.
+
+Name a section (its link or its name) and the audit reads that section and whatever is nested in it, nothing else. A section that overlaps its neighbour is still reported, since the overlap is about both; checks that only make sense across the whole page — which screens belong to a section, and in what order — are skipped, and the report says so. A name that matches no section is a blocking finding, and a section listed in `pages.exclude_sections` is left out with a note.
 
 The component audit works without any written convention. It derives the usage distribution from how other screens in the same file use that component, and compares against it.
 
@@ -791,6 +793,10 @@ plugins/
         arrow-build.js                   arrow construction helper
         prep-ops.js                      page cleanup helper
         probe-page.js                    convention observation
+        sync-compare.js                  /fig:sync's text, height and component comparison
+        sync-ops.js                      /fig:sync's keyword search and in-place value edits
+        text-walk.js                     reading every text layer, for /fig:proto
+        image-fills.js                   finding image fills, for /fig:proto
         token-bind.js                    binding colours to tokens, for /fig:tokens
         lib/                             config resolution, preflight, draft generation, syntax check
   pm/

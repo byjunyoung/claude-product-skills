@@ -107,6 +107,11 @@ with tempfile.TemporaryDirectory() as tmp:
     lines = [l for l in out.splitlines() if "[pm:task] description is" in l]
     check("override limit applies", not lines, "\n".join(lines))
 
+case("a 750-character deck description fails even under its 700 override",
+     lambda r: (r / "plugins/fig/skills/deck/SKILL.md").write_text(
+         set_description((r / "plugins/fig/skills/deck/SKILL.md").read_text(), "a" * 750), encoding="utf-8"),
+     1, "[fig:deck] description is 750 characters (limit 700)")
+
 
 def plant_market_drift(r):
     f = r / "plugins" / "pm" / ".claude-plugin" / "plugin.json"
