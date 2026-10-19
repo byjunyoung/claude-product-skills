@@ -138,7 +138,7 @@ check("a frame differing only in height or master takes the move path in step 3"
       bool(re.search(r"height or (a )?(component )?master[^.\n]*\*\*move", step3, re.I)))
 check("step 3's confirm is per frame, and a declined frame stays in its bucket",
       "declined" in step3 and "as a whole" in step3)
-report = section_of(sync, "## Reporting", "## Implementation")
+report = section_of(sync, "## Reporting", "## Scripts")
 check("the report counts declined frames and gives a new frame's before line",
       "declined" in report and "(new screen)" in report and "which the person confirmed" not in report)
 # Every string is compared; the length key only shortens how a long one is shown
@@ -151,10 +151,10 @@ check("the example config says text_diff_max_len only shortens display",
 step4 = section_of(sync, "### Step 4", "### Step 5")
 unseen = "not detected by any signal"
 check("report and archive preview both say a visual-only change goes unseen",
-      unseen in section_of(sync, "## Reporting", "## Implementation") and unseen in step4)
+      unseen in section_of(sync, "## Reporting", "## Scripts") and unseen in step4)
 
 # The name test is the file's own pattern, and null means exact names
-snippet = section_of(sync, "**Name-matched text comparison", "**Finding the keywords")
+snippet = read("plugins/fig/_common/scripts/sync-compare.js")
 check("sync tests names with naming.frame_pattern, not a hardcoded shape",
       "frame_pattern" in snippet and "\\S-\\S" not in sync and "naming.frame_pattern" in sig1)
 check("null frame_pattern matches by exact name", "exact" in sig1 and "null" in sig1)
