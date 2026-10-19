@@ -319,7 +319,7 @@ Neither touches the file. Run one when you inherit a file someone else has been 
 
 `deck` moves one source document into a presentation flow and builds a Figma Slides deck. It uses the team template's coordinates, colors and type as-is — when a content shape isn't in the catalog it never invents a layout, it fits the nearest archetype by trimming content or splitting the slide. `/fig:deck-setup` measures those values into local assets, which stay out of the published plugin since template backgrounds carry company wordmarks.
 
-`qa` audits what actually shipped against the spec, found the same way `draw` finds it. The rule is that a finding reads "this breaks rule X in document Y", never "this looks off" — anything without a baseline is filed as needs-checking rather than a defect.
+`qa` audits what actually shipped against the spec. `draw` and `sketch` take a document passed to the run; `qa` takes none and starts at `qa.baseline.prd`; left unset, that means `pm`'s PRD where `pm` is installed. The rule is that a finding reads "this breaks rule X in document Y", never "this looks off" — anything without a baseline is filed as needs-checking rather than a defect.
 
 <img src=".github/qa-report.png" alt="Two findings side by side: a defect citing the spec row it breaks, and an observation with no baseline filed as a question" width="100%">
 
@@ -706,6 +706,8 @@ task_tracker:
   type: github          # the line to add — notion or github, whichever the ref names
   ref:  "<the ref already in your file>"
 ```
+
+A config `/fig:setup` drafted before 3.28.0 carries `task_tracker.type: none`, so the handover line keeps printing even with `pm` installed. To borrow `pm`'s task files instead, delete the whole `task_tracker` block, not only the type line: the `ref: null` drafted beside it still counts as written, and with the type gone it stops here.
 
 </details>
 

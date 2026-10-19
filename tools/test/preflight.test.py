@@ -5,7 +5,7 @@ lines that do not are asserted: the `required by` line and the verdict's first w
 
     python3 tools/test/preflight.test.py
 """
-import os, shutil, site, subprocess, sys, tempfile
+import json, os, shutil, site, subprocess, sys, tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -156,6 +156,17 @@ with tempfile.TemporaryDirectory() as tmp3:
     check("task_tracker.ref without type → FAIL naming the key",
           out.splitlines()[-1].endswith("· FAIL") and "task_tracker.type" in section(out, "Fix first"),
           out.splitlines()[-1] if out else "")
+
+    # A pm whose manifest carries no version, installed through a registry of this temp config dir.
+    cfg4, pm4 = Path(tmp3) / "claude-nover", Path(tmp3) / "claude-nover" / "plugins" / "cache" / "m" / "pm" / "x"
+    (pm4 / ".claude-plugin").mkdir(parents=True)
+    (pm4 / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": "pm"}))
+    (cfg4 / "plugins" / "installed_plugins.json").write_text(
+        json.dumps({"version": 2, "plugins": {"pm@m": [{"scope": "user", "installPath": str(pm4)}]}}))
+    conv.write_text("task_tracker:\n  type: markdown\n")
+    out = run_fig(proj3, home3, cfg4)
+    check("task_tracker markdown, pm without a version → the row says (no version)",
+          "pm (no version) is older than" in section(out, "Worth knowing"), section(out, "Worth knowing"))
 
 print()
 if failures:

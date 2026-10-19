@@ -227,7 +227,8 @@ def borrow_checks(user):
             pm = None
     if pm and mod.version_ok(pm.get("version")):
         return
-    why = (f"pm {pm.get('version')} is older than {mod.PM_MIN}" if pm else "pm is not installed here")
+    why = (f"pm {pm.get('version') or '(no version)'} is older than {mod.PM_MIN}" if pm
+           else "pm is not installed here")
     row("tracker", "task_tracker.type: markdown", "attention",
         f"{why} — /fig:handoff prints its line instead of writing it into the task file")
 
