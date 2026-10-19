@@ -1,5 +1,12 @@
 # fig
 
+## 3.28.1 — 2026-10-19
+
+- **A PRD named as one markdown file read as "no PRD".** 3.28.0 went out without the fixes its final review asked for. A `.md` file passed to `/fig:draw` or `/fig:sketch`, or written as `qa.baseline.prd`'s `ref`, came back from the lookup with no candidate to read, and all three skills — qa too — took that for an empty folder and went on without a spec. The named file is now the single candidate (a `#…` after it names the entry to start from), and "no candidates" means only pm's folder holding no document yet or the named file missing, said in the note
+- `/fig:handoff` passes the heading and the line to `pm`'s script single-quoted, so a `"`, `$` or backtick in a version label no longer breaks or expands the command
+- The machine check says "(no version)" for a `pm` whose manifest names none, instead of an empty gap
+- Wording: `/fig:setup`'s handover and PRD rows say borrowing applies only where `pm` keeps markdown; the example config says to write `type` beside `ref` (a ref alone reads as markdown); the setup drafter's header says what a `null` style value does (the drawing skills fall back to their own defaults, and a section gets no style from it); both READMEs say that draw and sketch take a document passed in while qa starts at `qa.baseline.prd`, and how to move a config drafted before 3.28.0 onto borrowing
+
 ## 3.28.0 — 2026-10-19
 
 - **Installed beside `pm`, `fig` still asked where the PRD was and printed its handover line.** `pm` 0.38.0 starts local — specs under `./docs/prd`, tasks under `./tasks` — but `fig` read a PRD only from a Notion page named in `qa.baseline.prd`, and `/fig:handoff` wrote only into a Notion page or a GitHub issue. Two plugins sat side by side, each holding files the other could have used. One new script, `_common/scripts/lib/borrow-pm.py`, now decides everything that crosses into `pm`: it finds the installed `pm` through the plugin registry (or `FIG_PM_ROOT`), requires it enabled and at 0.38.0 or later, and reads `pm`'s settings through `pm`'s own reader. Where `pm` is missing, disabled or older, nothing is written through it — the run prints and says why

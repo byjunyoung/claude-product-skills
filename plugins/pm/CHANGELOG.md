@@ -1,5 +1,9 @@
 # pm
 
+## 0.38.2 — 2026-10-19
+
+- The shared machine check carries `fig` 3.28.1's wording fix: a `pm` whose manifest names no version reads "(no version)" in `fig`'s attention row. `preflight.py` is held byte for byte identical across the two plugins. Nothing changes for `pm` configs
+
 ## 0.38.1 — 2026-10-19
 
 - **The shared config reader and machine check carry `fig`'s pair and PRD rows.** `resolve-config.py` and `preflight.py` are held byte for byte identical across the two plugins, and `fig` 3.28.0 changed both: `task_tracker.ref` written without `task_tracker.type` stops under `--authored`, a plain-string `qa.baseline.prd` requires Notion, and `task_tracker.type: markdown` needs no connector. The attention row for a missing `pm` runs on the `fig` side only. None of it touches a `pm` key, so nothing changes for `pm` configs
