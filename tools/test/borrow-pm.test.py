@@ -193,8 +193,21 @@ with tempfile.TemporaryDirectory() as tmp:
     check("ref without type → exit 3",
           r.returncode == 3 and "task_tracker.type is not set" in r.stderr, f"rc={r.returncode} {r.stderr}")
 
-    r = run(cfg_ok, project(fig="task_tracker:\n  ui_section_heading: Handover\n"), "task")
+    r = run(cfg_ok, project(fig="task_tracker:\n  type: notion\n  ref: x\n  ui_section_heading: Handover\n"), "task")
     check("a set heading is used", parse(r).get("heading") == "Handover", r.stdout + r.stderr)
+
+    pm_head = "task:\n  design_heading: Handover\n"
+    r = run(cfg_ok, project(pm=pm_head), "task")
+    out = parse(r)
+    check("write uses pm's design heading",
+          out.get("action") == "write" and out.get("heading") == "Handover" and out.get("note") is None,
+          r.stdout + r.stderr)
+
+    r = run(cfg_ok, project(pm=pm_head, fig="task_tracker:\n  ui_section_heading: Notes\n"), "task")
+    out = parse(r)
+    check("fig heading differs -> pm's heading, with a note",
+          out.get("action") == "write" and out.get("heading") == "Handover"
+          and "ui_section_heading" in (out.get("note") or ""), r.stdout + r.stderr)
 
     # --- prd: the lookup order
     r = run(cfg_ok, project(fig=f"qa:\n  baseline:\n    prd: \"{HEX}\"\n"), "prd")

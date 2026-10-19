@@ -166,6 +166,14 @@ task:
   # must name its own, because the two are checked as a pair with task.record.type.
   link_property: ticket
 
+  # The heading of the record's section that holds the handover line. /fig:handoff writes the
+  # line under this heading in pm's markdown records, and /pm:task publish reads the pinned
+  # design version from under it. It is matched as written and does not depend on the language
+  # of the conversation, so a team that writes its records in another language writes the
+  # heading in that language here. With the floor it is "Design changes". It is never null:
+  # a record needs some heading for the line to live under.
+  design_heading: "Design changes"
+
   # --- The rule document the tracker is governed by ------------------------------
   # Some trackers are run by written conventions of their own — what may carry a
   # version, who may close what, how long a parked ticket keeps its place. Those

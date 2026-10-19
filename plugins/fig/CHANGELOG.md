@@ -1,5 +1,9 @@
 # fig
 
+## 3.28.2 — 2026-10-19
+
+- **In `pm`'s markdown records the handover line goes under `pm`'s `task.design_heading`, not `task_tracker.ui_section_heading`.** One heading read by both plugins, so what `/fig:handoff` writes is what `/pm:task publish` reads. When `ui_section_heading` is set and differs, `borrow-pm.py task` says so in its note; that setting now applies to Notion and GitHub only. An older `pm` without the key gets the same "Design changes" as before
+
 ## 3.28.1 — 2026-10-19
 
 - **A PRD named as one markdown file read as "no PRD".** 3.28.0 went out without the fixes its final review asked for. A `.md` file passed to `/fig:draw` or `/fig:sketch`, or written as `qa.baseline.prd`'s `ref`, came back from the lookup with no candidate to read, and all three skills — qa too — took that for an empty folder and went on without a spec. The named file is now the single candidate (a `#…` after it names the entry to start from), and "no candidates" means only pm's folder holding no document yet or the named file missing, said in the note

@@ -1,5 +1,9 @@
 # pm
 
+## 0.39.0 — 2026-10-19
+
+- **One key, `task.design_heading`, names the section a handover line lives under.** `/fig:handoff` writes the line under it in `pm`'s markdown records and `/pm:task publish` reads the pinned design version from under it; before, each side carried its own idea of the heading and a team that renamed one broke the other. It is matched as written, so the conversation's language does not change it; the floor is "Design changes". Where a record has no such heading, publish falls back to the section that plays that role and says which heading it read
+
 ## 0.38.2 — 2026-10-19
 
 - The shared machine check carries `fig` 3.28.1's wording fix: a `pm` whose manifest names no version reads "(no version)" in `fig`'s attention row. `preflight.py` is held byte for byte identical across the two plugins. Nothing changes for `pm` configs

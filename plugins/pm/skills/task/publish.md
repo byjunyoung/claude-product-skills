@@ -47,7 +47,7 @@ Then read the two things step 2 is drafted from:
 
 **Read the design for what exists, not for how it looks.** Colour, spacing and size never become conditions — step 2 says why. Copy is taken from the spec first: a design still carrying placeholder text would otherwise freeze a wrong string into the contract, and reading a screen in full costs far more than reading its structure. Go deeper on one screen only where the spec left its copy blank.
 
-Where the record's design section carries a handover line — the links, the date, and the version the handover was pinned to — **that line is what the referenced-version row is built from, verbatim.** Do not restate it in your own words and do not substitute today's date: the point of the pin is that it names a moment somebody else can go back to.
+The design section is the one headed `task.design_heading`. Where no section carries that heading, publish falls back to the section that plays that role in the record — the one holding the design link and handover line — and the report says which heading it read. Where the record's design section carries a handover line — the links, the date, and the version the handover was pinned to — **that line is what the referenced-version row is built from, verbatim.** Do not restate it in your own words and do not substitute today's date: the point of the pin is that it names a moment somebody else can go back to.
 
 Then branch:
 

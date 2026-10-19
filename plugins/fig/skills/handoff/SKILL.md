@@ -48,7 +48,7 @@ preview → go.
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --js <fileKey>
 ```
 
-`handoff.version` — whether a handover pins a named version, and how that version is named, matched and written out. `task_tracker.ui_section_heading` — the heading the one line goes under.
+`handoff.version` — whether a handover pins a named version, and how that version is named, matched and written out. `task_tracker.ui_section_heading` — the heading the one line goes under in a Notion or GitHub doc; in pm's markdown records pm's `task.design_heading` decides it, and `borrow-pm.py task` returns the heading to use.
 
 Where the line goes is not read off `task_tracker.type` here. Ask:
 

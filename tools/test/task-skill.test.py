@@ -139,6 +139,12 @@ check("sync reads filing, never publish", "filing.md" in sync_text and "publish.
 
 check("publish reads filing", "filing.md" in read("plugins/pm/skills/task/publish.md"))
 
+publish_text = read("plugins/pm/skills/task/publish.md")
+check("publish falls back to the role and says so",
+      "task.design_heading" in publish_text
+      and any("falls back" in l and "says which" in l for l in re.split(r"(?<=[.!?])\s+", publish_text.replace("\n", " "))),
+      "task.design_heading named: " + str("task.design_heading" in publish_text))
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)
