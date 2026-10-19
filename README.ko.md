@@ -30,7 +30,7 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 | **스킬 · 슬래시 명령** | `/fig:lint`처럼 치는 명령 하나. 그걸 쳤을 때 Claude가 따르는 지시서가 스킬입니다 |
 | **설정 파일** | 팀 규칙을 담은 텍스트 파일 하나 — 화면 이름을 어떻게 짓는지, 얼마나 띄우는지. 첫 벌은 `/fig:setup`이 씁니다 |
 | **`null`** | 일부러 비워 둔 설정. 그 값이 필요한 검사는 넘겨짚지 않고 건너뜁니다 |
-| **토큰** | 각 도구에서 직접 발급하는 열쇠. 스킬이 그 도구와 바로 이야기할 수 있게 해 줍니다. Figma·GitHub 각각 있습니다 |
+| **토큰** | 여기서는 두 가지를 뜻합니다. *액세스 토큰*은 각 도구에서 직접 발급하는 열쇠로, 스킬이 그 도구와 바로 이야기할 수 있게 해 줍니다. Figma·GitHub 각각 있습니다. *색 토큰*은 디자인 시스템이 이름 붙여 함께 쓰는 색(Figma에서는 변수)입니다. `/fig:lint`가 손으로 친 색을 이것과 대조하고, `/fig:tokens`가 색을 여기에 묶습니다 |
 | **연결(커넥터)** | Claude에 붙여 둔 도구 — Notion, Slack, GitHub. 붙어 있는 것만 스킬이 닿습니다 |
 | **트래커** | 개발이 티켓을 관리하는 곳 — GitHub, Jira, Linear. `pm`이 여기로 등록합니다 |
 | **정본 페이지** | 지금 기준이 되는 Figma 페이지. 옆에 두는 작업본과 구분해 부르는 말입니다 |
@@ -775,7 +775,7 @@ plugins/
     README.md
     skills/
       setup   read  prep   arrows  lint
-      handoff sync  tokens
+      handoff sync  tokens draw    sketch
       proto   code  qa     deck           각 SKILL.md (+ setup.md, pitfalls.md)
     _common/
       conventions.example.yaml           설정 스키마 + 내장 기본값

@@ -30,7 +30,7 @@ Neither needs the other. Most of what follows is about `fig`; `pm` has [its own 
 | **skill / slash command** | One command, typed as `/fig:lint`. A skill is the instructions Claude follows when you type it |
 | **settings file** | One text file holding your team's rules — how screens are named, how far apart they sit. `/fig:setup` writes your first one |
 | **`null`** | A setting deliberately left empty. The check that needed it is skipped rather than guessed at |
-| **token** | A key you generate in a tool's own settings so a skill can talk to it directly. Figma and GitHub each have one |
+| **token** | Two things here. An *access token* is a key you generate in a tool's own settings so a skill can talk to it directly — Figma and GitHub each have one. A *colour token* is a named colour a design system shares (a *variable* in Figma): `/fig:lint` checks hand-typed colours against them and `/fig:tokens` binds colours to them |
 | **connection** | A tool linked to Claude — Notion, Slack, GitHub. A skill can only reach what is connected |
 | **tracker** | Wherever engineering keeps its tickets — GitHub, Jira, Linear. `pm` files into it |
 | **canonical page** | The Figma page that is the current truth, as opposed to the working copies beside it |
@@ -780,7 +780,7 @@ plugins/
     README.md
     skills/
       setup   read  prep   arrows  lint
-      handoff sync  tokens
+      handoff sync  tokens draw    sketch
       proto   code  qa     deck           one SKILL.md each (plus setup.md, pitfalls.md)
     _common/
       conventions.example.yaml           config schema + bundled defaults

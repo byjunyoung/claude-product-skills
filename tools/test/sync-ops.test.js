@@ -93,6 +93,7 @@ test("fourEdgeClear tests the post-stretch box against the other sections on all
   const target = box("T", 0, 0, 100, 100);
   const others = [box("right", 150, 0, 100, 100), box("below", 0, 150, 100, 100)];
   const page = { children: [target, ...others, { type: "FRAME", id: "f", name: "f" }] };
+  target.parent = page;
   const { fourEdgeClear } = ops({ currentPage: page });
   assert.deepStrictEqual(fourEdgeClear(target, 100, 100), { clear: true, hits: [] });
   const wide = fourEdgeClear(target, 200, 100);   // stretching right runs into "right"
@@ -119,13 +120,30 @@ test("fourEdgeClear also catches a section to the left of and above the target",
   const box = (id, x, y, w, h) => ({ type: "SECTION", id, name: id, absoluteBoundingBox: { x, y, width: w, height: h } });
   const target = box("T", 200, 200, 100, 100);
   const left = box("left", 0, 200, 150, 100), above = box("above", 200, 0, 100, 150);
-  const { fourEdgeClear } = ops({ currentPage: { children: [target, left, above] } });
+  const page = { children: [target, left, above] };
+  target.parent = page;
+  const { fourEdgeClear } = ops({ currentPage: page });
   assert.strictEqual(fourEdgeClear(target, 100, 100).clear, true);
   // the stretch is anchored at the section's x/y, so a box that starts inside another is a hit on its left/top side
   const overlapLeft = box("T2", 100, 200, 100, 100);   // starts inside "left" (0..150)
+  overlapLeft.parent = page;
   assert.deepStrictEqual(fourEdgeClear(overlapLeft, 100, 100).hits.map((h) => h.name), ["left"]);
   const overlapTop = box("T3", 200, 100, 100, 100);    // starts inside "above" (0..150)
+  overlapTop.parent = page;
   assert.deepStrictEqual(fourEdgeClear(overlapTop, 100, 100).hits.map((h) => h.name), ["above"]);
+});
+
+test("fourEdgeClear compares a nested section with the sections beside it, not with the one holding it", () => {
+  const box = (id, x, y, w, h) => ({ type: "SECTION", id, name: id, absoluteBoundingBox: { x, y, width: w, height: h } });
+  const outer = box("Outer", 0, 0, 1000, 1000), far = box("Far", 2000, 0, 100, 100);
+  const target = box("T", 100, 100, 100, 100), beside = box("beside", 250, 100, 100, 100);
+  outer.children = [target, beside];
+  target.parent = outer; beside.parent = outer;
+  const page = { type: "PAGE", children: [outer, far] };
+  outer.parent = page; far.parent = page;
+  const { fourEdgeClear } = ops({ currentPage: page });
+  assert.deepStrictEqual(fourEdgeClear(target, 100, 100), { clear: true, hits: [] }, "the section holding it is not in its way");
+  assert.deepStrictEqual(fourEdgeClear(target, 200, 100).hits.map((h) => h.name), ["beside"], "a sibling one level down is");
 });
 
 test("a font that cannot load writes nothing", async () => {

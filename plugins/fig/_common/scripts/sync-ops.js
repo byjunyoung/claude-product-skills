@@ -58,11 +58,13 @@ async function editValues(edits, EXPECTED) {   // edits: [textNode, newValue] pa
 }
 
 /** Four-edge intersection check before stretching a section. w and h are the post-stretch values;
- *  `clear` must be true to be safe, `hits` names the sections in the way. */
+ *  `clear` must be true to be safe, `hits` names the sections in the way. The sections compared are
+ *  the target's siblings (target.parent.children), as prep's resizeSection does: a nested section is
+ *  checked against the ones beside it, never against the section holding it. */
 function fourEdgeClear(target, w, h) {
   const t = target.absoluteBoundingBox;
   const T = { x: t.x, y: t.y, r: t.x + w, b: t.y + h };   // computed with the post-stretch values
-  const hits = figma.currentPage.children.filter(c => c.type === 'SECTION' && c.id !== target.id)
+  const hits = target.parent.children.filter(c => c.type === 'SECTION' && c.id !== target.id)
     .map(s => { const b = s.absoluteBoundingBox;
       return { name: s.name, hit: b.x < T.r && b.x + b.width > T.x && b.y < T.b && b.y + b.height > T.y }; })
     .filter(s => s.hit);
