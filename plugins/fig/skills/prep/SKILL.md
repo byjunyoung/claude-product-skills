@@ -12,7 +12,7 @@ Like *mise en place* in a kitchen: before the design work and the arrows, every 
 
 Takes one page of a design file and (1) normalizes frame names to the convention, (2) groups them into feature-level sections and lays them out, and (3) reads what is actually on each screen to find missing cases and stub them as placeholder frames. A tidied page is only a third done — `/fig:draw` fills the stubs, then connecting the flow with `/fig:arrows` completes the set.
 
-**Prerequisites**: always load the `figma:figma-use` skill before calling `use_figma`.
+**Prerequisites**: always load the `figma:figma-use` skill before calling `use_figma`, and, before the first mutating call, `figma:figma-generate-design` alongside it (figma-use asks for both); in the `skillNames` of every mutating call name both: `figma-use,figma-generate-design`. This skill uses generate-design only for component discovery, never its page-level wrapper, which would put a new frame at the page's top level where prep places things itself.
 
 **Seat check before the first write** — call `whoami` once. Where every plan it lists carries `seat: View`, stop before any `use_figma` write and say so: the reading half of this skill runs on a View seat, the writing half needs an Edit seat on the file's plan, and no retry changes that. Where the seats are mixed, go ahead — and if the first write comes back as a permission error, report the seat table and stop rather than retrying.
 

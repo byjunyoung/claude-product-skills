@@ -116,6 +116,33 @@ check("handoff searches the tracker and asks on none or several",
       and "exactly one" in nt.lower() and "never picks" in nt and "read-only" in nt.lower()
       and "before any preview" in nt, nt[:160])
 
+# ---- Task 6: dead deck keys retire; qa says which design it judges against and where its report goes ----
+dk = ex.split("\ndeck:", 1)[1].split("\n# ---", 1)[0]
+check("retired deck keys are gone from the example",
+      not any(k in dk for k in ("template_file", "fidelity:", "batch_size")) and "assets_dir" in dk, dk[:80])
+tm = re.search(r"^\s+tasks:\s*\{ type: null, ref: null \}", ex, re.M)
+check("qa.baseline.tasks has the {type, ref} shape",
+      tm is not None and "markdown | notion | github | none" in ex[:tm.start()][-900:]
+      and "does not read past decisions" in ex[:tm.start()][-900:])
+qa = read(SK + "qa/SKILL.md")
+qa_tools = [x.strip() for x in tools_line(qa).split(",")]
+check("qa report goes to the response or a markdown file",
+      "Write" in qa_tools and "qa.report_dir" in qa and "recorded on the ticket" not in qa
+      and "as a reply" not in qa and "markdown file" in qa.split("## Delivering the report", 1)[1]
+      and re.search(r"^\s+report_dir:\s*null", ex, re.M) is not None
+      and "response only" in ex.split("report_dir", 1)[0][-400:])
+row = next((l for l in qa.splitlines() if l.startswith("| The design")), "")
+check("qa baseline table says the design is read live and the pin is not compared",
+      "live file" in row and "not yet compared" in row, row[:120])
+
+# ---- Carried from Tasks 1-3: the skills load what they call -------------------------------------------
+check("code lists Skill", "Skill" in [x.strip() for x in tools_line(code).split(",")])
+pg = prep.find("figma:figma-generate-design")
+check("prep loads generate-design with figma-use, names both in skillNames, and limits its use",
+      pg >= 0 and "skillNames" in prep and "figma-generate-design" in prep.split("skillNames", 1)[1][:200]
+      and "component discovery" in prep and "page-level wrapper" in prep
+      and pg < prep.find("**Seat check"), f"{pg}")
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

@@ -1,7 +1,7 @@
 ---
 name: qa
 description: Checks a feature against its PRD and Figma design once it has shipped to a dev or staging server, stopping at a checklist or clicking through it in the browser to write up each defect with reproduction steps, expected, actual and evidence. Triggers - "/fig:qa", "QA this", "check what is on the dev server", "file the defects", "QA 해줘", "개발서버 확인해줘", "결함 정리해줘".
-allowed-tools: AskUserQuestion, Bash, Read, Glob, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__read_console_messages, mcp__claude-in-chrome__read_network_requests
+allowed-tools: AskUserQuestion, Bash, Read, Write, Glob, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__get_metadata, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__browser_batch, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__read_console_messages, mcp__claude-in-chrome__read_network_requests
 ---
 
 # qa — baseline-referenced QA (checklist → verification → defect report)
@@ -79,8 +79,8 @@ Gather the documents the verdicts will rest on. **Internal assets first.** Where
 | Source | What to pull |
 |---|---|
 | The PRD (from the lookup above) | Detailed behaviour (Given/When/Then), states and cases, rules and exceptions |
-| The design | Screen composition, state variants, copy |
-| Existing tickets | Past decisions and reversals, undecided items |
+| The design | Screen composition, state variants, copy — read from the live file; the version a handover pinned is not yet compared (see CHANGELOG) |
+| Existing tickets (`qa.baseline.tasks`, as `{ type, ref }`) | Past decisions and reversals, undecided items. Where the type or ref is `null`, this row is skipped |
 | The request itself | What is newly asked for in this round |
 
 - Pull features and policies **exhaustively, by domain**. Look at only a handful and verification items leak out.
@@ -204,6 +204,6 @@ Without these three the report reads as "I looked at everything". Writing down w
 
 ## Delivering the report
 
-Where the report goes is **asked and settled** (in the response only / recorded on the ticket / drafted as a reply). External writes happen only after preview → "go".
+The report goes to the response, and, where `qa.report_dir` names a folder, also to a markdown file there (named for the feature and the date). Where `qa.report_dir` is `null` it is the response only, and nothing is written to disk. Show the file's whole text and path first and write it only after "go". Filing the defects anywhere else is outside this skill (see *When NOT to use*).
 
-**The person reading the report sees the captures, not a list of file names.** Walk each issue step by step — what was done, the capture, what it shows — in plain language before any engineering detail, and send the images themselves (attach them, or use whatever file-sending tool the session has). Where the report is going onto a ticket, say which captures go with which item; trackers that cannot take an image by API need them attached by hand, so say so rather than leaving a broken link.
+**The person reading the report sees the captures, not a list of file names.** Walk each issue step by step — what was done, the capture, what it shows — in plain language before any engineering detail, and send the images themselves (attach them, or use whatever file-sending tool the session has). Where the report is a markdown file, say which captures go with which item, and give their paths or links rather than leaving a name that opens nothing.
