@@ -171,7 +171,10 @@ annotations:
 design_system:
   library: auto                               # auto = detect the library the file is connected to
   token_prefixes: []                          # token groups to look up  e.g. ["fill/", "border/", "icon/"]
-  match_threshold_channel: 8                  # max channel delta still counted as "the same color"
+  # Largest per-channel difference (0–255) at which an unbound colour counts as near a token.
+  # /fig:lint blocks only an exact match; a near one is a warning, since snapping it changes the
+  # colour and a designer decides. null counts exact matches only.
+  match_threshold_channel: 8
 
 # --- Outside references (optional) ---------------------------------------------
 # Consulted by /fig:draw only when the file has no precedent and a new pattern has to be

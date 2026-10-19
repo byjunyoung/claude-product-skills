@@ -390,6 +390,7 @@ flowchart TD
 | Structure | Screens outside any section · screens past section bounds · overlapping screens · naming violations · section number vs. placement mismatch · a screen whose colours resolve in a light/dark mode nobody set · a control cut off by its own container or hanging off the screen |
 | Flow | Arrows cutting through unrelated screens · arrowheads pointing at empty space · screens on no flow at all · labels covering an arrowhead or another line |
 | Components | Variants stacked on top of one another inside a set · a component buried under the one placed beside it · settings that tagged along in a duplicate, leaving an empty slot rendered |
+| Colour tokens | A colour typed in by hand where the design system already has a token for it |
 
 <img src=".github/lint-catches.png" alt="A tidy-looking section with three numbered violations marked: an arrow crossing an unrelated screen, an arrowhead in empty space, and a screen on no flow" width="100%">
 
@@ -402,6 +403,8 @@ The component audit works without any written convention. It derives the usage d
 The two overlap checks read coordinates alone, so they run on a file with no config at all — and they run on a component page, which the frame-overlap check above never looked at. A set with no auto-layout drops each new variant on the last one's coordinates: the top variant draws fine and the rest are simply not visible, which is why review keeps letting it through.
 
 The mode check catches a duplicated screen that looked right only because of where it used to sit. A colour tied to a token with several modes (light and dark, say) renders in whatever mode the screen, any section it sits in, or its page names, and in the token's default where none does. Move a screen off a page that set light onto one that sets nothing, and it comes back dark, with nothing on the node looking wrong. So any screen using such a token has to name its mode somewhere above it, even when the default is what it wants.
+
+The colour-token check looks for a colour typed in by hand where a design-system token — a named colour the system shares, a *variable* in Figma — would have done. One that matches a token exactly holds its section back from handoff: engineering copies the hex, and the screen stops following the theme. One that is only close to a token, or near none, goes along as a warning, because snapping it changes the colour and that is a designer's call. The tokens it knows are the ones this file already uses plus its own; a library token nobody in the file has used yet cannot be seen from a script. A file with no colour tokens at all skips the check and says so, rather than flagging every fill. Colours inside a component instance belong to the library and are left out, and so are arrows, labels, placeholders and sections. Binding them is `/fig:tokens`.
 
 ---
 

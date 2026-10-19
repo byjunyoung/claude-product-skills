@@ -152,7 +152,18 @@ case("an audit script that lost its sections-deep marker fails", plant_missing_m
      1, "[fig] sections-deep marker missing from audit-struct.js")
 
 
+def strip_scaffolding(r):
+    # The real copies (audit-tokens.js, and the bind script after it) would join either case below,
+    # so each case starts from scripts that carry none.
+    pat = re.compile(r"// <scaffolding>\n.*?// </scaffolding>\n?", re.S)
+    for f in (r / "plugins" / "fig" / "_common" / "scripts").glob("*.js"):
+        t = f.read_text(encoding="utf-8")
+        if pat.search(t):
+            f.write_text(pat.sub("", t), encoding="utf-8")
+
+
 def plant_scaffolding_drift(r):
+    strip_scaffolding(r)
     d = r / "plugins" / "fig" / "_common" / "scripts"
     for name, body in (("audit-flow.js", "// one"), ("audit-struct.js", "// two")):
         f = d / name
@@ -164,6 +175,7 @@ case("a drifted scaffolding copy fails", plant_scaffolding_drift,
 
 
 def plant_lone_scaffolding(r):
+    strip_scaffolding(r)
     f = r / "plugins" / "fig" / "_common" / "scripts" / "audit-flow.js"
     f.write_text(f.read_text(encoding="utf-8") + "\n// <scaffolding>\n// one\n// </scaffolding>\n", encoding="utf-8")
 

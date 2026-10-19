@@ -9,11 +9,12 @@
  */
 const { test } = require("node:test");
 const assert = require("node:assert");
-const { readFileSync } = require("node:fs");
+const { readFileSync, readdirSync } = require("node:fs");
 const { join } = require("node:path");
 
 const ROOT = join(__dirname, "..", "..", "plugins", "fig");
-const SCRIPTS = ["audit-struct.js", "audit-flow.js", "audit-component.js"];
+// Every audit script, so a new one is held to the table without being listed here.
+const SCRIPTS = readdirSync(join(ROOT, "_common", "scripts")).filter((f) => /^audit-.*\.js$/.test(f)).sort();
 
 const LINT = readFileSync(join(ROOT, "skills", "lint", "SKILL.md"), "utf8");
 
@@ -50,11 +51,20 @@ test("every tag a script can emit has a row in lint's severity table, and every 
 });
 
 // ── The grade in the table equals the grade at every emit site ──
-// [arrow] and [state] split by wording: "orphan" / "passes through" are blocking, geometry is a
-// warning. An emit site is matched to a row by whether its message line says one of those.
-const SPLIT = new Set(["[arrow]", "[state]"]);
-const SPECIAL = /orphan|passes through/;
-const key = (tag, special) => (SPLIT.has(tag) ? tag + (special ? "|orphan-or-passes-through" : "|geometry") : tag);
+// Three tags carry two grades and split by wording. [arrow] and [state]: "orphan" / "passes
+// through" are blocking, geometry is a warning. [unbound]: "exact token" is blocking, a near or
+// missing token is a warning. An emit site is matched to a row by whether its message says those
+// words, and a row by whether its first cell does.
+const SPLIT = new Map([
+  ["[arrow]", [/orphan|passes through/, "orphan-or-passes-through", "geometry"]],
+  ["[state]", [/orphan|passes through/, "orphan-or-passes-through", "geometry"]],
+  ["[unbound]", [/exact token/, "exact-token", "near-or-none"]],
+]);
+const key = (tag, text) => {
+  if (!SPLIT.has(tag)) return tag;
+  const [words, yes, no] = SPLIT.get(tag);
+  return tag + "|" + (words.test(text) ? yes : no);
+};
 
 const expected = new Map();   // key -> the grade the table states
 for (const row of rows) {
@@ -63,7 +73,7 @@ for (const row of rows) {
   const grade = cells[2].trim();
   if (!["blocking", "warning"].includes(grade)) continue;       // the header row
   for (const m of cells[1].matchAll(/`(\[[^\]`]+\])/g))
-    expected.set(key(m[1], SPLIT.has(m[1]) && SPECIAL.test(cells[1])), grade);
+    expected.set(key(m[1], cells[1]), grade);
 }
 
 const sites = [];             // { script, tag, grade, key }
@@ -77,7 +87,7 @@ for (const name of SCRIPTS) {
     const m = line.match(/(?:\badd\(\s*|\btag:\s*)"(\[[^"]+\])",\s*(?:grade:\s*)?"(blocking|warning)"/);
     assert.ok(m, `${name}:${i + 1} has a grade that is not a literal — resolve it or list it in this test by name`);
     const text = lines.slice(i, i + 3).join(" ");           // the message may start on the next line
-    sites.push({ script: `${name}:${i + 1}`, tag: m[1], grade: m[2], key: key(m[1], SPECIAL.test(text)) });
+    sites.push({ script: `${name}:${i + 1}`, tag: m[1], grade: m[2], key: key(m[1], text) });
   });
 }
 

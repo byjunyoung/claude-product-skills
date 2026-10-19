@@ -4,11 +4,11 @@ description: Audits a Figma design page read-only against figma-conventions.yaml
 allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
 ---
 
-# fig:lint — read-only structure and flow audit (violations only)
+# fig:lint — read-only audit of structure, flow, components and colour tokens (violations only)
 
 **Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install fig@byjunyoung`), rather than improvising what the scripts do.
 
-Takes one design page and **audits structure (placement), flow (arrows), and component usage in a single pass**, reporting only violations. Detection is separated from repair, the way a design lint should be — this skill **only detects**; fig:prep fixes structure and fig:arrows fixes flow.
+Takes one design page and **audits structure (placement), flow (arrows), component usage, and colours left off the design system's tokens in a single pass**, reporting only violations. Detection is separated from repair, the way a design lint should be — this skill **only detects**; fig:prep fixes structure, fig:arrows fixes flow, and fig:tokens binds colours to tokens.
 
 **Why it exists**: to keep verification logic in **one place behind one gate**. Whatever touched the canvas — prep, arrows, a duplicated form, a manual edit — running this one skill at the end covers all of it. When verification is scattered across the working skills you get a blind spot shaped like "I wasn't using that skill this time, so the audit never ran." Removing that blind spot is the reason it is separate.
 
@@ -26,14 +26,14 @@ Takes one design page and **audits structure (placement), flow (arrows), and com
 - Actually fixing, tidying, or stubbing placeholders → `/fig:prep`
 - Drawing the screen a violation is about → `/fig:draw`
 - Creating or syncing arrows → `/fig:arrows`
-- Auditing token (variable) bindings → `/fig:tokens`
+- Binding colours to the design system's tokens → `/fig:tokens` (this skill finds the unbound ones; tokens binds them)
 - Checking and applying work into the canonical page → `/fig:sync`
 - Just understanding the structure → `/fig:read`
 
 ## Inputs
 
 - `figma_url` (required): the page to audit. For several pages, split the calls per page and run them in parallel
-- `scope` (optional): structure only / flow only / components only. Omitted, all three run
+- `scope` (optional): structure only / flow only / components only / `tokens` only (colour tokens). Omitted, all four run
 - `section` (optional): a section link or a section name. Only that section and the sections nested in it are audited, at any depth. Omitted, the whole page is. A link carries the section's id in `node-id` (Figma writes `1-2` for `1:2`; use `1:2`). A name is resolved to one id with a read-only `use_figma` call before the scripts run; if it matches no section or several, ask which one rather than choosing. Component collect (C-1) reads reference pages and ignores it
 - `reference_page` (optional): an existing production page to derive component usage conventions from. Omitted, the page in the same file that uses the most of the same components is chosen
 
@@ -94,6 +94,19 @@ An instance that was newly placed or duplicated **carries the component's defaul
 
 The basis is not a written rule but **how the same file actually uses the component** — the same principle as preferring existing assets. A property whose value also varies across production screens is a per-use choice, not a violation, and is not reported; only properties overwhelmingly settled one way count as deviation. The thresholds are `component_audit.min_samples` and `dominance`.
 
+### D. Colour tokens — fig:tokens's territory
+
+A colour typed in by hand where the design system has a token for it — a named colour the system shares, a *variable* in Figma. Engineering copies the hex it reads, and the screen stops following the theme.
+
+| Item | Basis |
+|---|---|
+| **Unbound colour, exact token** | A solid fill, stroke, text or effect colour not bound to a variable, whose hex is exactly a token's |
+| Unbound colour, near or no token | The same, where the nearest token is within `design_system.match_threshold_channel` on every channel (near) or further (none). Snapping it changes the colour, so a designer chooses. With the threshold `null` only an exact match counts |
+
+**The tokens it compares against** are the colour variables bound anywhere on the page plus the file's own local colour variables, each read in its collection's default mode. **A library token nobody in this file has used yet cannot be seen from a script**, so a colour matching only such a token comes back as near or none, not exact. A file with no colour tokens at all — a team with no design system — skips the check: the result is a pass with a note saying so, never a finding on every fill.
+
+**Not read**: anything inside a component instance (fixed at the component's source — the instance's own override is read), working scaffolding (arrows, labels and state chains by the names in `naming`, placeholders by their `placeholder_style` paint, and a section's or component set's own paint), sections in `pages.exclude_sections`, gradients, images and videos, text in several colours, and paints switched off. A paint already bound to a variable passes, whichever variable it is.
+
 ### The ✋ mark — a check the script does not do
 
 **Missing required state**, marked `✋` above, is not done by the audit script. Not because it can't be, but because **it shouldn't be** — which states are required depends on whether the screen is a list, a form, or a search, and that call requires reading the screen's content. Faking it with a regex produces "if the name contains 'list' it's a list screen", which only adds false positives.
@@ -128,12 +141,14 @@ Every violation carries one of two grades. **The grade never changes what is aud
 | `[state] … orphan` · `… passes through` | blocking | The same two, on a state chain |
 | `[coverage] orphan frame` | blocking | A screen nothing reaches — engineering cannot tell how the user gets there |
 | `[default]` | blocking | The instance carries a library default this screen does not use, and it ships as an empty slot |
+| `[unbound]` … an exact token exists | blocking | A token for this exact colour exists and was not used — engineering copies the hex, and the screen stops following the theme |
 | Missing required state ✋, **type settled** | blocking | A state nobody designed is a state engineering invents |
 | `[naming]` · `[order]` | warning | Reads correctly, filed untidily |
 | `[layer name]` | warning | Reads fine to whoever drew it, and to nobody else |
 | `[annotation]` | warning | Pins that pile up stop being read, and a copied pin states a decision nobody made for this screen |
 | `[arrow]` · `[state]` geometry — edge offset, target gap, entry direction, elbows, name order | warning | The connection is right; the drawing is off |
 | `[label]` — z-order, clearance, covering a line | warning | Legibility, not meaning |
+| `[unbound]` — near a token, or none | warning | Snapping it to the nearest token changes the colour, so a designer has to choose |
 | Missing required state ✋, **type unclear** | warning | Undecided is not the same as missing, and the report has to say which |
 
 Three of these are close calls placed deliberately rather than obviously: `[section overlap]` (ambiguity, not invisibility), `[label] covers` (a label can be read against the wrong arrow), and `[arrow] arrowhead parallel` (the entry direction is wrong, the connection is not). If a file argues otherwise, move it and say so in the report.
@@ -144,9 +159,9 @@ Three of these are close calls placed deliberately rather than obviously: `[sect
 ## Procedure
 
 1. **Settle the target page and resolve the config.** Take fileKey and page from the URL and get `CFG` via `resolve-config.py --js <fileKey>`. For several pages, split per page and **call in parallel** — one `setCurrentPageAsync` per script, per the figma-use rule.
-2. **Run the read-only audits** — the scripts below (A structure / B flow / C components) and collect violations. Zero node changes. C is two stages: derive conventions from a reference page (C-1), then compare against the working page (C-2). Different pages, so different calls.
+2. **Run the read-only audits** — the scripts below (A structure / B flow / C components / D colour tokens) and collect violations. Zero node changes. C is two stages: derive conventions from a reference page (C-1), then compare against the working page (C-2). Different pages, so different calls.
 3. **Judge required states (✋) and do the second visual pass** — settle the screen type (list, form, search) from a screenshot and compare against `naming.required_states`. Then, if a violation is suspected or clone/move was involved, confirm with **a screenshot of the whole section node**, not an isolated frame. Isolated renders cannot catch parent or position errors, so they are never grounds for a PASS.
-4. **Report** — violating nodes by category, a one-line reason each, its **grade** (see "Severity"), and **which skill fixes it** (structure → fig:prep, flow → fig:arrows). Blocking first, warnings beneath them, never interleaved. Close on a line of its own with both counts — `blocking: N · warning: N`. Zero of both is `PASS`. Zero blocking with warnings still open is `GATE PASS` — enough for /fig:handoff, not enough for fig:prep or fig:arrows.
+4. **Report** — violating nodes by category, a one-line reason each, its **grade** (see "Severity"), and **which skill fixes it** (structure → fig:prep, flow → fig:arrows, colour tokens → fig:tokens). Blocking first, warnings beneath them, never interleaved. Close on a line of its own with both counts — `blocking: N · warning: N`. Zero of both is `PASS`. Zero blocking with warnings still open is `GATE PASS` — enough for /fig:handoff, not enough for fig:prep or fig:arrows.
 
 ## Running it
 
@@ -156,9 +171,10 @@ The audit code lives in `${CLAUDE_PLUGIN_ROOT}/_common/scripts/`. Snippets are n
 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/audit-struct.js       A. structure
 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/audit-flow.js         B. flow
 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/audit-component.js    C. components (MODE=collect / compare)
+${CLAUDE_PLUGIN_ROOT}/_common/scripts/audit-tokens.js       D. colour tokens
 ```
 
-All three are called the same way.
+All four are called the same way.
 
 1. Get the single `const CFG = {...};` line from `resolve-config.py --js <fileKey>`
 2. Optionally one input line, `const SECTION = "<section node id>";`, after the CFG line (from the `section` input; leave it out to audit the whole page). Compare mode of the component script takes it too, after `STAT`
@@ -168,6 +184,8 @@ All three are called the same way.
 For several pages, split the calls per page and **issue them in one message so they run in parallel**. One script never switches pages twice.
 
 **C is two stages and its calls are split.** `MODE="collect"` derives STAT from the reference page; `MODE="compare"` checks the working page against it. If one reference page does not yield enough samples, take one form-heavy page and one list-heavy page and sum their STAT.
+
+**D runs in its default mode, one call.** It reads the file's colour variables as well as the page, and writes nothing. Its `MODE="collect"` returns the token dictionary and the unbound colours grouped by hex — that is `/fig:tokens`'s scan, not part of this audit. A file with no colour tokens comes back as `pass: true` with a `note` saying the check was skipped; print the note, as for an excluded section. A `note` may also count colour variables that could not be resolved to a colour and were left out of the comparison.
 
 After editing a script, check its syntax with `scripts/lib/check.sh`. `use_figma` wraps scripts in an async function, so top-level `await` and `return` are both legal — a combination `node --check` alone cannot accept. check.sh wraps them the same way before checking.
 
