@@ -380,7 +380,7 @@ SKILL_REF = re.compile(r"(?<![\w/.-])/(fig|pm):([a-z][a-z-]*)")
 # called now. The old side is a name that no longer exists on purpose; the new side is still checked.
 # A removal note — `/fig:old-name` → (removed — …) / (삭제 — …) — is the same map for a skill with no
 # successor: only the old name is skipped, and the same name written bare elsewhere still fails.
-RENAME_FROM = re.compile(r"(?<![\w/.-])/(?:fig|pm):[a-z][a-z-]*(?=`? → (?:/(?:fig|pm):[a-z]|\(removed|\(삭제))")
+RENAME_FROM = re.compile(r"(?<![\w/.-])/(?:fig|pm):[a-z][a-z-]*(?=`? → (?:`?/(?:fig|pm):[a-z]|\(removed|\(삭제))")
 
 
 def check_references(plugins: dict[str, set[str]]) -> None:

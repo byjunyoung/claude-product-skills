@@ -248,7 +248,7 @@ write that fails stops the run and names the call.
 
 **deck.** On first use, `/fig:deck` measures your team's slide template into `~/.claude/deck-assets`.
 The plugin ships no template values at all, because deck backgrounds carry company wordmarks
-and can't be distributed. Run it once before `/fig:deck`, and again when the template is revised.
+and can't be distributed. It runs the first time you use `/fig:deck`, and again whenever you tell it the template was revised.
 
 ### 3. Judge the first audit (fig)
 
@@ -378,7 +378,7 @@ flowchart TD
 
 `/fig:diff` → (removed — Dev Mode's *Compare changes* shows what changed; no written AS-IS/TO-BE record)
 
-`/fig:deck-setup` → /fig:deck (measuring the slide template is now its first step)
+`/fig:deck-setup` → `/fig:deck` (measuring the slide template is now its first step)
 
 ### What `/fig:lint` looks at
 
@@ -638,9 +638,9 @@ Without a token it can only see what the desktop app has open. To list every pag
 </details>
 
 <details>
-<summary><b>`/fig:deck` says there are no assets.</b></summary>
+<summary><b>`/fig:deck` asks for the team template and creates a file before building anything.</b></summary>
 
-The slide template has not been measured yet. Run `/fig:deck` — its first step reads your team's template into `~/.claude/deck-assets`. The plugin ships no template, because template backgrounds carry company wordmarks.
+That is the first-use measuring step: the slide template has not been measured into `~/.claude/deck-assets` yet. It creates an empty mirror Slides file (after your go), asks you to apply the team template there, and reads the values from it. The plugin ships no template, because template backgrounds carry company wordmarks. It stops here if your seat in the plan is View (it checks first), or if there is no template to apply.
 
 </details>
 

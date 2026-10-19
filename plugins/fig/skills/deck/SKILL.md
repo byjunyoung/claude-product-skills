@@ -25,7 +25,7 @@ The shape — **prepare** (assets / 0) → **align** (intent and source / 1–2)
 
 ### 0. Check the template assets
 
-Look in `deck.assets_dir` for `template-spec.md` and `template.js`. If either is missing, or the person says the team template was revised, read `setup.md` (beside this file) and run it before anything else — it measures the template into those files, and its Figma writes (the mirror file, the verification builds) each wait for their own preview and go. When both files are there and nothing was revised, go on to step 1.
+Look in `deck.assets_dir` for `template-spec.md` and `template.js`. If either is missing, or the person says the team template was revised, read `setup.md` (beside this file) and run it before anything else — it measures the template into those files, and its Figma writes (the mirror file, the verification builds) each wait for their own preview and go. When the request was only to measure the template (no source given), stop after `setup.md`'s report. Otherwise, once the assets are there — or when both files were there and nothing was revised — go on to step 1.
 
 ### 1. Confirm the intent
 

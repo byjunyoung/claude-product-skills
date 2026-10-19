@@ -134,7 +134,7 @@ stale = [f"{rel}:{n}" for rel, text in tracked_text_files()
          if "deck-setup" in line and " → " not in line]
 check("no tracked file names deck-setup (outside history and the README map)", not stale, ", ".join(stale))
 for rel in ("README.md", "README.ko.md"):
-    check(f"{rel} maps deck-setup to deck", "`/fig:deck-setup` → /fig:deck" in read(rel))
+    check(f"{rel} maps deck-setup to deck", "`/fig:deck-setup` → `/fig:deck`" in read(rel))
 
 deck_dir = "plugins/fig/skills/deck/"
 deck = read(deck_dir + "SKILL.md")
@@ -144,6 +144,15 @@ mirror = setup.split("## 1.", 1)[1].split("## 2.", 1)[0] if "## 1." in setup els
 build = setup.split("## 5.", 1)[1] if "## 5." in setup else ""
 check("setup checks the seat with whoami before the mirror file",
       "whoami" in mirror and first(r"whoami", mirror) < first(r"create_new_file", mirror))
+m_list = without_heading(mirror).split("\n1.", 1)[-1]
+w, g, c = first(r"\bwhoami\b", m_list), first(r"\bthe go\b", m_list), first(r"`create_new_file`", m_list)
+check("mirror step order: whoami, then the go, then create_new_file",
+      None not in (w, g, c) and w < g < c)
+b_list = without_heading(build).split("\n1.", 1)[-1]
+g, b = first(r"\bthe go\b", b_list), first(r"\bbuild a slide\b", b_list)
+check("build step order: the go comes before the first build", None not in (g, b) and g < b)
+check("setup never builds into the team's own template file",
+      "never go into the team's own template file" in setup)
 check("setup's mirror step waits for a go", bool(re.search(r"\bgo\b", mirror)))
 check("setup's build step waits for a go", bool(re.search(r"\bgo\b", build)))
 check("setup's report names the mirror file",

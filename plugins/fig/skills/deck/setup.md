@@ -24,7 +24,7 @@ Extracting design-file conventions is `/fig:setup`, a separate thing — this on
 
 ## 1. Reach the template
 
-The source template file is usually outside MCP's reach. When it is, make a mirror. This is a Figma write, so it waits for a go.
+The source template file is usually outside MCP's reach. When it is, make a mirror. This is a Figma write, so it waits for a go. (When the template is reachable directly and no mirror is needed, the verification builds in step 5 still never go into the team's own template file — they go into a new Slides file created behind this same whoami → preview → go.)
 
 1. **Check the seat first** — `whoami`. A plan listed with `seat: View` cannot take the `use_figma` writes that steps 1 and 5 are made of; stop and say so rather than creating a file that cannot be built in
 2. **Preview, then wait for the go.** Say what will be created — a new empty Slides file named `deck-template-mirror`, in the person's drafts, which this run will leave behind and name in the closing report — and ask "go?" Nothing is created before it

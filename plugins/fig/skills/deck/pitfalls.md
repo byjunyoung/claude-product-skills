@@ -1,12 +1,12 @@
 # deck — pitfalls
 
-Read from `SKILL.md` before the build. The numbers a pitfall leans on — margins, the slide bounds, type sizes, content-top y values — are read from `template-spec.md` in `deck.assets_dir`, not remembered from any one template. Pitfalls 1–5 and 47 are stated by `figma-use-slides` too, so they are one line each here; the numbers stay so that other text can cite them.
+Read from `SKILL.md` before the build. The numbers a pitfall leans on — margins, the slide bounds, type sizes, content-top y values — are read from `template-spec.md` in `deck.assets_dir`, not remembered from any one template. Pitfalls 4 and 5 are stated by `figma-use-slides` too (appendChild before x/y; loading fonts), so they are one line each here; the numbers stay so that other text can cite them. The others stay in full: the installed `figma-use-slides` does not state their remedies.
 
-1. Applying the template drags the sample slides in wholesale — see `figma-use-slides`; clear them after the build, keeping one theme-reference slide back
+1. **Applying the template drags the sample slides in wholesale** — clear them after the build. Keep one theme-reference slide back before clearing
 
-2. `upload_assets` leaves frames on the page — see `figma-use-slides`; delete them after the build too (the hashes are stored in the file, so the images survive)
+2. **`upload_assets` leaves frames on the page** — delete them after the build too. The hashes are already stored in the file, so the images survive the frames going
 
-3. `getSlideGrid()` results can be stale — see `figma-use-slides`
+3. **`getSlideGrid()` results can be stale** — if a slide you just made is missing, confirm again with a separate read call
 
 4. Writing x/y before `appendChild` shifts the node — see `figma-use-slides`; the preamble helpers force the order
 
@@ -94,4 +94,4 @@ Read from `SKILL.md` before the build. The numbers a pitfall leans on — margin
 
 46. **Settle the register of the body copy first** — where the source is academic or report prose, the sentences get carried over as they are, and on a presentation screen that reads as long-winded. Body copy defaults to the compressed register the language offers (in Korean, nominal endings). **But apply it in layers** — titles and leads stay as present-tense assertions (turning "the bar disagrees with reality" into "disagreement" costs the title its force). Direct quotations stay verbatim, and lists, labels, and table cells already in that register are left alone. When changing register, **swap the endings only and leave hand-placed newlines alone** — the compressed form is the same length or shorter, so the line count and height do not change and no rebreaking or re-verification is needed. Check afterwards that the line count and height are unchanged
 
-47. A slide child's x/y is relative to its parent, not to the slide — see `figma-use-slides`. The part it does not state: `clone()` can land in a neighbouring slide, so pin membership with `slide.appendChild(clone)` before setting coordinates, and check `parent.id` afterwards
+47. **A slide child's x/y is relative to its parent, not to the slide** — adding the slide's absolute coordinate to a value read from `absoluteBoundingBox` pushes the node over by the slide's width. Read as `b.x - slide.absoluteBoundingBox.x`, and write that relative value into `node.x` **as it is**. And **do not trust `clone()` to land in the same parent as the original** — a node cloned inside a slide has been known to attach to the slide next door. After cloning, pin membership with `slide.appendChild(clone)`, and only then set the coordinates (the same order as pitfall 4). After placement, check `parent.id` and the slide's child count together

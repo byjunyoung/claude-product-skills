@@ -244,7 +244,7 @@ claude plugin update fig        # pm 도 깔았으면 함께. 적용은 재시�
 
 **deck.** `/fig:deck`이 처음 쓸 때 팀 슬라이드 템플릿을 재서 `~/.claude/deck-assets`로 옮깁니다.
 플러그인에는 템플릿 값이 하나도 안 들어 있습니다. 덱 배경에 회사 워드마크가 박혀 있어 배포할 수
-없기 때문입니다. `/fig:deck` 전에 한 번, 템플릿이 개정되면 다시 돌리면 됩니다.
+없기 때문입니다. `/fig:deck`을 처음 쓸 때 돌고, 템플릿이 개정됐다고 알려 주면 다시 돕니다.
 
 ### 3. 첫 검증을 읽는다 (fig)
 
@@ -374,7 +374,7 @@ flowchart TD
 
 `/fig:diff` → (삭제 — 무엇이 바뀌었는지는 Dev Mode의 *Compare changes*로 보고, AS-IS/TO-BE 기록은 쓰지 않는다)
 
-`/fig:deck-setup` → /fig:deck (슬라이드 템플릿 실측은 이제 `/fig:deck`의 첫 단계)
+`/fig:deck-setup` → `/fig:deck` (슬라이드 템플릿 실측은 이제 `/fig:deck`의 첫 단계)
 
 ### `/fig:lint`가 보는 것
 
@@ -633,9 +633,9 @@ Figma가 토큰을 거부했습니다 — 있긴 한데 만료됐거나 틀린 �
 </details>
 
 <details>
-<summary><b>`/fig:deck`이 "자산 없음"으로 멈춥니다.</b></summary>
+<summary><b>`/fig:deck`이 덱을 짓기 전에 팀 템플릿을 요청하고 파일부터 만듭니다.</b></summary>
 
-슬라이드 템플릿을 아직 재지 않은 것입니다. `/fig:deck`을 돌리면 첫 단계에서 팀 템플릿을 읽어 `~/.claude/deck-assets`에 만듭니다. 플러그인엔 템플릿이 안 들어 있습니다 — 배경에 회사 워드마크가 있어서요.
+처음 쓸 때 도는 실측 단계입니다. 슬라이드 템플릿을 아직 `~/.claude/deck-assets`로 재지 않았기 때문입니다. go를 받은 뒤 빈 미러 Slides 파일을 만들고, 거기에 팀 템플릿을 적용해 달라고 요청한 다음 값을 읽습니다. 플러그인엔 템플릿이 안 들어 있습니다 — 배경에 회사 워드마크가 있어서요. 플랜 좌석이 View이거나(먼저 확인합니다) 적용할 템플릿이 없으면 여기서 멈춥니다.
 
 </details>
 

@@ -154,6 +154,15 @@ case("a rename map to a skill that does not exist still fails",
      lambda r: write(r, "README.md", "\n`/pm:old-name → /pm:nonexistent`\n", append=True),
      1, "→ /pm:nonexistent does not exist")
 
+case("a rename map with both ends backticked passes",
+     lambda r: [write(r, f, "\n`/pm:old-name` → `/pm:setup`\n", append=True) for f in ("README.md", "README.ko.md")],
+     0)
+
+case("a bare stale name next to a backticked rename map still fails",
+     lambda r: write(r, "README.md",
+                     "\n`/fig:old-name` → `/fig:read`\n\nRun /fig:old-name to see it.\n", append=True),
+     1, "→ /fig:old-name does not exist")
+
 case("a removal note in either language passes",
      lambda r: [write(r, f, n, append=True) for f, n in (
          ("README.md", "\n`/fig:old-name` → (removed — nothing replaces it)\n"),
