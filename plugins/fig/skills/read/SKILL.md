@@ -6,8 +6,6 @@ allowed-tools: AskUserQuestion, Skill, mcp__plugin_figma_figma__get_metadata, mc
 
 # fig:read — collecting every frame in a Figma file
 
-**Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install fig@byjunyoung`), rather than improvising what the scripts do.
-
 Takes a single Figma file URL, walks the page → frame structure automatically, and collects every top-level frame on the pages you pick as metadata plus screenshots. It works without selecting anything in the desktop app.
 
 ## When to invoke
@@ -38,7 +36,7 @@ Extract the fileKey from the Figma URL:
 
 ### 2. List the pages
 
-Read page names and **order** with one read-only `use_figma` call (`fileKey` from step 1). Load `figma:figma-use` before it, as every `use_figma` call requires.
+Read page names and **order** with one read-only `use_figma` call (`fileKey` from step 1). Load `figma:figma-use` before it, as every `use_figma` call requires, and pass `figma-use` in `skillNames` on the call (`figma-use` SKILL.md:11), read-only or not.
 
 ```js
 return figma.root.children.map((p, i) => `${i}\t${p.id}\t${p.name}`).join("\n");

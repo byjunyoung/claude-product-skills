@@ -91,7 +91,7 @@ code = read(SK + "code/SKILL.md")
 check("code pulls assets through get_design_context",
       "download_assets" not in code and "get_design_context` response" in code)
 proto = read(SK + "proto/SKILL.md")
-dtc = proto.find("figma:figma-design-to-code")
+dtc = proto.find("figma:figma-design-to-code", proto.find("## Procedure"))
 gdc = proto.find("get_design_context", proto.find("## Procedure"))
 check("proto loads design-to-code before get_design_context",
       "Skill" in [x.strip() for x in tools_line(proto).split(",")] and 0 <= dtc < gdc, f"{dtc} vs {gdc}")

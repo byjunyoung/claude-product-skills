@@ -10,7 +10,7 @@ Every other skill here is explicit about staying out of this step. `/fig:prep` l
 
 **Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install fig@byjunyoung`), rather than improvising what the scripts do.
 
-**Prerequisites**: always load the `figma:figma-use` skill before calling `use_figma`. **Assembly is not this skill's work** — where a screen needs components discovered, imported and composed, load `figma:figma-generate-design` and let it do that; where a component master or a variant set has to be built, `figma:figma-generate-library`. This skill decides what gets drawn, where it belongs and what it has to match, and hands the building to them.
+**Prerequisites**: always load the `figma:figma-use` skill before calling `use_figma`. **Assembly is not this skill's work** — when cloning a canonical screen there is nothing to assemble, but where a screen needs components discovered, imported and composed, load `figma:figma-generate-design` and let it do that; where a component master or a variant set has to be built, `figma:figma-generate-library`. This skill decides what gets drawn, where it belongs and what it has to match, and hands the building to them.
 
 **What draw takes from `figma:figma-generate-design`:** its component discovery (the Code Connect check and the inspection of screens already in the file) and its way of editing an existing screen. **What it does not take:** the page-level wrapper frame and `html_to_figma`, because draw clones a canonical screen, so the screen already exists inside its section and there is nothing to wrap or to build from HTML.
 

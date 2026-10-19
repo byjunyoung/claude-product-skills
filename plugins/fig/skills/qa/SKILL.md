@@ -204,6 +204,6 @@ Without these three the report reads as "I looked at everything". Writing down w
 
 ## Delivering the report
 
-The report goes to the response, and, where `qa.report_dir` names a folder, also to a markdown file there (named for the feature and the date). Where `qa.report_dir` is `null` it is the response only, and nothing is written to disk. Show the file's whole text and path first and write it only after "go". Filing the defects anywhere else is outside this skill (see *When NOT to use*).
+The report goes to the response, and, where `qa.report_dir` names a folder, also to a markdown file there (named for the feature and the date). Where `qa.report_dir` is `null` it is the response only, and nothing is written to disk. Show the file's whole text and path first and write it only after "go". Filing the defects anywhere else is outside this skill (see *When NOT to invoke*).
 
 **The person reading the report sees the captures, not a list of file names.** Walk each issue step by step — what was done, the capture, what it shows — in plain language before any engineering detail, and send the images themselves (attach them, or use whatever file-sending tool the session has). Where the report is a markdown file, say which captures go with which item, and give their paths or links rather than leaving a name that opens nothing.
