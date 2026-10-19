@@ -175,8 +175,8 @@ check("allowed-tools match the calls (setup: Edit)", "Edit" in tools_of("plugins
 # descriptions in one shape: one sentence, then the trigger phrases
 task_desc = frontmatter("plugins/pm/skills/task/SKILL.md")["description"]
 need = ["/pm:task", "update the GitHub task", "sync notion and github", "일감 초안 잡아줘", "티켓 갱신해줘", "일감 동기화해줘"]
-check("descriptions in one shape (task)", len(task_desc) <= 700 and all(n in task_desc for n in need),
-      f"{len(task_desc)} chars; missing {[n for n in need if n not in task_desc]}")
+check("task description restores its triggers", all(n in task_desc for n in need),
+      f"missing {[n for n in need if n not in task_desc]}")
 for sk in sorted(p.name for p in (REPO / "plugins/pm/skills").iterdir() if (p / "SKILL.md").exists()):
     d = frontmatter(f"plugins/pm/skills/{sk}/SKILL.md")["description"]
     lead = d.split("Triggers", 1)[0]

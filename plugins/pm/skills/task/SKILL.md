@@ -1,7 +1,7 @@
 ---
 name: task
 description: Drafts a task from a request, files it as a ticket in the engineering tracker, or keeps the task list in step with that tracker. Triggers - "/pm:task", "/pm:task draft", "/pm:task publish", "/pm:task sync", "draft a task from this thread", "fill in the context table", "file this task as a ticket", "update the GitHub task", "reconcile the tasks", "sync notion and github", "일감 초안 잡아줘", "맥락표 채워줘", "깃헙에 일감 등록해줘", "티켓 갱신해줘", "일감 동기화해줘", "노션 깃헙 맞춰줘".
-allowed-tools: AskUserQuestion, Read, Write, Bash, Agent, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_figma_figma__get_metadata
+allowed-tools: AskUserQuestion, Read, Write, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-users, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__plugin_figma_figma__get_metadata
 ---
 
 # task — one task record, three ways to work on it
