@@ -1,6 +1,6 @@
 ---
 name: task-publish
-description: Files one task record as a ticket in the engineering tracker, or updates the ticket already there. The ticket carries a summary and links rather than a copy of the body, and it carries the two sections that decide when the work is finished — the done conditions and the QA checklist — drafted from the spec and the design rather than left as a placeholder. Missing fields are filled by one grouped interview, the parent is resolved before writing, and the link back into the record is what matching relies on afterwards. Reconciling many tasks at once belongs to /pm:task-sync. Triggers - "/pm:task-publish", "file this task as a ticket", "update the GitHub task", "깃헙에 일감 등록해줘", "이 일감 티켓 만들어줘", "티켓 갱신해줘".
+description: Files one task record as a ticket in the engineering tracker, or updates the one already there. The ticket carries a summary, links, done conditions and a QA checklist. One grouped interview fills gaps, the parent is resolved first, and the link written into the record is what matching uses. With no tracker attached it says tasks are records only and stops. Many at once is /pm:task-sync. Triggers - "/pm:task-publish", "file this task as a ticket", "깃헙에 일감 등록해줘", "이 일감 티켓 만들어줘", "티켓 갱신해줘".
 allowed-tools: AskUserQuestion, Bash, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_design_context, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__add_issue_comment, mcp__plugin_github_github__sub_issue_write, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues
 ---
 
@@ -18,16 +18,32 @@ Files a single task record as a ticket in the engineering tracker, or updates th
 
 ## What decides where things go
 
+Config is read in two stages, because a team with no tracker attached is not missing a setting — it has nothing to file into, and the answer to that is not "a property is unset".
+
+**Stage 1 — is there a tracker at all?**
+
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
-  --need task.record.ref,task.link_property --authored task.contract.level
+  --authored task.record.type,task.record.ref
 ```
 
-With `mirror.type` anything but `none`, `task.mirror.ref` belongs on that list too. A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than interviewing for the value here.
+Where `task.mirror.type` is `none`, stop with this, and nothing else:
+
+> These tasks are kept as records only — nothing is set up to file them into. `task.mirror` is the setting that attaches a tracker; `/pm:setup` reads its schema and fills it in.
+
+**Stage 2 — a tracker is attached, so the rest must be named.**
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
+  --need task.record.ref,task.link_property,task.mirror.ref \
+  --authored task.record.type,task.record.ref,task.link_property,task.contract.level
+```
+
+A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than interviewing for the value here.
 
 **`--authored` is the other half, and `--need` cannot see what it sees.** A key no config of theirs mentions still resolves — to the bundled floor — so it reads as answered. `task.contract.level` is the one that decides which ticket carries the binding sections, and the floor says `task`: a team whose tracker reviews at the parent, running on a config that never named it, gets a contract filed onto the wrong ticket and no sign that anything was assumed. Where the stop fires, the message names the key and says where the copy came from — a config that has fallen behind a shared one is the usual cause, and the lines underneath say by how much. Do not interview for the value and do not proceed on the default: neither answers who chose it.
 
-`task.record` is where the task lives, `task.mirror` is the tracker it is filed into. **With `mirror.type: none` this skill has nothing to do** — say so and stop, rather than inventing a destination.
+`task.record` is where the task lives, `task.mirror` is the tracker it is filed into. **With `mirror.type: none` this skill has nothing to do** — stage 1 above says so and stops, rather than inventing a destination.
 
 **Matching runs on `task.link_property` alone** — the property on the record that holds the ticket's url. A back-link written in the ticket body is for a human to click, never for matching: it can point at a source that was already discarded, which is how duplicates and resurrected tickets happen.
 
@@ -226,7 +242,7 @@ duplicate of one that already exists.
 
 **A task with no parent is a real answer where the config allows it.** A one-off fix, a chore, a ticket somebody's merge opened by itself — none of those has a feature to hang under, and inventing a parent for them is what produces the empty umbrella ticket everything unrelated then collects under. Say what it costs at the same time: with `milestone_on: parent` a task with no parent cannot carry a version, so it is invisible to anything reading the milestone. Where the work does belong to a feature, the parent is still the right answer. With `parent_required` `true` the option is not offered — the tracker requires one.
 
-A newly created parent is titled by `task.hierarchy.parent_title`, is built on `task.template.parent` where one is named, and carries whatever `task.mirror_extras` specifies for its type and board placement. Its assignees and every other setting are filled the way step 3 fills a task's — from this project's existing parents first, then by asking — and its title follows the wording those parents already use. **`task.ticket.default_labels` is the task level's and does not follow it up** — a parent carries the labels the rule document requires of its kind and no others, and where there is no rule document it carries none. A parent filed with a label nobody's rules asked for is worse than one filed bare: the label is what other people's filters and boards are built on. Where the project uses milestones, the milestone is set **on the parent** — see step 8.
+A newly created parent is titled by `task.hierarchy.parent_title`, is built on `task.template.parent` where one is named, and carries whatever `task.mirror_extras` specifies for its type and board placement. Its assignees and every other setting are filled the way step 3 fills a task's — from this project's existing parents first, then by asking — and its title follows the wording those parents already use. **`task.ticket.default_labels` is the task level's and does not follow it up** — a parent carries the mapped project label and the labels the rule document requires of its kind, and nothing else; where there is no rule document the project label is all it carries. The project label is not optional: the adapter finds candidate parents by searching on it, so a parent filed without one is invisible to the next run and gets filed again. A parent filed with a label nobody's rules asked for is worse than one filed bare: the label is what other people's filters and boards are built on. Where the project uses milestones, the milestone is set **on the parent** — see step 8.
 
 ### 5. Assemble the ticket body
 
@@ -452,7 +468,9 @@ Where the tracker already gates on the sections existing — a column a ticket c
 
 ### 7. Create the ticket
 
-Create it with the assembled title, body, labels and assignee.
+**Before anything is created, look for the ticket already there.** List the mirror's newest issues and match the exact title about to be sent — the adapter says how. A match stops the run and offers to link that ticket instead; filing past it is how a run that died after the write, or a second run of the same task, makes a duplicate.
+
+Create it with the assembled title, body, labels and assignee. **Right after the create returns, write the link property into the record** — still inside the same "go", and before step 8 attaches anything. Attaching is the part that can fail halfway, and a ticket that exists with no link in the record is one the next run cannot match and files again.
 
 **Labels have two sources and the preview names which.** `task.ticket.default_labels` plus the mapped project and priority are the config's. **A label the rule document requires is the other** — a kind of ticket that has to carry one, a level that does. Those are read off the document rather than listed here, because a list here is a copy of a rule that changes at a meeting the config was not in, and a copy that falls behind is invisible: the ticket comes out looking finished and drops out of the filter the rule exists to feed. **A required label the tracker does not have is reported, never created** — a label is somebody's filter and somebody's board column, and creating one from inside a ticket run is how a near-duplicate of an existing label starts collecting tickets.
 
@@ -488,11 +506,12 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventio
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.record.type} --role record
 ```
 
-It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; 3b drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
+It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; `/pm:setup` 4c drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
 
 ### 9. Write back into the record
 
-- **The link property** — always. This is what every later run matches on
+The link property is not here: step 7 wrote it the moment the ticket existed.
+
 - **The spec link** — only where the interview produced a new one
 - **The change summary** — only where the interview produced a new one. Where the record already had it, leave it alone. Append rather than replace, so the history survives: one dated line under what is already there
 
@@ -506,7 +525,7 @@ Ticket        : {url}
 Parent        : #{n}
 Contract      : {n} conditions · {n} steps · {n} rows skipped → #{n} {level}
                 (or "placeholder — run again before work starts", or "off")
-Link property : written
+Link property : written at create
 {spec link stored, where applicable}
 {change summary written, where applicable}
 ```

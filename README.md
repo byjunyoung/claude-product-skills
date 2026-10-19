@@ -105,14 +105,14 @@ Follow whichever one you installed. With both, start at the top — the two sett
 
 ```
 1  Install                     two lines in a terminal
-2  /pm:setup                    it reads how your own tools are set up and drafts your
-                               settings. "No tools yet" is an answer it takes
+2  /pm:setup                    it starts local — folders for specs, tasks and a daily log,
+                               and a settings file. A tracker attaches now or later
 3  Paste one request            at the end of setup — a thread, an email, anything —
                                and it sorts that into a context table: fact, assumed, undecided
 4  Read the table               the rows left empty are the interview you still owe someone
 ```
 
-**Neither writes into anything of yours.** `fig` writes nothing to Figma at all; `pm` writes to your doc tool or tracker only after a preview and an explicit go. All step 2 writes, either way, is one settings file on your own machine.
+**Neither writes into your tools without asking.** `fig` writes nothing to Figma at all; `pm` writes to your doc tool or tracker only after a preview and an explicit go. What step 2 writes is local and shown first — one settings file, and for `pm`, the folders and README of its local start. One `pm` skill writes without a preview: `/pm:log` puts the day's file into your own log folder, because it is built to run with nobody watching. It runs only when called by name — by you, or a scheduler you set up — never on Claude's own initiative.
 
 **With `fig` you find out at step 3 whether this is for you; with `pm`, at step 4.** The `fig` report names specific screens: this one sits outside its section, this arrow points at empty space, this duplicate kept a setting nobody wanted. If almost everything comes back flagged, that is not your file being a mess — it is the rules from step 2 being wrong, and [Troubleshooting](#troubleshooting) says which one to loosen. The `pm` table is the other way round: the empty cells are the result — each one is something nobody has decided, and together they tell you whether there is enough here to write a spec against.
 
@@ -127,7 +127,7 @@ The rest of this section has each step in full. From there, [**fig**](#fig--the-
 | **Claude Code** | These are Claude Code plugins |
 | **The Figma MCP plugin** (`plugin:figma`) | Every `fig` skill reads and writes Figma through it. Confirm it answers before going further |
 | **A Figma file** | `/fig:setup` infers conventions by measuring a file you already work in. An empty one, or a first one, takes the starter path instead — four rules proposed in plain words, then the first skeleton laid on a page |
-| **`python3` with PyYAML, and `node`** | Config resolution runs on the host, and the audit scripts are syntax-checked with `node --check` |
+| **`python3` with PyYAML, and `node`** | Config resolution runs on the host. `node` is for `fig`'s audit scripts, which are syntax-checked with `node --check`, and on the `pm` side only for the importer that brings in an existing Notion log |
 | **A Figma personal access token** *(optional)* | A key you generate in Figma yourself (Settings → Security), which lets a skill ask Figma directly instead of going through the app. `/fig:read` enumerates every page over the REST API with one; without it, it falls back to the MCP and may see only some pages. `/fig:handoff` reads a saved version back through the same API where `handoff.version` is on — with no token it asks for the version's link to be pasted instead, and never hands over unpinned |
 | **The `gh` command** *(pm, where the tracker is GitHub)* | GitHub's own command-line tool, installed on your machine and logged in separately from Claude. The GitHub side runs on it, not on Claude's connection. Log in with the account that can see the tracker — a personal account looking at a company repository sees nothing — and give it board access once with `gh auth refresh -s read:project` |
 
@@ -184,15 +184,16 @@ there if something required is absent, rather than running on and coming back th
 | You installed | Run | What it reads |
 |---|---|---|
 | `fig` | `/fig:setup <your figma file URL>` | how your file already names frames, spaces sections and draws arrows |
-| `pm` | `/pm:setup` | your doc tool's and your tracker's schemas |
+| `pm` | `/pm:setup` | where your specs and tasks live — local files by default — and a tracker's schema where you name one |
 | `fig`, and you will use `/fig:deck` | `/fig:deck-setup` | your team's slide template |
 
 **What the first run is like.** Each setup opens by saying what it will produce and how long it
-takes, shows its steps, and names each one as it begins — read-only until the one file it
-writes, which you see first. Questions come in your words, with options and a recommendation,
-and "leave it blank" is always one of them: a blank is `null`, written with the question beside
-it for whoever can answer. It ends on a first result rather than a file — `pm` drafts a context
-table from one message you paste, `fig` audits one page — and names the commands to run next.
+takes, shows its steps, and names each one as it begins — read-only until it writes, and what
+it writes you see first: one settings file, plus, for `pm`'s local start, a few folders and a
+README. Questions come in your words, with options and a recommendation, and "leave it blank"
+is always one of them: a blank is `null`, written with the question beside it for whoever can
+answer. It ends on a first result rather than a file — `pm` drafts a context table from one
+message you paste, `fig` audits one page — and names the commands to run next.
 
 **fig.** Nothing is written to Figma — this step only reads. It counts how the file already
 names frames, spaces sections, and styles arrows, takes the dominant value as the convention,
@@ -210,19 +211,29 @@ reinstalling the plugin. Pass `out: ./figma-conventions.yaml` instead for a proj
 Read the line comments before you accept it. They carry the evidence — `24/69 (35%)` means the
 value turned up in 24 of 69 observations, which is why that one came back `null`.
 
-**pm.** Reads the schemas of your doc tool and your tracker, and asks only what no schema
-answers. Property names, select options, labels, board field ids and user mappings are read
-from the live schema rather than guessed at. The draft lands in `~/.claude/pm-conventions.yaml`.
+**pm.** Starts local. It asks where your specs, tasks, chat and calendar live, and local files
+are the recommended answer: it lays out one markdown repository — specs, tasks, a daily log, and
+a README saying what lives where — that needs no other tool, with git as the audit trail. The
+settings file goes into that repository as `pm-conventions.yaml` (pass `out` to put it
+elsewhere), and it holds only what you answered. A setting nobody asked about stays out of the
+file, so the plugin's own defaults keep applying, later changes to them included. From then on,
+run the skills in Claude Code opened in that repository — the settings file is read only there.
+
+Then a tracker, only where you named one. It reads the schemas of your doc tool and your
+tracker, and asks only what no schema answers. Property names, select options, labels, board
+field ids and user mappings are read from the live schema rather than guessed at. Before it
+writes, it asks what filing and reconciling tasks will need — which ticket carries the done
+conditions, whether progress is counted from them — so the next command does not stop on a
+question nobody was asked. A tracker that arrives later attaches the same way: run `/pm:setup`
+again and name it.
 
 Where the doc tool and the tracker are reachable from different machines — the doc tool from
 home, the tracker only on the office account — run it with `side: record` on one and
 `side: mirror` on the other; each writes only its half of the same file. **Anything you cannot
 answer is `null`**, and the file keeps the question beside it as a comment for whoever can.
 
-Starting with nothing at all — no doc tool, no tracker — is an answer it takes: it lays out one
-markdown repository (specs, tasks, logs) that needs no other tool, and a tracker attaches later
-with `side: mirror`. And a tool it has never seen — Linear, Jira, Teams — is not a dead end:
-name it in your settings and it writes the support from what is connected.
+And a tool it has never seen — Linear, Jira, Teams — is not a dead end: name it in your
+settings and it writes the support from what is connected.
 
 **deck.** `/fig:deck-setup` measures your team's slide template into `~/.claude/deck-assets`.
 The plugin ships no template values at all, because deck backgrounds carry company wordmarks
@@ -387,21 +398,21 @@ A separate plugin covering the document and the work that comes out of it.
 
 | | |
 |---|---|
-| `/pm:setup` | Read your tool schemas and draft the config, ids included |
+| `/pm:setup` | Lay out a local start, then read a tracker's schema when one attaches, ids included |
 | `/pm:prd` | Write a requirements doc against a format, in language its readers can act on |
-| `/pm:task-draft` | Turn a request thread into a task's context table |
-| `/pm:task-publish` | File that task as a ticket in the engineering tracker |
+| `/pm:task-draft` | Turn a request thread into a task with its context table — a markdown file by default |
+| `/pm:task-publish` | File that task as a ticket in the engineering tracker, once one is attached |
 | `/pm:task-sync` | Reconcile the planning list against that tracker |
-| `/pm:log` | Record a day's work as a file, unattended, from the same tracker |
+| `/pm:log` | Record a day's work as a file, from your task records — run by name, by you or a scheduler |
 | `/pm:log-review` | Turn a period of those files into accomplishment statements |
 
 ### The cycle — a request through to a filed ticket
 
 ```
-/pm:setup          First time in a workspace, read the schemas and draft a config
+/pm:setup          First time, lay out the local start; attach a tracker when there is one
 /pm:task-draft     Sort a request thread into the task's context rows
 /pm:prd            Write the entries the work will be built and judged against
-/pm:task-publish   File it as a ticket, once the scope has settled
+/pm:task-publish   File it as a ticket, once a tracker is attached and the scope has settled
 /pm:task-sync      Every so often, reconcile the whole list against the tracker
 ```
 
@@ -419,7 +430,7 @@ The release a task is tied to moves the same way, in one direction only. The tra
 
 **And a ticket is written for the people who will act on it.** Most of who opens one does not read the system it is built on — whoever draws the screens, whoever decides what is in this release, whoever answers for it once it ships. So the title names the outcome rather than the internals' own word for it, and a clause number or a spec path sits under the notes heading instead of inside the condition it explains. Where the record's title is the one written in that vocabulary, the preview offers a plainer one beside it rather than renaming anything quietly. Plain is not licence to write a sentence, though: a title is a noun phrase naming the work, in the grammar the list's other rows already use — a symptom stated as a sentence is what a defect is called. `/pm:task-sync` reports the same drift across a list and stops there: rewording sentences other people wrote, on one approval, is the edit neither skill makes.
 
-**The task side assumes nothing about your tracker.** A team that plans and builds in one place sets `task.mirror.type: none`, and `/pm:task-sync` says there is nothing to reconcile — which is the right answer, not an error. A team that plans in one tool and builds in another names both, and matching runs on one property holding the ticket's url. A back-link in the ticket body is never trusted for matching: it can point at a source that was already discarded, and that is how duplicates and resurrected tickets happen.
+**The task side assumes nothing about your tracker.** Out of the box there is none: a task is a markdown file under `./tasks`, and `/pm:task-publish` and `/pm:task-sync` say the tasks are kept as records only and stop, naming `task.mirror` as the setting that attaches a tracker. A team that plans and builds in one place sets `task.mirror.type: none` and gets the same answer — the right one, not an error. A team that plans in one tool and builds in another names both, and matching runs on one property holding the ticket's url — for a markdown task, the `ticket` line its file already carries. A back-link in the ticket body is never trusted for matching: it can point at a source that was already discarded, and that is how duplicates and resurrected tickets happen.
 
 **Your tracker's own conventions outrank this config, so they are read rather than copied.** Where `task.policy.doc` names the rules a tracker is run by, and `task.template` names the ticket skeleton everyone else files on, both are read at run time and both win. A ticket then comes out shaped like its neighbours — the template's headings, in the template's order, carrying the labels the rules require — rather than shaped like whatever the config last remembered. Copying either one into config is how a config goes quietly stale: a section gets renamed, a rule changes at a meeting the file was not in, and nothing tells the file. Where a configured section name is no longer in the template, the run names both and stops, instead of writing a second section beside the first — two sections holding the same thing is the failure nobody spots. Tickets already filed are not rewritten behind your back — the contract writer leaves every section it does not own byte for byte — but they are not stranded either. `/pm:task-publish` offers to bring one back to the template, moving whole blocks rather than re-drafting them and asking where every orphaned piece of content should go, under its own preview and its own "go". `/pm:task-sync` surveys the rest and reports; the same edit across a whole list, on one approval, is the one thing neither skill will do.
 
@@ -428,7 +439,7 @@ The release a task is tied to moves the same way, in one direction only. The tra
 ```
 markdown   local files. the default — no other tooling required
 git        writes markdown, then branch and PR
-notion     Notion pages. requires the prd.notion section
+notion     Notion pages. copies the prd.notion template, or creates under prd.notion.parent
 ```
 
 Five things it holds to.
@@ -445,12 +456,14 @@ Five things it holds to.
 
 ### The log side — what you actually did
 
-Two of the skills are not about the spec. They keep a record of your own work, read from the same tracker.
+Two of the skills are not about the spec. They keep a record of your own work, read from the same task records — the `./tasks` files by default, or the tracker your settings name.
 
 ```
-every workday   /pm:log          one file a day — facts, quotes, evidence. unattended
+every workday   /pm:log          one file a day — facts, quotes, evidence. called by name
 now and then    /pm:log-review   a period of those files → accomplishment statements
 ```
+
+**The log is on from the start, and nothing runs until `/pm:log` is called by name** — by you, or by a scheduler you set up; Claude never starts it on its own. It is built to run with nobody watching, so it writes the day's file into your own log folder without a preview, and only reads everything else. `log.enabled: false` turns it off.
 
 They are split on purpose. The daily run records only what happened and never rates it; the review asks you the three things a file cannot know — your role, what the result can be measured by, what you learned. An unattended agent writing daily about the significance of its own work fills a log with claims nobody can check later.
 
@@ -662,6 +675,22 @@ That value is empty in every settings file, and the skill cannot run without it.
 </details>
 
 <details>
+<summary><b>A skill stops saying a setting "is not set in …, while … is".</b></summary>
+
+Your settings say *where* your tasks live (`task.record.ref`) but not *what kind of place* it is (`task.record.type`). Until `pm` 0.38.0 a ref written alone took its type from the plugin's own defaults, which said Notion. The default is now a local markdown folder, so the same line would quietly be read as a folder — the skill stops instead of reading the wrong place. The fix is the missing line beside the one you wrote, with the type you meant:
+
+```yaml
+task:
+  record:
+    type: notion        # the line to add — notion was the old default
+    ref:  "<the ref already in your file>"
+```
+
+The same stop names `task.link_property` where the type is anything other than `markdown`: write the name of the field that holds the ticket's link, since the default is now the markdown one. `/pm:setup` writes the missing half when you run it again, and its machine check already lists the first case as something to fix first.
+
+</details>
+
+<details>
 <summary><b>A skill stops saying a tool "is not supported yet".</b></summary>
 
 Your settings name a tool nobody has described how to work with. `/pm:setup` writes that support from the tools actually connected on your machine, into `pm-adapters/` next to your settings — and marks what it could not verify. Until then the skill stops rather than guessing how the tool works; a guess is how a ticket lands in the wrong place.
@@ -678,7 +707,7 @@ A tool can be where tasks are planned, or where engineering tracks them, and the
 <details>
 <summary><b>A skill wrote something you didn't expect.</b></summary>
 
-Every write to Figma, a spec page or a branch goes through a preview and an explicit go. If one happened without that, it's a bug worth [reporting](https://github.com/byjunyoung/claude-product-skills/issues).
+Every write to Figma, a spec page or a branch goes through a preview and an explicit go. `/pm:log`'s daily file in your own log folder is not one of them — it is written without a preview, and only when the skill is called by name. If one of those writes happened without a go, it's a bug worth [reporting](https://github.com/byjunyoung/claude-product-skills/issues).
 
 </details>
 

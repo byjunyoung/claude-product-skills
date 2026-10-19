@@ -17,7 +17,8 @@
 # of a floor, and for most keys it is what you want. For the few that decide the
 # shape of what a skill writes into somebody else's tool, it is not: the skill
 # refuses rather than write a shape your team never chose, and names the key.
-# Those keys are marked below.
+# Those keys are marked below. A ref written without its type stops too, because
+# the floor's type would otherwise decide where the ref points.
 #
 # Sharing this file across a team: keep it in a repository and symlink it into
 # ~/.claude. Nothing here needs to change — the skills read where the file came
@@ -97,8 +98,9 @@ prd:
 
   # --- target: markdown | git ----------------------------------------------------
   markdown:
-    dir: "./docs/prd"            # where documents go
-    front_matter: true           # whether to prepend title, status and updated date
+    dir: "./docs/prd"            # where documents go: {dir}/{slug(product)}.md, or with split: domain
+                                 # {dir}/{slug(product)}/index.md plus {dir}/{slug(product)}/{slug(domain)}.md
+    front_matter: true           # prepend title, product, domain (domain files only), status and updated
     split: product               # product = one file per product / domain = one per domain
   git:
     branch_prefix: "prd/"        # branch prefix when target is git
@@ -108,6 +110,9 @@ prd:
   # null skips that lookup or link. Inline database schemas are not changed per document.
   notion:
     template:      null          # page id of the standard format to duplicate
+    parent:        null          # page id a new document is created under when template is null.
+                                 # null with template also null = ask for a page and offer to store it;
+                                 # a document is never created at the workspace's top level
     inline_db:
       users:       null          # user groups
       features:    null          # features and policies
@@ -142,8 +147,10 @@ adapters:
 # skill has nothing to reconcile, which is the correct answer rather than an error.
 task:
   record:                        # where the planning-side task lives
-    type: notion                 # any type whose adapter answers as a record — notion and markdown ship. none = no tracker
-    ref:  null                   # a collection:// url, an owner/repo, or a directory
+    type: markdown               # any type whose adapter answers as a record — notion and markdown ship. none = no tracker
+    ref:  "./tasks"              # a collection:// url, an owner/repo, or a directory. A relative
+                                 # path resolves against the directory the skill runs in, and the
+                                 # folder is created with the first record.
     scope: members               # whose work the record list holds. members = only tickets with an
                                  # assignee on assignee_map; a ticket held wholly by others has no record
                                  # and is never created or synced. all = every ticket in the mirror
@@ -154,8 +161,10 @@ task:
   # The single source of truth for matching the two sides. Name the property on the
   # record that holds the mirror's url. A back-link written in the mirror's body is
   # NOT used — it can point at a source that was already discarded, which is how
-  # duplicates and resurrected tickets happen.
-  link_property: null
+  # duplicates and resurrected tickets happen. With the markdown floor this is the key in
+  # the record skeleton that holds the mirror url. A config that names another record type
+  # must name its own, because the two are checked as a pair with task.record.type.
+  link_property: ticket
 
   # --- The rule document the tracker is governed by ------------------------------
   # Some trackers are run by written conventions of their own — what may carry a
@@ -425,7 +434,7 @@ task:
 # job — an unattended agent writing about its own significance is how a log
 # fills with sentences nobody can check later.
 log:
-  enabled: false               # off by default. turn it on where you keep a log
+  enabled: true                # on by default. /pm:log runs only when you call it by name, and writes one file under out.dir
   out:
     dir: "./logs"              # written as <dir>/YYYY/MM/YYYY-MM-DD.md
     front_matter: [date, tasks_mine, tasks_others, meetings, completed, sources]

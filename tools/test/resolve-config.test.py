@@ -46,17 +46,43 @@ with tempfile.TemporaryDirectory() as tmp:
     (home / ".claude").mkdir(parents=True)
     proj.mkdir()
 
-    # 1. No config anywhere: the bundled defaults alone, and record.ref is null
+    # 1. No config anywhere: the bundled floor alone. Local markdown, so the tasks folder and the
+    #    log work before anyone has written a settings file.
     r = run(proj, home)
     cfg = parse(r) or {}
-    check("no config → bundled defaults only", r.returncode == 0 and len(cfg.get("meta", {}).get("layers", [])) == 1, r.stderr)
-    check("no config → task.record.ref is null", cfg.get("task", {}).get("record", {}).get("ref") is None)
+    check("no config → the local floor", r.returncode == 0
+          and len(cfg.get("meta", {}).get("layers", [])) == 1
+          and cfg.get("task", {}).get("record", {}).get("type") == "markdown"
+          and cfg.get("task", {}).get("record", {}).get("ref") == "./tasks"
+          and cfg.get("task", {}).get("link_property") == "ticket"
+          and cfg.get("log", {}).get("enabled") is True
+          and cfg.get("task", {}).get("mirror", {}).get("type") == "none", r.stderr)
 
-    # 2. --need on that null: exit 2, the key named on stderr, nothing on stdout
-    r = run(proj, home, "--need", "task.record.ref")
+    # 2. --need on task.mirror.ref, which the floor leaves null: exit 2, the key named on
+    #    stderr, nothing on stdout
+    r = run(proj, home, "--need", "task.mirror.ref")
     check("--need on a null → exit 2", r.returncode == 2, f"rc={r.returncode}")
-    check("--need on a null → key named on stderr", "task.record.ref is not set" in r.stderr, r.stderr)
+    check("--need on a null → key named on stderr", "task.mirror.ref is not set" in r.stderr, r.stderr)
     check("--need on a null → no JSON on stdout", r.stdout.strip() == "")
+
+    # 1b. The floor writes both halves of the pair, so --authored has nothing to stop on
+    r = run(proj, home, "--authored", "task.record.type")
+    check("no config → --authored task.record.type passes", r.returncode == 0, r.stderr)
+
+    # 1c. A project that names notion takes its own ref and link property as written
+    proj2 = Path(tmp) / "proj2"
+    proj2.mkdir()
+    (proj2 / NAME).write_text("task:\n  record:\n    type: notion\n    ref: \"collection://x\"\n"
+                              "  link_property: Ticket\n")
+    r = run(proj2, home, "--authored", "task.record.type,task.link_property")
+    cfg = parse(r) or {}
+    check("explicit notion config → --authored passes", r.returncode == 0, r.stderr)
+    check("explicit notion config → type as written",
+          cfg.get("task", {}).get("record", {}).get("type") == "notion")
+    check("explicit notion config → ref as written",
+          cfg.get("task", {}).get("record", {}).get("ref") == "collection://x")
+    check("explicit notion config → link_property as written",
+          cfg.get("task", {}).get("link_property") == "Ticket")
 
     # 3. A project layer writes the key: --need passes and the value comes through
     (proj / NAME).write_text("task:\n  record:\n    type: markdown\n    ref: ./tasks\n")
@@ -123,6 +149,68 @@ with tempfile.TemporaryDirectory() as tmp:
     check("written null → --authored passes (somebody decided)", r.returncode == 0, r.stderr)
     r = run(proj, home, "--need", "task.contract.level")
     check("written null → --need still stops", r.returncode == 2, f"rc={r.returncode}")
+
+    # 8b. A key that only means something beside another stops when the other is written alone.
+    #     The floor used to fill the missing half; once it changes, a written ref would silently
+    #     point somewhere else, so the pair has to be written together.
+    pair_home = Path(tmp) / "pair-home"
+    (pair_home / ".claude").mkdir(parents=True)
+    pair_proj = Path(tmp) / "pair-proj"
+    pair_proj.mkdir()
+    pf = pair_proj / NAME
+    pf.write_text("task:\n  record:\n    ref: ./x\n")
+    r = run(pair_proj, pair_home, "--authored", "task.record.type")
+    check("paired: ref without type → --authored stops", r.returncode == 3, f"rc={r.returncode}")
+    check("paired: ref without type → message names both keys",
+          f"task.record.type is not set in {NAME}, while task.record.ref is" in r.stderr, r.stderr)
+    pf.unlink()
+    r = run(pair_proj, pair_home, "--authored", "task.record.type")
+    check("paired: neither written → passes", r.returncode == 0, r.stderr)
+    pf.write_text("task:\n  record: {type: markdown, ref: ./t}\n")
+    r = run(pair_proj, pair_home, "--authored", "task.record.type")
+    check("paired: both written → passes", r.returncode == 0, r.stderr)
+    pf.write_text("task:\n  record: {type: notion, ref: 'collection://x'}\n")
+    r = run(pair_proj, pair_home, "--authored", "task.link_property")
+    check("paired: a non-markdown type needs its link property",
+          r.returncode == 3 and "task.link_property" in r.stderr, f"rc={r.returncode} {r.stderr}")
+    pf.write_text("task:\n  record: {type: markdown, ref: ./t}\n")
+    r = run(pair_proj, pair_home, "--authored", "task.link_property")
+    check("paired: a markdown type exempts the link property", r.returncode == 0, r.stderr)
+
+    # 8c. The reverse pair: a tracker type written without its ref. The floor's ref is a local
+    #     folder, so a Notion or GitHub record would be handed ./tasks. markdown and none have no
+    #     database to name, so the floor's folder is theirs to take.
+    both = "task.record.type,task.record.ref"
+    pf.write_text("task:\n  record:\n    type: notion\n")
+    r = run(pair_proj, pair_home, "--authored", both)
+    check("paired: a tracker type without its ref → --authored stops", r.returncode == 3, f"rc={r.returncode}")
+    check("paired: a tracker type without its ref → message names both keys",
+          f"task.record.ref is not set in {NAME}, while task.record.type is —" in r.stderr, r.stderr)
+    pf.write_text("task:\n  record:\n    type: markdown\n")
+    r = run(pair_proj, pair_home, "--authored", both)
+    check("paired: markdown without a ref → passes", r.returncode == 0, r.stderr)
+    pf.write_text("task:\n  record:\n    type: none\n")
+    r = run(pair_proj, pair_home, "--authored", both)
+    check("paired: none without a ref → passes", r.returncode == 0, r.stderr)
+    pf.unlink()
+    r = run(pair_proj, pair_home, "--authored", both)
+    check("paired: nothing written → passes with the ref asked for too", r.returncode == 0, r.stderr)
+
+    # 8d. Each pair says its own reason after the shared first clause. "That default has changed"
+    #     is true of a ref whose type the floor used to supply, and of nothing else.
+    changed = "that default has changed"
+    pf.write_text("task:\n  record:\n    ref: ./x\n")
+    r = run(pair_proj, pair_home, "--authored", "task.record.type")
+    check("reason: ref without type → the default it leaned on changed", changed in r.stderr, r.stderr)
+    pf.write_text("task:\n  record: {type: notion, ref: 'collection://x'}\n")
+    r = run(pair_proj, pair_home, "--authored", "task.link_property")
+    check("reason: link property → which property holds the ticket's link",
+          "holds the ticket's link" in r.stderr and changed not in r.stderr, r.stderr)
+    pf.write_text("task:\n  record:\n    type: notion\n")
+    r = run(pair_proj, pair_home, "--authored", "task.record.ref")
+    check("reason: ref → which database or repository, not a local folder",
+          "database or repository" in r.stderr and "local folder" in r.stderr and changed not in r.stderr, r.stderr)
+    pf.unlink()
 
     # 9. --origin describes the strongest layer without asking it to declare anything
     r = run(proj, home, "--origin")

@@ -1,5 +1,10 @@
 # fig
 
+## 3.27.1 — 2026-10-19
+
+- **The shared config reader and machine check carry `pm`'s paired-key guard.** `resolve-config.py` and `preflight.py` are held byte for byte identical across the two plugins, and `pm` 0.38.0 changed both: a config writing `task.record.ref` without `task.record.type`, or a type other than `markdown` without `task.link_property`, now stops under `--authored`, the first of those also fails the machine check, and `node` reads as absent rather than missing on the `pm` side. None of it touches a `fig` key, so nothing changes for `fig` configs — and `node` is still required here, since the Figma scripts are checked with it. `fig`'s own pair arrives with the change that makes its tracker type unset
+- The same copies also stop a `pm` config that writes a tracker type other than `markdown` or `none` without `task.record.ref`, and each paired stop gives its own reason. Still no `fig` key is involved
+
 ## 3.27.0 — 2026-10-19
 
 - **The audits skipped everything inside a section nested in another section.** `/fig:lint` walked only the page's top-level sections, so a frame sitting in a sub-section never reached the bounds, naming or overlap checks, and an arrow there never reached the flow checks. A whole nested block could read as clean because nothing in it was looked at. The three audit scripts now walk sections at every depth, composing each child's position through its parents. Section-name checks (number against placement, pattern) still apply to top-level sections only, since a sub-section is not numbered by the page's scheme

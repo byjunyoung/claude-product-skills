@@ -15,6 +15,8 @@ Usage
                                              → exit 2 naming any of these that is null, no JSON
     python3 resolve-config.py --authored task.contract.level
                                              → exit 3 naming any of these no layer of yours sets
+                                             A key that only means something beside another (a ref and its
+                                             type) is held to this only when the other is written without it
     python3 resolve-config.py --origin       → where this machine's config came from, nothing else
 
 A skill that cannot run without a value asks for it with --need. A null there is a config
@@ -64,6 +66,34 @@ def plugin_name(here):
 HERE = os.path.dirname(os.path.abspath(__file__))
 PLUGIN = plugin_name(HERE)
 DEFAULT_NAME = {"pm": "pm-conventions.yaml"}.get(PLUGIN, "figma-conventions.yaml")
+
+# Keys that must be written beside another. (key, trigger, trigger values that exempt it.)
+# A written trigger whose key is absent is completed by the bundled default, and that default
+# was chosen for some other case — a ref read against a type that has since changed, a tracker
+# handed the floor's local folder — so the pair is written together. A key listed here is
+# checked by --authored only while its trigger is written without it — a config that writes
+# neither is not asking anything of it.
+AUTHORED_WITH = (
+    ("task.record.type", "task.record.ref", frozenset()),
+    ("task.link_property", "task.record.type", frozenset({"markdown"})),
+    ("task.record.ref", "task.record.type", frozenset({"markdown", "none"})),
+)
+
+# Why each pair stops, said after `{key} is not set in {name}, while {trigger} is —`. {value} is
+# what the trigger says. A pair with no entry here gets the rule itself rather than a reason
+# that belongs to another pair.
+AUTHORED_WHY = {
+    ("task.record.type", "task.record.ref"):
+        "{key} used to come from the plugin's own defaults, and that default has changed, so the "
+        "value you wrote would now be read some other way",
+    ("task.link_property", "task.record.type"):
+        "the record's tracker has to say which of its properties holds the ticket's link, and the "
+        "plugin's own default names the key a markdown file carries, not one of yours",
+    ("task.record.ref", "task.record.type"):
+        "a record kept in {value} has to say which database or repository it points at, and the "
+        "plugin's own default is a local folder",
+}
+AUTHORED_RULE = "{key} is read together with {trigger}, so the two are written together"
 
 
 def candidates(name):
@@ -161,10 +191,35 @@ def user_layers(name):
     return cfg, used
 
 
+def lookup(d, dotted):
+    cur = d
+    for part in dotted.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            return None
+        cur = cur[part]
+    return cur
+
+
+def unpaired(user):
+    """(key, trigger) for each AUTHORED_WITH entry whose trigger is written in `user`, whose
+    written value does not exempt it, and whose key is not."""
+    out = []
+    for key, trigger, exempt in AUTHORED_WITH:
+        if not present(user, trigger) or present(user, key):
+            continue
+        if str(lookup(user, trigger)).lower() in exempt:
+            continue
+        out.append((key, trigger))
+    return out
+
+
 def inherited(keys, name):
-    """The dotted keys no layer of yours mentions."""
+    """The dotted keys no layer of yours mentions. A key listed in AUTHORED_WITH counts only
+    when it is unpaired; every other key counts whenever it is absent."""
     user, _ = user_layers(name)
-    return [k for k in keys if not present(user, k)]
+    pairs = dict(unpaired(user))
+    paired_keys = {k for k, _, _ in AUTHORED_WITH}
+    return [k for k in keys if (k in pairs if k in paired_keys else not present(user, k))]
 
 
 def git(root, *args, timeout=5):
@@ -277,7 +332,16 @@ def main():
         sys.exit(2)
     borrowed = inherited(owned, name)
     if borrowed:
+        user = user_layers(name)[0]
+        trigger_of = dict(unpaired(user))
         for k in borrowed:
+            if k in trigger_of:
+                t = trigger_of[k]
+                why = AUTHORED_WHY.get((k, t), AUTHORED_RULE).format(key=k, trigger=t, value=lookup(user, t))
+                print(f"{k} is not set in {name}, while {t} is — {why}. Write {k} beside {t} "
+                      f"— the schema and what each value governs are in _common/conventions.example.yaml "
+                      f"— and run again.", file=sys.stderr)
+                continue
             print(f"{k} is not set in {name} — the value in play came from the plugin's own "
                   f"defaults, which nobody on your team chose. Writing on one puts a shape into "
                   f"your tracker that no one decided on. Set it — the schema and what each value "

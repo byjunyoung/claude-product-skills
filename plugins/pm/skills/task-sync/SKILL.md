@@ -1,6 +1,6 @@
 ---
 name: task-sync
-description: Reconciles a planning-side task list against the engineering tracker it mirrors. Reads both, diagnoses the ways they have drifted apart — unfiled, duplicated, wrong parent, broken link, resurrected, field mismatch, a field its status requires left blank, off the tracker's own template — and then proposes, waits for approval, and only then writes. Nothing is written automatically. Where the read cannot be exhaustive it says so in the coverage line rather than implying it saw everything. Filing or updating one task belongs to /pm:task-publish. Triggers - "/pm:task-sync", "reconcile the tasks", "sync notion and github", "일감 동기화해줘", "노션 깃헙 맞춰줘", "정합화 돌려줘".
+description: Reconciles a planning-side task list against the engineering tracker it mirrors. Reads both, diagnoses how they drifted (unfiled, duplicated, wrong parent, broken link, resurrected, field mismatch), then proposes, waits for approval, and only then writes. Reports its coverage. With no tracker attached it says the tasks are records only and stops. One task is /pm:task-publish. Triggers - "/pm:task-sync", "reconcile the tasks", "sync notion and github", "일감 동기화해줘", "노션 깃헙 맞춰줘", "정합화 돌려줘".
 allowed-tools: AskUserQuestion, Bash, Agent, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__sub_issue_write, mcp__plugin_github_github__list_issues, mcp__plugin_github_github__search_issues
 ---
 
@@ -14,12 +14,30 @@ Where `task.mirror.type` is `none` there is no second side and nothing to reconc
 
 ## Configuration
 
+Config is read in two stages. A team with no tracker attached is not missing a setting; it has nothing to reconcile against.
+
+**Stage 1 — is there a second side at all?**
+
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
-  --need task.record.ref,task.link_property --authored task.contract.level,task.progress_source
+  --authored task.record.type,task.record.ref
 ```
 
-With a mirror, `task.mirror.ref` belongs on that list too. A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than reconciling against a side that was never named.
+Where `task.mirror.type` is `none`, stop with this, and nothing else:
+
+> These tasks are kept as records only — nothing is set up to file them into. `task.mirror` is the setting that attaches a tracker; `/pm:setup` reads its schema and fills it in.
+
+**Stage 2 — a tracker is attached.**
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-conventions.yaml \
+  --need task.record.ref,task.link_property,task.mirror.ref \
+  --authored task.record.type,task.record.ref,task.link_property,task.contract.level
+```
+
+Add `task.progress_source` to that `--authored` list only where `task.properties.progress` is named (non-null in the resolved config) — the progress checks are inert without the property, so a config that never mentions the key must not be stopped on the floor's copy of it.
+
+A `null` named on stderr is a config gap, not a tracker problem — `/pm:setup` writes it. Stop on it rather than reconciling against a side that was never named.
 
 ## What "correct" means — every verdict rests on these
 
@@ -79,7 +97,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventio
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.mirror.type} --role mirror
 ```
 
-It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; 3b drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
+It prints the file to read — the bundled one, or yours from `adapters.dirs` where you drafted one. **Exit 3 means no adapter exists for that type.** Stop and say so; `/pm:setup` drafts one from the tools connected on this machine. Do not improvise the calls. **Exit 4 means the adapter exists but answers for the other side** — a mirror-only file asked for the record, say. Stop the same way; `/pm:setup` 4c drafts the side that is missing. Say what it means in the person's words — "this tool isn't supported yet; `/pm:setup` can add it from what's connected here" — never the exit code or the file path.
 
 ### 2. Diagnose — a rule broken is a drift
 
