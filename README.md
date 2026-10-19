@@ -128,7 +128,7 @@ The rest of this section has each step in full. From there, [**fig**](#fig--the-
 | **The Figma MCP plugin** (`plugin:figma`) | Every `fig` skill reads and writes Figma through it. Confirm it answers before going further |
 | **A Figma file** | `/fig:setup` infers conventions by measuring a file you already work in. An empty one, or a first one, takes the starter path instead — four rules proposed in plain words, then the first skeleton laid on a page |
 | **`python3` with PyYAML, and `node`** | Config resolution runs on the host. `node` is for `fig`'s audit scripts, which are syntax-checked with `node --check`, and on the `pm` side only for the importer that brings in an existing Notion log |
-| **A Figma personal access token** *(optional)* | A key you generate in Figma yourself (Settings → Security), which lets a skill ask Figma directly instead of going through the app. `/fig:read` enumerates every page over the REST API with one; without it, it falls back to the MCP and may see only some pages. `/fig:handoff` and `/fig:sync` read a saved version back through the same API — handoff where `handoff.version` is on, sync where `sync.named_version` is set. With no token, `/fig:handoff` asks for the version's link to be pasted instead and never hands over unpinned; `/fig:sync`, which has no link to pin, reports that the version could not be confirmed |
+| **A Figma personal access token** *(optional)* | A key you generate in Figma yourself (Settings → Security), which lets a skill ask Figma directly instead of going through the app. `/fig:handoff` and `/fig:sync` read a saved version back through the same API — handoff where `handoff.version` is on, sync where `sync.named_version` is set. With no token, `/fig:handoff` asks for the version's link to be pasted instead and never hands over unpinned; `/fig:sync`, which has no link to pin, reports that the version could not be confirmed |
 | **The `gh` command** *(pm, where the tracker is GitHub)* | GitHub's own command-line tool, installed on your machine and logged in separately from Claude. The GitHub side runs on it, not on Claude's connection. Log in with the account that can see the tracker — a personal account looking at a company repository sees nothing — and give it board access once with `gh auth refresh -s read:project` |
 
 `pm` needs none of the Figma side. If you only write specs, install it alone.
@@ -635,14 +635,7 @@ The file arrived without permission to run on its own. Call it as `bash <path>` 
 <details>
 <summary><b>A Figma token request comes back 401.</b></summary>
 
-Figma rejected the token — it exists, but it is expired or wrong. `/fig:read` checks that the token is set before calling, so a 401 is never "no token". Issue a new one in Figma's Security tab.
-
-</details>
-
-<details>
-<summary><b>`/fig:read` only returns some of the pages.</b></summary>
-
-Without a token it can only see what the desktop app has open. To list every page it needs a token — see the prerequisites.
+Figma rejected the token — it exists, but it is expired or wrong. `/fig:handoff` and `/fig:sync` check that the token is set before calling, so a 401 is never "no token". Issue a new one in Figma's Security tab.
 
 </details>
 

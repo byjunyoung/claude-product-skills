@@ -1,7 +1,7 @@
 ---
 name: read
 description: Lists every page of a Figma file and every top-level frame on the page you pick as a markdown tree built from the URL alone, when you need a file's structure before working in it. Triggers - "/fig:read", "read this Figma file", "list every frame", "피그마 파일 읽어줘", "프레임 전부 뽑아줘", "전체 구조 보여줘".
-allowed-tools: AskUserQuestion, Bash, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__use_figma
+allowed-tools: AskUserQuestion, Skill, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot, mcp__plugin_figma_figma__use_figma
 ---
 
 # fig:read — collecting every frame in a Figma file
@@ -36,63 +36,18 @@ Extract the fileKey from the Figma URL:
 - Pattern: `figma.com/design/([A-Za-z0-9]+)/...`
 - If no fileKey comes out, ask the user for the exact URL again
 
-### 1.5 Check the token first
-
-Before going down the REST API path, confirm the token's state with a light ping. The environment variable's name is set by `tools.figma_token_env` (default `FIGMA_TOKEN`).
-
-```bash
-source ~/.zshrc 2>/dev/null
-VAR=$(python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py \
-      | python3 -c 'import json,sys; print(json.load(sys.stdin)["tools"]["figma_token_env"])')
-TOKEN="${!VAR}"
-if [ -z "$TOKEN" ]; then
-  echo "STATE=NO_TOKEN ($VAR not set)"
-else
-  CODE=$(curl -sS -o /dev/null -w '%{http_code}' \
-    -H "X-Figma-Token: $TOKEN" "https://api.figma.com/v1/me")
-  echo "STATE=HTTP_$CODE"
-fi
-```
-
-Branching by state:
-
-| STATE | Meaning | What to do |
-|---|---|---|
-| `NO_TOKEN` | The environment variable is not set | Say "no token set", link the PAT guide in Notes, fall back to plugin:figma |
-| `HTTP_200` | Fine | Proceed with the REST path in step 2 |
-| `HTTP_401` | Token expired or invalid | **"FIGMA_TOKEN has expired or is invalid. It needs reissuing."** + the guide + fallback |
-| `HTTP_403` | Insufficient permission | "The token lacks permission. Reissue it with the file_content:read scope" + fallback |
-| `HTTP_429` | Rate limited | "Try again shortly" + fallback |
-| anything else | Unknown error | Surface the HTTP code as it is + fallback |
-
-**Important**: 401 is the one status code that covers "no token", "expired", and "invalid" alike. Because the environment variable's existence is checked above first, a 401 here means the value is present and was rejected — so the guidance is expired or invalid.
-
 ### 2. List the pages
 
-**First choice: the Figma REST API (if 1.5 came back HTTP_200)**
+Read page names and **order** with one read-only `use_figma` call (`fileKey` from step 1). Load `figma:figma-use` before it, as every `use_figma` call requires.
 
-```bash
-curl -sS -w "\nHTTP_CODE=%{http_code}" \
-  -H "X-Figma-Token: $FIGMA_TOKEN" \
-  "https://api.figma.com/v1/files/{fileKey}?depth=1"
+```js
+return figma.root.children.map((p, i) => `${i}\t${p.id}\t${p.name}`).join("\n");
 ```
 
-- depth=1 returns page nodes only (avoiding a download of the whole tree)
-- From the response body, `.document.children[]` → extract `{nodeId}|{pageName}`
-- Take HTTP_CODE alongside it to guard against per-file permission problems:
-  - `200` → proceed
-  - `403` → "no access to this file (it may belong to another team, or be private)" + fallback
-  - `404` → "file not found. Check the URL"
-  - anything else → surface the error + fallback
-- Never print the token in a response or a log — it belongs in the header only
-
-**Second choice: the plugin:figma MCP fallback (no token, or an error)**
-
-Call `mcp__plugin_figma_figma__get_metadata` with the fileKey alone.
-- The limit: it depends on the desktop app's open file and viewport, so it may return only some of the pages
+- Each line is `index<TAB>id<TAB>name` — the page's node id is what step 3-2 passes to `get_metadata`
+- `get_metadata` with a fileKey alone returns an incomplete page list, so it is not used to list pages
 - If the node-id in the user's URL is a page (canvas type), include that page as a direct entry candidate too
-
-**Zero pages**: with no token set and an empty plugin response too, point at the "PAT setup guide" at the end of the output and stop.
+- Zero pages back, or the call fails: say so and stop — do not guess page names
 
 With only one page, skip the selection step and go straight to 3-2.
 
@@ -169,31 +124,6 @@ One line at the end of the output:
 ## Notes
 
 - The plugin:figma MCP's `get_metadata` and `get_screenshot` need only fileKey + nodeId — the desktop app's selection state is irrelevant
-- But plugin MCP `get_metadata(fileKey only)` is bound to the desktop app's context and exposes only some pages → enumerating every page requires the Figma REST API
+- But plugin MCP `get_metadata(fileKey only)` is bound to the desktop app's context and exposes only some pages → every page is enumerated through `figma.root.children` in `use_figma`
 - Expanding down into components, instances, and vectors is deliberately not done. It stops at top-level frames
 - When a design changes often there is no point caching the result — call again each time
-
-### Setting up a Figma Personal Access Token (PAT)
-
-The REST path needs a PAT. A one-time setup:
-
-1. Figma web → profile, top right → Settings → **Security** tab → **Personal access tokens** → **Generate new token**
-2. Minimise the scope: check `File content` → **Read-only** and nothing else
-3. Copy the token (shown once, starts with `figd_`)
-4. Add it to the end of `~/.zshrc` (matching the name in `tools.figma_token_env`):
-
-   ```bash
-   export FIGMA_TOKEN="figd_paste_it_here"
-   ```
-
-5. Open a new terminal, or run `source ~/.zshrc`
-
-Token safety:
-- Never expose it in a response, a log, or a commit
-- Even when parsing with jq, pass it in the header only and rely on the response body alone
-- If expiry is suspected, revoke the token in Figma's Security tab and reissue
-
-The limits of expiry detection:
-- A Figma PAT does not encode its expiry date, so there is no way to check ahead of time
-- It can only be detected after the fact, from an API call's HTTP status
-- A `401` covers "no token", "expired", and "invalid" all at once, so the skill checks the environment variable's existence first to separate the cases

@@ -274,7 +274,7 @@ qa:
 
 # --- Tools ---------------------------------------------------------------------
 tools:
-  figma_token_env: FIGMA_TOKEN                # env var holding the PAT, for REST paths
+  figma_token_env: FIGMA_TOKEN                # env var holding the PAT, for the version read-back in handoff and sync (version-pin.md)
   frame_count_guard: 20                       # above this many frames, confirm before collecting screenshots
   proto_output_dir: "."                       # where working prototypes are written
   proto_publish:                              # an unset repo stays local and never offers to publish
