@@ -2,11 +2,12 @@
  * token-bind.js — binds hand-typed colours to the design system's tokens (WRITES)
  *
  * The bind half of /fig:tokens. Its scan is audit-tokens.js with MODE "collect", and the check after it
- * is audit-tokens.js in its default mode. Its preview is this file with DRY_RUN; the real run follows
- * only the go to that preview, with the `mapping` that dry run returned — the previewed MAPPING, every
- * entry naming its nodes.
+ * is audit-tokens.js in its default mode. Its preview is this file with DRY_RUN true; the real run, with
+ * DRY_RUN false, follows only the go to that preview, with the `mapping` that dry run returned — the
+ * previewed MAPPING, every entry naming its nodes.
  *
- * Usage — the CFG line, the MAPPING line, optionally SECTION and DRY_RUN lines, then this file, to use_figma.
+ * Usage — the CFG line, the MAPPING line, the DRY_RUN line, optionally a SECTION line, then this file, to
+ * use_figma.
  *
  * Inputs
  *   CFG      naming.arrow_delimiter / label_prefix / state_chain_prefix and placeholder_style (the
@@ -30,7 +31,8 @@
  *            them and returns them in its `mapping`; a real run rejects an accepted entry without them
  *            before anything is written, so it only ever takes one from a dry run's `mapping`.
  *   SECTION  optional — that section and the sections nested in it; without it, the whole page
- *   DRY_RUN  optional — true or false; anything else ("true", 1, null) throws before anything is read.
+ *   DRY_RUN  required — true or false; left out, or anything else ("true", 1, null), it throws before
+ *            anything is read, so a forgotten line is never a real write. false is the real run.
  *            true writes nothing at all: no node, no paint, and no import — the file is as it was. It
  *            reads only the tokens already in the file (local ones, and library ones bound somewhere on
  *            the page), and returns what the same MAPPING would do, for the preview:
@@ -94,15 +96,18 @@
  * first write. A dry run never imports: it takes a library token from a paint already bound to it on
  * the page, and returns any other as an "unchecked" candidate, and under `unchecked`.
  *
- * Returns { bound, skipped } (DRY_RUN: { wouldBind, skipped, unchecked, paints, mapping }) — bound counts
- *   paints, as collect's `count` does; skipped is [{ node, reason, change?, variableKey? }], one per node
+ * Returns { bound, changed, skipped } (DRY_RUN: { wouldBind, skipped, unchecked, paints, mapping }) — bound
+ *   counts paints, as collect's `count` does; changed lists every paint bound with a visible change — an
+ *   accepted one — as a wouldBind row with its change, including a change to a token no dry run could
+ *   read, which only an earlier real run's `skipped` showed; skipped is [{ node, reason, change?, variableKey? }], one per node
  *   and reason, the reason opening "<node name>: <kind> <hex> — ". A paint no candidate binds has a row
  *   for every token it tried, in that order; a paint that binds has one only for a token tried before
  *   it that could not be read or imported. change and variableKey are set on a row that is a visible
  *   difference accept: true with that node and that token would lift — the rows a preview asks about.
- *   DRY_RUN not true or false, MAPPING empty or malformed, accept without nodes, a real run's accept
- *   without paints, or SECTION not on the page → throws before anything is written. SECTION inside an excluded section → { bound: 0 (or
- *   wouldBind, unchecked, paints and mapping all []), skipped: [{ node: SECTION, reason }] }.
+ *   DRY_RUN missing or not true or false, MAPPING empty or malformed, accept without nodes, a real run's
+ *   accept without paints, or SECTION not on the page → throws before anything is written. SECTION inside
+ *   an excluded section → { bound: 0, changed: [] (or wouldBind, unchecked, paints and mapping all []),
+ *   skipped: [{ node: SECTION, reason }] }.
  * ========================================================================== */
 
 const C = typeof CFG !== "undefined" ? CFG : {};
@@ -258,10 +263,12 @@ const scopeOf = all => {
 };
 // </scope-of>
 
-// ── DRY_RUN, when given, is true or false: a "true" or a 1 must not turn into a real write ──
-if (typeof DRY_RUN !== "undefined" && typeof DRY_RUN !== "boolean")
+// ── DRY_RUN is required, true or false: a "true", a 1 or a forgotten line must not turn into a real write ──
+if (typeof DRY_RUN === "undefined")
+  throw new Error("set DRY_RUN = true for a preview or false to bind; nothing was read or written");
+if (typeof DRY_RUN !== "boolean")
   throw new Error(`DRY_RUN is true or false, not ${typeof DRY_RUN === "string" ? JSON.stringify(DRY_RUN) : String(DRY_RUN)}; nothing was read or written`);
-const DRY = typeof DRY_RUN !== "undefined" && DRY_RUN === true;
+const DRY = DRY_RUN === true;
 
 // ── MAPPING: colour key → its entries, in the order given ──
 if (typeof MAPPING === "undefined" || !Array.isArray(MAPPING) || !MAPPING.length)
@@ -312,7 +319,7 @@ const scope = SEC ? scopeOf(allSecs) : null;
 if (scope && scope.missing) throw new Error(`section ${SEC} is not on this page`);
 if (scope && scope.excluded) {
   const skippedAll = [{ node: SEC, reason: `section ${SEC} is excluded by pages.exclude_sections; nothing bound` }];
-  return DRY ? { wouldBind: [], skipped: skippedAll, unchecked: [], paints: [], mapping: [] } : { bound: 0, skipped: skippedAll };
+  return DRY ? { wouldBind: [], skipped: skippedAll, unchecked: [], paints: [], mapping: [] } : { bound: 0, changed: [], skipped: skippedAll };
 }
 
 const skipped = [], skipSeen = new Set();
@@ -501,4 +508,6 @@ for (const { n, props } of plan.values())
     bound += list.length;
   }
 
-return { bound, skipped };
+// Every paint bound with a visible change — an accepted one — named, so the person sees what changed,
+// including a change to a token no dry run could read, which only an earlier run's `skipped` showed.
+return { bound, changed: wouldBind.filter(w => w.change), skipped };

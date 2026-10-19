@@ -2,8 +2,9 @@
  *
  *     node --test tools/test/
  *
- * The script reads `CFG`, `MAPPING`, `SECTION` and `figma` globals, writes, and returns
- * `{ bound, skipped }`. The fakes follow audit-tokens.test.js and the Plugin API's own shapes:
+ * The script reads `CFG`, `MAPPING`, `SECTION`, `DRY_RUN` and `figma` globals, writes, and returns
+ * `{ bound, changed, skipped }` (a dry run, its preview). The `bind` helper below passes DRY_RUN false
+ * unless told otherwise; leaving it out is tested by calling the script directly. The fakes follow audit-tokens.test.js and the Plugin API's own shapes:
  * `setBoundVariableForPaint` / `setBoundVariableForEffect` return a new paint or effect bound to the
  * variable, `importVariableByKeyAsync` finds a published variable by key, and a variable resolves on a
  * node through `resolveForConsumer`. The audit runs on the same fake tree afterwards, so a bind that
@@ -98,7 +99,7 @@ const fakeFigma = (pageChildren, { vars = [], local = [], published = [], collec
 
 // Strict mode, with every fixture paint and paint array frozen (see node()): a write into either in
 // place throws instead of passing quietly, so "rebuilt and reassigned, never edited" is asserted directly.
-const bind = (figma, MAPPING, { cfg = baseCfg(), SECTION, DRY_RUN } = {}) =>
+const bind = (figma, MAPPING, { cfg = baseCfg(), SECTION, DRY_RUN = false } = {}) =>
   new AsyncFunction("CFG", "MAPPING", "SECTION", "DRY_RUN", "figma", '"use strict";\n' + BIND)(cfg, MAPPING, SECTION, DRY_RUN, figma);
 const audit = (figma, { cfg = baseCfg(), SECTION, MODE } = {}) =>
   new AsyncFunction("CFG", "SECTION", "MODE", "figma", AUDIT)(cfg, SECTION, MODE, figma);
@@ -132,7 +133,7 @@ test("token-bind binds exact mapped hexes on editable nodes and rebuilds the pai
   const figma = fakeFigma(page, LIB());
 
   const out = await bind(figma, [{ hex: "#3366FF", variableKey: "key:primary" }, { hex: "#FF0000", variableKey: "key:lib-red" }]);
-  assert.deepStrictEqual(out, { bound: 5, skipped: [] }, "fill, stroke, text, effect and the library fill — paints, not nodes");
+  assert.deepStrictEqual(out, { bound: 5, changed: [], skipped: [] }, "fill, stroke, text, effect and the library fill — paints, not nodes");
 
   assert.notStrictEqual(home.fills, before.fills, "the paint array is rebuilt and reassigned, never edited in place");
   assert.strictEqual(home.fills.length, 3);
@@ -226,7 +227,10 @@ test("a visible change — colour or opacity — is skipped unless the entry acc
 
   const p2 = page();
   const loose = await viaPreview(fakeFigma(p2, lib), MAP(true));
-  assert.deepStrictEqual(loose, { bound: 4, skipped: [] });
+  assert.deepStrictEqual([loose.bound, loose.skipped], [4, []]);
+  assert.deepStrictEqual(loose.changed.map((c) => [c.node, c.kind, c.change]), [
+    ["id:Soft-Default", "fill", "opacity 20% → 100%"], ["id:Glow-Default", "effect", "opacity 20% → 100%"], ["id:Near-Default", "fill", "#3B66FF → #3366FF"],
+  ], "the real run names every accepted change it made; the exact scrim is not among them");
   assert.strictEqual(boundTo(find(p2, "Glow-Default").effects[0]), "primary");
   assert.strictEqual(boundTo(find(p2, "Near-Default").fills[0]), "primary");
 
@@ -264,7 +268,9 @@ test("a token that renders another colour in a node's mode is skipped there, and
     { hex: "#FFFFFF", variableKey: "key:surface" },
     { hex: "#FFFFFF", variableKey: "key:surface", accept: true, nodes: ["id:Dark-Default", "id:Card"] },
   ]);
-  assert.deepStrictEqual(accepted, { bound: 4, skipped: [] });
+  assert.deepStrictEqual([accepted.bound, accepted.skipped], [4, []]);
+  assert.deepStrictEqual(accepted.changed.map((c) => [c.node, c.change]),
+    [["id:Dark-Default", "#FFFFFF → #1E1E1E (mode Dark)"], ["id:Card", "#FFFFFF → #1E1E1E (mode Dark)"]]);
 });
 
 test("text with part of it in a style is left alone, and the audit still reports it", async () => {
@@ -342,7 +348,7 @@ test("SECTION narrows the bind; a missing one throws before writing; an excluded
 
   const p1 = page();
   const one = await bind(fakeFigma(p1, LIB()), MAP, { SECTION: "id:01. Home" });
-  assert.deepStrictEqual(one, { bound: 2, skipped: [] });
+  assert.deepStrictEqual(one, { bound: 2, changed: [], skipped: [] });
   assert.deepStrictEqual(["Home-Default", "Sub-Default", "Other-Default", "Loose-Default", "T-Default"].map((n) => boundTo(find(p1, n).fills[0])),
     ["primary", "primary", null, null, null]);
 
@@ -429,7 +435,10 @@ test("accept: true without nodes is rejected before anything is written; nodes l
     { hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: ["id:Near-A"] },
     { hex: "#3366FF", variableKey: "key:primary", nodes: ["id:Exact-B"] },
   ]);
-  assert.deepStrictEqual(out, { bound: 2, skipped: [] }, "a node no entry names is neither bound nor reported");
+  assert.deepStrictEqual(out, {
+    bound: 2, skipped: [],
+    changed: [{ node: "id:Near-A", name: "Near-A", kind: "fill", hex: "#3B66FF", variable: "primary", variableKey: "key:primary", change: "#3B66FF → #3366FF" }],
+  }, "a node no entry names is neither bound nor reported");
   assert.deepStrictEqual(p2[0].children.map((f) => boundTo(f.fills[0])), ["primary", null, null, "primary"]);
 });
 
@@ -528,7 +537,7 @@ test("a dry run never imports", async () => {
 
   const real = await bind(figma, MAPPING);
   assert.deepStrictEqual(figma.imports, ["key:lib-ink", "key:lib-red"], "the real run imports every non-local token, as before");
-  assert.deepStrictEqual(real, { bound: 4, skipped: [] });
+  assert.deepStrictEqual(real, { bound: 4, changed: [], skipped: [] });
 });
 
 test("the real run still skips a mode difference for a token the dry run could not check", async () => {
@@ -599,7 +608,7 @@ test("a dry run shows every token a paint tries, in order, past one it cannot ch
   assert.deepStrictEqual(["Label", "Card"].map((n) => boundTo(find(page, n).fills[0])), [null, null], "nothing written");
 
   const real = await bind(figma, dry.mapping);
-  assert.deepStrictEqual(real, { bound: 2, skipped: [] });
+  assert.deepStrictEqual(real, { bound: 2, changed: [], skipped: [] });
   assert.deepStrictEqual(["Label", "Card"].map((n) => boundTo(find(page, n).fills[0])), ["lib-text", "fill"],
     "Label takes the text token; Card, which it does not fit, falls to fill — the order the preview showed");
 });
@@ -612,6 +621,10 @@ test("DRY_RUN is true or false: anything else throws before the file is read", a
   const MAPPING = [{ hex: "#3366FF", variableKey: "key:primary" }, { hex: "#FF0000", variableKey: "key:lib-red" }];
   for (const bad of ["true", 1, null])
     await assert.rejects(bind(watched, MAPPING, { DRY_RUN: bad }), /DRY_RUN is true or false/, `DRY_RUN = ${JSON.stringify(bad)}`);
+  // Left out, it is not a real run either: the bind writes only when told to. Called directly, since the
+  // helper above fills in false.
+  const raw = new AsyncFunction("CFG", "MAPPING", "SECTION", "DRY_RUN", "figma", '"use strict";\n' + BIND);
+  await assert.rejects(raw(baseCfg(), MAPPING, undefined, undefined, watched), /set DRY_RUN = true for a preview or false to bind/);
   assert.strictEqual(reads, 0, "the file is not read");
   assert.deepStrictEqual(figma.imports, []);
   assert.deepStrictEqual(["Home-Default", "Alert"].map((n) => boundTo(find(page, n).fills[0])), [null, null], "nothing written");
@@ -670,12 +683,12 @@ test("a paint no token can bind reports every token it tried, and each change ac
   assert.deepStrictEqual(dry.skipped, both);
   assert.deepStrictEqual(dry.paints[0].candidates.map((c) => [c.variableKey, c.status, c.change]),
     [["key:ink", "skip", undefined], ["key:primary", "skip", "#3B66FF → #3366FF"]]);
-  assert.deepStrictEqual(await bind(fakeFigma(p1, lib), MAPPING), { bound: 0, skipped: both });
+  assert.deepStrictEqual(await bind(fakeFigma(p1, lib), MAPPING), { bound: 0, changed: [], skipped: both });
 
   // The later token's change, once accepted on that node, binds
   const p2 = page();
   const accepted = await viaPreview(fakeFigma(p2, lib), [...MAPPING, { hex: "#3B66FF", variableKey: "key:primary", accept: true, nodes: ["id:Near"] }]);
-  assert.deepStrictEqual(accepted, { bound: 1, skipped: [] });
+  assert.deepStrictEqual([accepted.bound, accepted.skipped, accepted.changed.map((c) => [c.node, c.change])], [1, [], [["id:Near", "#3B66FF → #3366FF"]]]);
   assert.strictEqual(boundTo(find(p2, "Near").fills[0]), "primary");
 });
 
@@ -721,6 +734,7 @@ test("a token that cannot be imported is reported, and an accepted change binds 
   const failed = "token key:libfill could not be imported (no published variable with key key:libfill)";
   assert.deepStrictEqual(real, {
     bound: 1,
+    changed: [{ node: "id:Badge", name: "Badge", kind: "stroke", hex: "#3B66FF", variable: "primary", variableKey: "key:primary", change: "#3B66FF → #3366FF" }],
     skipped: [
       { node: "id:Badge", reason: `Badge: fill #3B66FF — ${failed}` },
       { node: "id:Badge", reason: "Badge: fill #3B66FF — token primary renders #3366FF here, not #3B66FF — binding changes what you see; accept: true binds it anyway",
@@ -749,9 +763,43 @@ test("a plain exact fallback after an import failure still binds, and the failur
   const real = await bind(figma, dry.mapping);
   assert.deepStrictEqual(real, {
     bound: 1,
+    changed: [],
     skipped: [{ node: "id:Body", reason: "Body: text #111111 — token key:lib-ink could not be imported (no published variable with key key:lib-ink)" }],
   });
   assert.strictEqual(boundTo(find(page, "Body").fills[0]), "ink");
+});
+
+test("an accepted entry whose token is still unchecked binds its change in the real run, which reports it; a plain entry does not", async () => {
+  const modal = { id: "c1", defaultModeId: "m1", modes: [{ modeId: "m1", name: "Light" }, { modeId: "dark", name: "Dark" }] };
+  const lib = { vars: [colorVar("lib-surface", { m1: value("#FFFFFF"), dark: value("#1E1E1E") })], local: [], published: ["lib-surface"], collections: [modal] };
+  const page = [section("01. Home", [frame("Dark-Default", { fills: [solid("#FFFFFF")], resolvedVariableModes: { c1: "dark" } })])];
+  const figma = fakeFigma(page, lib);
+  const PLAIN = { hex: "#FFFFFF", variableKey: "key:lib-surface" };
+  const CHANGE = "#FFFFFF → #1E1E1E (mode Dark)";
+
+  // A plain entry: the real run reads the token, finds the change and leaves the node, reporting the change
+  const first = await viaPreview(figma, [PLAIN]);
+  assert.deepStrictEqual([first.bound, first.changed], [0, []]);
+  assert.deepStrictEqual(first.skipped.map((s) => [s.node, s.change, s.variableKey]), [["id:Dark-Default", CHANGE, "key:lib-surface"]]);
+  assert.strictEqual(boundTo(find(page, "Dark-Default").fills[0]), null);
+
+  // Bound nowhere, the token is still unchecked: the dry run lists the accepted entry unchecked, marked accept
+  const dry = await bind(figma, [PLAIN, { ...PLAIN, accept: true, nodes: ["id:Dark-Default"] }], { DRY_RUN: true });
+  assert.deepStrictEqual(dry.paints[0].candidates, [
+    { variableKey: "key:lib-surface", status: "unchecked" },
+    { variableKey: "key:lib-surface", accept: true, status: "unchecked" },
+  ]);
+  assert.deepStrictEqual(dry.unchecked, [{ variableKey: "key:lib-surface", nodes: ["id:Dark-Default"] }]);
+  assert.deepStrictEqual(dry.wouldBind, []);
+
+  // The real run of that mapping binds it, with the change the earlier skipped row showed, and returns it
+  const real = await bind(figma, dry.mapping);
+  assert.deepStrictEqual(real, {
+    bound: 1,
+    changed: [{ node: "id:Dark-Default", name: "Dark-Default", kind: "fill", hex: "#FFFFFF", variable: "lib-surface", variableKey: "key:lib-surface", change: CHANGE }],
+    skipped: [],
+  });
+  assert.strictEqual(boundTo(find(page, "Dark-Default").fills[0]), "lib-surface");
 });
 
 test("a rectangle fill matching a text-only token is a warning, and the dry run refuses that token the same way", async () => {
