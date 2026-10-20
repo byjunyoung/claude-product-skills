@@ -49,7 +49,7 @@ claude plugin install fig@byjunyoung
 | `/fig:draw` | Draws a screen or fills a placeholder, cloned from the nearest canonical screen, with its copy taken from the PRD |
 | `/fig:arrows` | Creates and re-syncs flow arrows |
 | `/fig:lint` | The audit everything else has to pass. Reads and reports, never edits |
-| `/fig:handoff` | Hands the sections that pass lint to engineering, with their links, and writes one line into the task — `pm`'s task file, a Notion page or a GitHub issue — or prints it where there is none |
+| `/fig:handoff` | Hands the sections that pass lint to engineering, with their links, and writes one line into the task — `pm`'s task file, a Notion page or a GitHub issue — or prints it where there is none; last, marks them Ready for dev where `handoff.ready_for_dev` is on (off by default) |
 | `/fig:sync` | Finds what never made it into the canonical page → applies it → archives the working copy |
 | **Around the cycle** | |
 | `/fig:tokens` | Binds hand-typed colours — the ones `/fig:lint` flags — to the design system's tokens, after showing which token each one maps to and what binding changes |
