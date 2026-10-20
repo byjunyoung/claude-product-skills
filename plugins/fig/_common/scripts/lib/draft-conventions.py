@@ -156,7 +156,9 @@ def main():
     L.append("")
 
     # ── Section style ─────────────────────────────────────────
-    S = [s for p in probes for s in p.get("sections", [])]
+    # Top-level sections only, as for the naming evidence above: a nested one is grouping inside a
+    # section, painted its own way or not at all, and this is the style /fig:prep paints top-level ones with.
+    S = [s for p in probes for s in p.get("sections", []) if s.get("depth", 0) == 0]
     fill, fw = mode([s["fill"] for s in S])
     strk, sw = mode([s["stroke"] for s in S])
     swt, swtw = mode([s["strokeWeight"] for s in S])

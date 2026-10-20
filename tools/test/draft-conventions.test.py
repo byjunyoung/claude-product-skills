@@ -189,6 +189,18 @@ arch[0]["sections"].append({"name": "Archive 2025", "depth": 1, "w": 900, "fill"
 rc, out, err = run(arch)
 check("a nested archive section is proposed for exclusion", rc == 0 and "Archive 2025" in out, err[:200] + out[:200])
 
+# section_style is how a top-level section is painted (/fig:prep paints new ones with it). Nested
+# sections are grouping inside a section, painted differently or not at all, and must not outvote
+# it: five inner sections against three outer ones is 5/8, over the 0.6 dominance.
+inner = [probe("Page", [f"Screen{j}-Default" for j in range(6)], fill="#8306FF")]
+inner[0]["sections"] += [{"name": f"Group {i}", "depth": 1, "w": 900, "fill": {"hex": "#FFFFFF", "opacity": 1},
+                          "stroke": {"hex": "#FFFFFF"}, "dash": None, "radius": 0, "strokeWeight": 1,
+                          "strokeAlign": "INSIDE"} for i in range(5)]
+rc, out, err = run(inner)
+ss = ((yaml.safe_load(out) if rc == 0 else {}) or {}).get("section_style") or {}
+check("nested sections do not vote on section_style",
+      ss.get("fill") == "#8306FF" and ss.get("fill_opacity") == 0.04, str(ss) + err[:200])
+
 print()
 if failures:
     print(f"{len(failures)} failed — " + ", ".join(failures)); sys.exit(1)
