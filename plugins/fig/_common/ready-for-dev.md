@@ -50,13 +50,15 @@ written and read back.
    - **No `devStatus`, or another type** → the click did not land: report that section as not marked
    - **No token** (caught before the call) → report the sections as clicked but not read back, and
      say why
-   - **A 401** → the token is expired or wrong, or lacks the scope: say which it can be, and report
-     the sections as clicked but not read back
+   - **Anything but a 200** — a 401 or 403 (an expired or wrong token, or one without the
+     `file_content:read` scope), a 404, a 400 → show the status and Figma's `err` as they came back,
+     and report the sections as clicked but not read back
 
 ## Never
 
-- Mark before the line is written and read back — marking notifies, and a notice about a handover
-  that has not landed is worse than none
+- Mark before the line is written and read back — or, under handoff's `print`, where nothing is
+  written, before the go — marking notifies, and a notice about a handover that has not landed is
+  worse than none
 - Mark a section the preview did not name, or one lint held back
 - Set *Completed*, or change a status a section already has
 - Read or set the status with `use_figma`

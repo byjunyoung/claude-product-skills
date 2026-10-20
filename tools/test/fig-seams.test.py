@@ -174,6 +174,32 @@ for rel in ("README.md", "README.ko.md"):
     check(f"{rel} token row names /fig:qa", "/fig:qa" in tok, tok[:80])
 check("figma_token_env comment names qa", "qa" in tl.split("#", 1)[1], tl)
 
+# ---- 3e final-review fixes ----------------------------------------------------------------------------------
+vpimg = " ".join(vp.split("## Reading a pinned version as an image", 1)[-1].split("## Never", 1)[0].split())
+check("ready-for-dev and the pinned image read treat any status but 200 alike, 403 named",
+      "403" in rfd1 and "anything but a 200" in rfd1.lower() and "403" in vpimg and "anything but a 200" in vpimg.lower(),
+      vpimg[-300:])
+for rel in ("README.md", "README.ko.md"):
+    ls = read(rel).splitlines()
+    k = next((i for i, l in enumerate(ls) if "<summary>" in l and "401" in l), None)
+    tr = "\n".join(ls[k:k + 6]) if k is not None else ""
+    check(f"{rel} token troubleshooting names 403 and /fig:qa", "403" in tr and "/fig:qa" in tr, tr[:120])
+check("the Korean lint paragraph has no leftover sentence the English lacks",
+      "보고서는 그 색이 몇 개인지 세고 그 페이지를 가리킵니다" not in read("README.ko.md"))
+wd = qa1[qa1.find("**Which design.**"):][:1400]
+check("qa finds the hand-over line in pm's task file when qa.baseline.tasks is unset",
+      "borrow-pm.py task" in wd and "list --dir" in wd and "{heading}" in wd, wd[:200])
+for rel, task_file in (("README.md", "task file"), ("README.ko.md", "일감 파일")):
+    para = next((l for l in read(rel).splitlines() if l.startswith("`qa`")), "")
+    check(f"{rel} qa paragraph says where the hand-over line is read from",
+          ("hand-over line" in para or "넘김 줄" in para) and "qa.baseline.tasks" in para and task_file in para, para[:100])
+s6n = " ".join(s6.split())
+check("handoff decides the print case for Ready for dev",
+      "`print`" in s6n and "after the go" in s6n and "`print`" in " ".join(rfd.split("## Never", 1)[1].split()))
+tk = " ".join(read(SK + "tokens/SKILL.md").split())
+check("tokens says every case the pin cannot cover, not just one",
+      "The one case the pin cannot cover" not in tk and "could not read what the token renders" in tk)
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

@@ -28,7 +28,8 @@
  *            paints: [{ node, prop, index, expect }] — on an accepted entry only, the paints (n[prop][index]) a
  *            dry run listed it for; the entry is then tried on those paints and no other, so its change
  *            lands only where the preview showed it. expect is the colour key the token rendered on that
- *            paint in the dry run, or null where it could not be read (an unchecked token); a real run
+ *            paint in the dry run, or null where the dry run could not read it (an unchecked token, a
+ *            value it could not resolve, a token that did not fit the property then); a real run
  *            binds the paint only while the token still renders expect there, and otherwise skips it with
  *            "now renders … the preview showed … — run the dry run again". A dry run takes an accepted
  *            entry with or without them and returns them in its `mapping`; a real run rejects an accepted

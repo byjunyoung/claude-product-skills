@@ -94,8 +94,9 @@ file stands now. Read-only: nothing is saved or changed.
    alone is not enough, so a token minted only for that needs this scope added.
 3. **An id that maps to `null`** — the frame did not exist at that version, or rendered nothing
    there — is read from the live file instead, for that frame alone, and named as such.
-4. **No token, or a 401** → every frame is read from the live file, and that is said once, with
-   which of the two it was.
+4. **No token, or anything but a 200** — a 401 or 403 (an expired or wrong token, or one without
+   `file_content:read`), a 400 or 404 (a version id the file does not have) → every frame is read
+   from the live file, and that is said once, with the status and Figma's `err` as they came back.
 
 ## Never
 
