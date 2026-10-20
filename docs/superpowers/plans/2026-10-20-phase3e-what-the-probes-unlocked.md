@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** The items 3d left *Gated* are settled by the 2026-10-20 probes: the ones that passed ship (handoff can mark *Ready for dev*, qa compares against the handed-over version), the ones that failed or needed nothing close, and one setup seam the probes' file walk exposed is fixed.
+**Goal:** The items 3d left *Gated* are settled by the 2026-10-20 probes: the ones that passed ship (handoff can mark *Ready for dev*, qa compares against the handed-over version), the ones that failed or needed nothing close, and the seams 3c deferred close — setup's `section_style` mixing in nested sections, the bind pinning the change a preview showed, and the instance note telling library instances apart.
 
-**Architecture:** Prose changes to handoff, qa and the shared `_common` procedures, with one new shared procedure (`_common/ready-for-dev.md`) shaped like `version-pin.md`, because both are web-app writes read back through REST. One script change in `draft-conventions.py`. Every behaviour is pinned by a doc test in `tools/test/fig-seams.test.py` or a unit test in `tools/test/draft-conventions.test.py`. No new Figma script.
+**Architecture:** Prose changes to handoff, qa and the shared `_common` procedures, with one new shared procedure (`_common/ready-for-dev.md`) shaped like `version-pin.md`, because both are web-app writes read back through REST. Script changes in `draft-conventions.py`, `token-bind.js` and `audit-tokens.js`. Every behaviour is pinned by a doc test in `tools/test/fig-seams.test.py` or a unit test beside the script (`draft-conventions.test.py`, `token-bind.test.js`, `audit-tokens.test.js`). No new Figma script.
 
 **Tech Stack:** Markdown skills; Python 3.9 tests; Figma REST (`/v1/files/:key/nodes`, `/v1/files/:key/versions`, `/v1/images/:key`); claude-in-chrome for the web-app click.
 
@@ -29,10 +29,11 @@
 
 **Found during the probes — not planned unless the owner adds it:** `sync-compare.js` collects every FRAME in a section, so `[label] A --> B` pills come back as `new — not on the canonical page` (17 of 57 entries on one queue page). The `<scaffolding>` block already names them.
 
+**Deferred by 3c, now planned** (the 3c PR's deferred list, quoted in the 3d session's record): setup's `section_style` mixing in nested sections → Task 3; pinning the change value an accepted entry was shown → Task 4; the instance note counting library instances too ("a note only, no effect on the verdict") → Task 5.
+
 **Open — needs the owner:**
-- The checklist names a 3e candidate "tokens 보류 항목". It is not in the 3c/3d plans, the CHANGELOG or the shared memory read on 2026-10-20; the other Mac's memory may hold it. Not planned until named.
 - Task 1 contradicts the owner's 2026-10-08 rule that a handover ends at the named version, the ticket's link and Plan-Ready, with *Ready for dev* kept out of the procedure (the reason then: no tool could set it). The checklist's own rule says §11 ships when probe A passes. The plan therefore ships it **off by default**; confirm, or drop Task 1.
-- Task 3 reads "setup의 중첩 섹션 스타일" as the seam found at `draft-conventions.py:159` (inference). Confirm.
+- Accepting a visible change per paint rather than per node (the other half of 3c's deferred tokens item). Today the person accepts node by node and the dry run pins the entry to the paints it showed on those nodes, so a node whose fill and stroke both change is accepted as one. Recommendation: keep per node — a second question per node costs more than it saves unless nodes with two differing changes turn out to be common. Not planned.
 
 ## Global Constraints
 
@@ -116,11 +117,53 @@
 - [ ] **Step 4: Run** + verify.py. Expected: PASS.
 - [ ] **Step 5: Commit** `fix(fig): setup 초안의 섹션 스타일을 맨 위 섹션으로만 관찰한다`
 
-### Task 4: Release fig 3.32.0
+### Task 4: an accepted change binds only while the token still renders what the preview showed
+
+**Files:**
+- Modify: `plugins/fig/_common/scripts/token-bind.js` — the dry run's `mapping` (accepted entries' `paints`) and the real run's accepted-entry check
+- Modify: `plugins/fig/skills/tokens/SKILL.md` step 3.4 and *Verify* — the sentence "binds only … with the accepted change the preview showed there" becomes enforced, and says what happens when the token moved
+- Test: `tools/test/token-bind.test.js`
+
+**Interfaces:**
+- Produces: accepted entries' `paints: [{ node, prop, index, expect }]`. `expect` is the colour key `renderedOn` read for that paint in the dry run (`"#RRGGBB"` / `"#RRGGBBAA"`), or `null` where the token was `unchecked` and nothing could be read.
+
+**Decisions:**
+- Real run, accepted paint with `expect` set: bind only if `renderedOn(v, n) === expect`; otherwise the candidate is a `skip` with reason `token {name} now renders {rk} here; the preview showed {expect} — run the dry run again` and its `change`, and the paint goes on to its next candidate, as an import failure does today.
+- `expect: null` keeps today's behaviour for a token no dry run could read (it binds, and `changed` names the change). The SKILL says this is the one case the pin cannot cover.
+- A real run whose accepted `paints` lack the `expect` key altogether throws before anything is written, as one without `paints` does: the mapping must come from a dry run of this version.
+
+- [ ] **Step 1: Failing tests** — `accepted change is pinned to the previewed value`: paint `#000000`, token `#00000080` accepted in the dry run (`expect: "#00000080"`); the token's value set to `#00000066` before the real run → `bound` 0, one `skipped` row naming both values. `unchanged token still binds`: same, value unchanged → `bound` 1, `changed` has the row. `expect key required on a real run`: accepted paints without `expect` → throws, nothing written.
+- [ ] **Step 2: Run** `node --test tools/test/token-bind.test.js`. Expected: FAIL.
+- [ ] **Step 3: Implement** in `token-bind.js`; edit the SKILL sentences.
+- [ ] **Step 4: Run** + `bash plugins/fig/_common/scripts/lib/check.sh` + verify.py. Expected: PASS.
+- [ ] **Step 5: Commit** `fix(fig): 승인한 색 변화는 미리보기 때 값 그대로일 때만 묶고, 토큰이 바뀌었으면 건너뛰고 알린다`
+
+### Task 5: the instance note tells this file's components from library ones
+
+**Files:**
+- Modify: `plugins/fig/_common/scripts/audit-tokens.js` — the audit note and collect's `inInstance`
+- Modify: `plugins/fig/skills/lint/SKILL.md` (D's *Not read* paragraph and *Running it*'s note description), `plugins/fig/skills/tokens/SKILL.md` (`inInstance` in step 1)
+- Test: `tools/test/audit-tokens.test.js`
+
+**Interfaces:**
+- Produces: `inInstance: [{ hex, count, source }]`, `source` `"local"` or `"library"`; the audit note in two halves, each left out at zero.
+
+**Decisions:**
+- For each colour the walk passes up as `"instance"`, find its outermost INSTANCE ancestor through `parent` in `audit-tokens.js` itself — the shared `<paint-scope>` block stays byte-identical. After the walk, `await getMainComponentAsync()` once per distinct outermost instance; `remote === true` is library.
+- Note wording: `{a} hand-typed colours sit inside instances of this file's components — run lint on {page names}` and `{b} sit inside library components — fix them in the library that publishes them`. The page names come from the master's PAGE ancestor. Neither half changes `pass` or a count.
+- On BarisON `[UI] 🤖 운영관리` (2026-10-20) the note read "461 … run lint on the page that holds their masters" for a file with no local colour tokens, so most of it pointed at a page that is not in the file (inference — not split then).
+
+- [ ] **Step 1: Failing tests** — `instance note splits local and library`: one instance of a local master on page `Components` holding 2 hand-typed colours, one of a remote master holding 3 → the note has both halves with 2, `Components`, and 3; `pass` unchanged. `library-only note`: only the remote instance → the local half absent. `inInstance carries source`.
+- [ ] **Step 2: Run** `node --test tools/test/audit-tokens.test.js`. Expected: FAIL.
+- [ ] **Step 3: Implement**; edit both SKILLs.
+- [ ] **Step 4: Run** + check.sh + verify.py. Expected: PASS.
+- [ ] **Step 5: Commit** `fix(fig): 인스턴스 안 색 안내가 이 파일 컴포넌트와 라이브러리 컴포넌트를 나눠 센다`
+
+### Task 6: Release fig 3.32.0
 
 **Files:** `plugins/fig/.claude-plugin/plugin.json` 3.31.0 → 3.32.0, `plugins/fig/CHANGELOG.md`, `plugins/fig/README.md`, both root READMEs.
 
-- [ ] **Step 1:** Version + CHANGELOG. Opens with what a designer sees: qa judges against the handed-over version; handoff can mark *Ready for dev* where a team switches it on (off by default); setup's drafted section style ignores nested sections. One line records the probes that closed D4 and 3c's three live checks with no change.
+- [ ] **Step 1:** Version + CHANGELOG. Opens with what a designer sees: qa judges against the handed-over version; handoff can mark *Ready for dev* where a team switches it on (off by default); setup's drafted section style ignores nested sections; an accepted colour change binds only while the token still renders what the preview showed; lint's instance note says which colours belong to a library. One line records the probes that closed D4 and 3c's three live checks with no change.
 - [ ] **Step 2:** README sweep, English then Korean — the off default stated wherever handoff's writes are listed.
 - [ ] **Step 3:** `bash tools/verify-all.sh` → `· PASS`, no WARN.
 - [ ] **Step 4: Commit** `chore(release): fig 3.32.0 — qa가 넘긴 버전과 비교하고, handoff가 켜 둔 팀에서 Ready for dev를 표시한다`. The controller pushes, previews the PR, waits for go.
