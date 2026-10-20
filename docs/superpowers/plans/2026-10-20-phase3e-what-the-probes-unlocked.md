@@ -58,7 +58,7 @@
 - Create: `plugins/fig/_common/ready-for-dev.md` — why the web app; steps; read back; never. Same headings as `version-pin.md`
 - Modify: `plugins/fig/skills/handoff/SKILL.md` — :3 description; :23 the "never offered" paragraph; step 4 (:99-125) preview and order; :144 report line; :150 and :154 constraints
 - Modify: `plugins/fig/_common/conventions.example.yaml` :197-199 comment and the `handoff` block (:200) — new key
-- Modify: both root READMEs where handoff's writes and "never a Dev Mode status" are described; *What each skill needs* (handoff gains the browser tools)
+- Modify: both root READMEs where handoff's writes and "never a Dev Mode status" are described; *What each skill needs* — handoff's `allowed-tools` already carries the claude-in-chrome tools for the version pin (:4), so only the row's wording changes: the browser now also marks the status where it is switched on
 - Test: `tools/test/fig-seams.test.py`
 
 **Interfaces:**
