@@ -281,7 +281,7 @@ qa:
 
 # --- Tools ---------------------------------------------------------------------
 tools:
-  figma_token_env: FIGMA_TOKEN                # env var holding the PAT (scope file_versions:read), for the version read-back in handoff and sync; version-pin.md step 4 reads it and checks it is non-empty before calling. handoff's Ready for dev read-back (ready-for-dev.md) needs file_content:read on it too
+  figma_token_env: FIGMA_TOKEN                # env var holding the PAT (scope file_versions:read), for the version read-back in handoff and sync; version-pin.md step 4 reads it and checks it is non-empty before calling. handoff's Ready for dev read-back (ready-for-dev.md) and qa's read of a pinned version (version-pin.md, "Reading a pinned version as an image") need file_content:read on it too
   frame_count_guard: 20                       # above this many frames, confirm before collecting screenshots (/fig:read, default 20)
   proto_output_dir: "."                       # where working prototypes are written
   proto_publish:                              # an unset repo stays local and never offers to publish

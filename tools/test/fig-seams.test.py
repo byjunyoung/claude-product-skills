@@ -110,8 +110,8 @@ check("qa report goes to the response or a markdown file",
       and re.search(r"^\s+report_dir:\s*null", ex, re.M) is not None
       and "response only" in ex.split("report_dir", 1)[0][-400:])
 row = next((l for l in qa.splitlines() if l.startswith("| The design")), "")
-check("qa baseline table says the design is read live and the pin is not compared",
-      "live file" in row and "not yet compared" in row, row[:120])
+check("qa baseline table points at the pinned version, with the live file as the fall-back (3e)",
+      "version-id" in row and "live file" in row and "not yet compared" not in row, row[:120])
 
 # ---- Carried from Tasks 1-3: the skills load what they call -------------------------------------------
 check("prep no longer says 'Never all at once'", "Never all at once" not in prep)
@@ -154,6 +154,25 @@ for rel in ("README.md", "README.ko.md"):
     ch = next((l for l in read(rel).splitlines() if "Claude in Chrome" in l and "/fig:handoff" in l), "")
     check(f"{rel} Chrome row says handoff marks Ready for dev where ready_for_dev is on",
           "handoff.ready_for_dev" in ch and "Ready for dev" in ch, ch[:100])
+
+# ---- 3e Task 2: qa compares against the version the handover pinned (S15) ----------------------------------
+qa1 = " ".join(qa.split())
+check("qa takes the pinned version from the last hand-over line, through version-pin.md",
+      "version-pin.md" in qa and "last hand-over line" in qa1 and "qa.baseline.tasks" in qa)
+check("qa falls back to the live file in each named case, and never stops on it",
+      all(k in qa1 for k in ("no `version-id`", "no hand-over line", "no token", "comes back `null`",
+                              "never stops")), qa1[qa1.find("version-pin.md") - 200:][:300])
+head = next((l for l in qa.splitlines() if "baseline documents —" in l), "")
+check("qa's report head says which design it judged against", "live file —" in head and "version" in head, head)
+vp1 = " ".join(vp.split())
+check("version-pin.md reads a pinned version back as an image",
+      "## Reading a pinned version as an image" in vp and "/v1/images/" in vp and "version=" in vp
+      and "file_content:read" in vp and "/fig:qa" in vp.split("## Steps", 1)[0], vp1[:200])
+for rel in ("README.md", "README.ko.md"):
+    tok = next((l for l in read(rel).splitlines() if l.startswith("| **") and
+                ("personal access token" in l or "개인 액세스 토큰" in l)), "")
+    check(f"{rel} token row names /fig:qa", "/fig:qa" in tok, tok[:80])
+check("figma_token_env comment names qa", "qa" in tl.split("#", 1)[1], tl)
 
 print()
 if failures:
