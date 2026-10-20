@@ -110,8 +110,8 @@ check("qa report goes to the response or a markdown file",
       and re.search(r"^\s+report_dir:\s*null", ex, re.M) is not None
       and "response only" in ex.split("report_dir", 1)[0][-400:])
 row = next((l for l in qa.splitlines() if l.startswith("| The design")), "")
-check("qa baseline table says the design is read live and the pin is not compared",
-      "live file" in row and "not yet compared" in row, row[:120])
+check("qa baseline table points at the pinned version, with the live file as the fall-back (3e)",
+      "version-id" in row and "live file" in row and "not yet compared" not in row, row[:120])
 
 # ---- Carried from Tasks 1-3: the skills load what they call -------------------------------------------
 check("prep no longer says 'Never all at once'", "Never all at once" not in prep)
@@ -123,6 +123,82 @@ check("prep loads generate-design with figma-use, names both in skillNames, and 
       pg >= 0 and "skillNames" in prep and "figma-generate-design" in prep.split("skillNames", 1)[1][:200]
       and "component discovery" in prep and "page-level wrapper" in prep
       and pg < prep.find("**Seat check"), f"{pg}")
+
+# ---- 3e Task 1: handoff marks Ready for dev last, where a team switches it on (§11) -----------------------
+RFD = REPO / "plugins/fig/_common/ready-for-dev.md"
+rfd = RFD.read_text(encoding="utf-8") if RFD.exists() else ""
+hb = ex.split("\nhandoff:", 1)[1].split("\n# ---", 1)[0]
+check("handoff ready_for_dev ships off",
+      re.search(r"^\s+ready_for_dev:\s*false\b", hb, re.M) is not None
+      and "never offered" not in ho and "is not set by any skill" not in ex)
+h5, h6 = ho.find("### 5. Read back"), ho.find("### 6. Mark Ready for dev")
+s6 = ho[h6:].split("\n## ", 1)[0] if h6 >= 0 else ""
+check("handoff marks Ready for dev last, after the line is written and read back",
+      0 <= h5 < h6 and "ready-for-dev.md" in s6 and "handoff.ready_for_dev" in s6, f"{h5} {h6}")
+s4 = ho.split("### 4.", 1)[1].split("### 5.", 1)[0]
+check("handoff's line preview names the mark where it is switched on",
+      "handoff.ready_for_dev" in s4 and "Ready for dev" in s4)
+check("ready-for-dev.md names its route and its read-back",
+      all(k in rfd for k in ("m=dev", "Mark as ready for dev", "devStatus", "READY_FOR_DEV",
+                              "tools.figma_token_env", "/v1/files/")), rfd[:80])
+check("ready-for-dev.md hands it back with no browser or the wrong account",
+      "hand it back" in rfd and "wrong" in rfd)
+rfd1 = " ".join(rfd.split())   # prose wraps mid-sentence; judge sentences, not lines
+check("an already-marked section is skipped, not clicked again",
+      re.search(r"already[^.]*Ready for dev[^.]*skip|skip[^.]*already[^.]*Ready for dev", rfd1, re.I) is not None)
+check("nothing is marked when the run stops before the line",
+      "marks nothing" in s6 or "nothing is marked" in s6.lower())
+check("sync still leaves Completed unset",
+      "Dev Mode status (*Completed*) is not set and not offered" in read(SK + "sync/SKILL.md"))
+for rel in ("README.md", "README.ko.md"):
+    ch = next((l for l in read(rel).splitlines() if "Claude in Chrome" in l and "/fig:handoff" in l), "")
+    check(f"{rel} Chrome row says handoff marks Ready for dev where ready_for_dev is on",
+          "handoff.ready_for_dev" in ch and "Ready for dev" in ch, ch[:100])
+
+# ---- 3e Task 2: qa compares against the version the handover pinned (S15) ----------------------------------
+qa1 = " ".join(qa.split())
+check("qa takes the pinned version from the last hand-over line, through version-pin.md",
+      "version-pin.md" in qa and "last hand-over line" in qa1 and "qa.baseline.tasks" in qa)
+check("qa falls back to the live file in each named case, and never stops on it",
+      all(k in qa1 for k in ("no `version-id`", "no hand-over line", "no token", "comes back `null`",
+                              "never stops")), qa1[qa1.find("version-pin.md") - 200:][:300])
+head = next((l for l in qa.splitlines() if "baseline documents —" in l), "")
+check("qa's report head says which design it judged against", "live file —" in head and "version" in head, head)
+vp1 = " ".join(vp.split())
+check("version-pin.md reads a pinned version back as an image",
+      "## Reading a pinned version as an image" in vp and "/v1/images/" in vp and "version=" in vp
+      and "file_content:read" in vp and "/fig:qa" in vp.split("## Steps", 1)[0], vp1[:200])
+for rel in ("README.md", "README.ko.md"):
+    tok = next((l for l in read(rel).splitlines() if l.startswith("| **") and
+                ("personal access token" in l or "개인 액세스 토큰" in l)), "")
+    check(f"{rel} token row names /fig:qa", "/fig:qa" in tok, tok[:80])
+check("figma_token_env comment names qa", "qa" in tl.split("#", 1)[1], tl)
+
+# ---- 3e final-review fixes ----------------------------------------------------------------------------------
+vpimg = " ".join(vp.split("## Reading a pinned version as an image", 1)[-1].split("## Never", 1)[0].split())
+check("ready-for-dev and the pinned image read treat any status but 200 alike, 403 named",
+      "403" in rfd1 and "anything but a 200" in rfd1.lower() and "403" in vpimg and "anything but a 200" in vpimg.lower(),
+      vpimg[-300:])
+for rel in ("README.md", "README.ko.md"):
+    ls = read(rel).splitlines()
+    k = next((i for i, l in enumerate(ls) if "<summary>" in l and "401" in l), None)
+    tr = "\n".join(ls[k:k + 6]) if k is not None else ""
+    check(f"{rel} token troubleshooting names 403 and /fig:qa", "403" in tr and "/fig:qa" in tr, tr[:120])
+check("the Korean lint paragraph has no leftover sentence the English lacks",
+      "보고서는 그 색이 몇 개인지 세고 그 페이지를 가리킵니다" not in read("README.ko.md"))
+wd = qa1[qa1.find("**Which design.**"):][:1400]
+check("qa finds the hand-over line in pm's task file when qa.baseline.tasks is unset",
+      "borrow-pm.py task" in wd and "list --dir" in wd and "{heading}" in wd, wd[:200])
+for rel, task_file in (("README.md", "task file"), ("README.ko.md", "일감 파일")):
+    para = next((l for l in read(rel).splitlines() if l.startswith("`qa`")), "")
+    check(f"{rel} qa paragraph says where the hand-over line is read from",
+          ("hand-over line" in para or "넘김 줄" in para) and "qa.baseline.tasks" in para and task_file in para, para[:100])
+s6n = " ".join(s6.split())
+check("handoff decides the print case for Ready for dev",
+      "`print`" in s6n and "after the go" in s6n and "`print`" in " ".join(rfd.split("## Never", 1)[1].split()))
+tk = " ".join(read(SK + "tokens/SKILL.md").split())
+check("tokens says every case the pin cannot cover, not just one",
+      "The one case the pin cannot cover" not in tk and "could not read what the token renders" in tk)
 
 print()
 if failures:

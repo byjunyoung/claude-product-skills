@@ -25,11 +25,16 @@
  *            value in the mode a node is set to — and said go to that change, node by node. It needs
  *            nodes: an entry with accept and no nodes is rejected before anything is written, so a go
  *            never covers a node its preview did not list. Without accept, any such difference is skipped.
- *            paints: [{ node, prop, index }] — on an accepted entry only, the paints (n[prop][index]) a
+ *            paints: [{ node, prop, index, expect }] — on an accepted entry only, the paints (n[prop][index]) a
  *            dry run listed it for; the entry is then tried on those paints and no other, so its change
- *            lands only where the preview showed it. A dry run takes an accepted entry with or without
- *            them and returns them in its `mapping`; a real run rejects an accepted entry without them
- *            before anything is written, so it only ever takes one from a dry run's `mapping`.
+ *            lands only where the preview showed it. expect is the colour key the token rendered on that
+ *            paint in the dry run, or null where the dry run could not read it (an unchecked token, a
+ *            value it could not resolve, a token that did not fit the property then); a real run
+ *            binds the paint only while the token still renders expect there, and otherwise skips it with
+ *            "now renders … the preview showed … — run the dry run again". A dry run takes an accepted
+ *            entry with or without them and returns them in its `mapping`; a real run rejects an accepted
+ *            entry without them, or with a paint lacking expect, before anything is written, so it only
+ *            ever takes one from a dry run's `mapping`.
  *   SECTION  optional — that section and the sections nested in it; without it, the whole page
  *   DRY_RUN  required — true or false; left out, or anything else ("true", 1, null), it throws before
  *            anything is read, so a forgotten line is never a real write. false is the real run.
@@ -295,10 +300,15 @@ for (const m of MAPPING) {
     throw new Error(`MAPPING entry for ${k}: paints is a list of { node, prop, index }`);
   if (m.accept === true && !hasPaints && !DRY)
     throw new Error(`MAPPING entry for ${k} has accept: true but no paints — run the mapping the dry run returned, whose accepted entries name the paints the preview showed them on`);
+  // Each accepted paint carries the value its preview showed, so the change that lands is the one the
+  // person said go to. null where the dry run could not read the token (unchecked).
+  if (hasPaints && !DRY && !m.paints.every(p => "expect" in p && (p.expect === null || (typeof p.expect === "string" && /^#[0-9A-F]{6}([0-9A-F]{2})?$/.test(p.expect)))))
+    throw new Error(`MAPPING entry for ${k}: each accepted paint carries expect, the value its dry run showed (null where it could not be read) — run the mapping a dry run of this version returned`);
   // listed: the nodes this run reports under the entry — what a dry run's `mapping` hands back as its nodes;
   // onPaints: for an accepted entry, the paints it was tried on — what `mapping` hands back as its paints
   const e = { hex: k, variableKey: String(m.variableKey), accept: m.accept === true, nodes: has ? new Set(m.nodes) : null,
-              paints: hasPaints ? new Set(m.paints.map(p => paintKey(p.node, p.prop, p.index))) : null, listed: new Set(), onPaints: new Map() };
+              paints: hasPaints ? new Map(m.paints.map(p => [paintKey(p.node, p.prop, p.index), p.expect == null ? null : p.expect])) : null,
+              listed: new Set(), onPaints: new Map() };
   if (!wanted.has(k)) wanted.set(k, []);
   wanted.get(k).push(e);
   entries.push(e);
@@ -451,7 +461,7 @@ for (const { n, c } of targets) {
   for (const e of wanted.get(c.key)) {
     if (!coversPaint(e, n, c)) continue;
     e.listed.add(n.id);
-    if (e.accept) e.onPaints.set(paintKey(n.id, c.prop, c.i), { node: n.id, prop: c.prop, index: c.i });
+    if (e.accept) e.onPaints.set(paintKey(n.id, c.prop, c.i), { node: n.id, prop: c.prop, index: c.i, expect: null });
     const t = tokens.get(e.variableKey), at = { variableKey: e.variableKey, ...(e.accept ? { accept: true } : {}) };
     if (t.unchecked) {
       // Not in the file, so neither its scopes nor its value here can be read without importing it.
@@ -465,6 +475,13 @@ for (const { n, c } of targets) {
     at.variable = v.name;
     if (!fits(v, n, c.kind)) { tried.push({ ...at, status: "skip", reason: `token ${v.name} is not scoped for ${c.kind} colours` }); continue; }
     const rk = renderedOn(v, n), change = rk === c.key ? null : await changeText(v, n, rk, c.key);
+    if (e.accept) e.onPaints.get(paintKey(n.id, c.prop, c.i)).expect = rk;
+    // A real run binds an accepted paint only while the token renders what its preview showed there
+    const want = !DRY && e.accept && e.paints ? e.paints.get(paintKey(n.id, c.prop, c.i)) : null;
+    if (want != null && rk !== want) {
+      tried.push({ ...at, status: "skip", reason: `token ${v.name} now renders ${rk === null ? "a value that cannot be read" : rk} here; the preview showed ${want} — run the dry run again` });
+      continue;
+    }
     if (change && !e.accept) { tried.push({ ...at, status: "skip", reason: await changeOn(v, n, rk, c.key), change }); continue; }
     tried.push({ ...at, status: "bind", ...(change ? { change } : {}) });
     chosen = { v, variableKey: e.variableKey, change };

@@ -53,10 +53,13 @@
  *            { pass: true, findings: [], note }: the check is skipped, never run against nothing. The
  *            note says whether no colour variable was found at all or some were found and none resolved.
  *            Where instances in scope hold hand-typed colours (the ones collect counts in inInstance),
- *            the note says how many and that lint must run on the page holding their masters — this
- *            audit never grades them, and a draft component's colours turn up nowhere else.
+ *            the note says how many, split by where each outermost instance's master lives: this
+ *            file's components ("run lint on" the pages holding them), library components ("fix them
+ *            in the library that publishes them"), and masters that cannot be read ("run lint on the
+ *            page that holds their masters"). This audit never grades them, and a draft component's
+ *            colours turn up nowhere else. No half changes pass or a count.
  *   collect  { dictionary: { [hex]: [{ key, scopes }] },
- *              unbound: [{ hex, kind, count, nodes, grade, nearest, tokens }], inInstance: [{ hex, count }], note? }
+ *              unbound: [{ hex, kind, count, nodes, grade, nearest, tokens }], inInstance: [{ hex, count, source }], note? }
  *            The dictionary keeps each token's scopes beside its key (null where they cannot be read).
  *            unbound has a row per colour and kind ("fill", "text", "stroke", "effect"), split again
  *            where the tokens that fit differ (a frame's fill and a shape's), so every token a row
@@ -67,8 +70,9 @@
  *            nearest that fit the row — [] where none does — and the only ones /fig:tokens may propose.
  *            inInstance counts the colours inside instances, including overrides on its layers — every
  *            layer inside one, and an instance's own paint on a property it does not override — none of
- *            which is bound here. unbound is sorted by count, then hex, kind and grade; inInstance by
- *            count, then hex.
+ *            which is bound here — a row per colour and source, source "local" (the outermost
+ *            instance's master is in this file), "library" (remote) or "unknown" (it cannot be read).
+ *            unbound is sorted by count, then hex, kind and grade; inInstance by count, hex, source.
  *   SECTION not on the page → audit: one blocking [section] finding; collect: throws.
  *   SECTION inside an excluded section → a `note` saying nothing was audited, and no findings.
  * ========================================================================== */
@@ -363,10 +367,36 @@ const outcome = (r, ...rest) => [...rest, r.grade, r.nearest, r.tokens.join(",")
 // override: collect lists it for /fig:tokens to report apart, and the audit notes it, since those colours
 // are graded only on the page that holds the component's master.
 const S = scaffoldingCfg(C);
-const hits = [], inInst = new Map();   // hits: { n, where, kind, key }
-const held = (n, c, why) => { if (why === "instance") inInst.set(c.key, (inInst.get(c.key) || 0) + 1); };
-for (const { n, where } of rootsOf(page, allSecs, scope ? scope.ids : null))
-  walkColours(n, S, (m, c) => hits.push({ n: m, where, kind: c.kind, key: c.key }), held);
+const roots = rootsOf(page, allSecs, scope ? scope.ids : null);
+// Each instance, and each node inside one, mapped to the outermost instance holding it, so a colour
+// held inside one can be told by where that instance's master lives. A walk of its own, so the shared
+// <paint-scope> block stays as every other script carries it.
+const outer = new Map();
+const mapInstances = (n, top) => {
+  const t = top || (n.type === "INSTANCE" ? n : null);
+  if (t) outer.set(n.id, t);
+  if (n.children) for (const ch of n.children) mapInstances(ch, t);
+};
+for (const { n } of roots) mapInstances(n, null);
+const hits = [], held = [];   // hits: { n, where, kind, key }; held: { key, inst }
+for (const { n, where } of roots)
+  walkColours(n, S, (m, c) => hits.push({ n: m, where, kind: c.kind, key: c.key }),
+    (m, c, why) => { if (why === "instance") held.push({ key: c.key, inst: outer.get(m.id) || null }); });
+// Where each of those instances' masters lives: "library" (remote), "local" (this file, with the page
+// holding it), or "unknown" where the master cannot be read.
+const origin = new Map();
+for (const inst of new Set(held.map(h => h.inst))) {
+  let m = null;
+  try { m = inst && typeof inst.getMainComponentAsync === "function" ? await inst.getMainComponentAsync() : null; } catch (e) { m = null; }
+  let pg = null;
+  for (let p = m && m.parent; p; p = p.parent) if (p.type === "PAGE") { pg = p.name; break; }
+  origin.set(inst, !m ? { source: "unknown" } : m.remote === true ? { source: "library" } : { source: "local", page: pg });
+}
+const inInst = new Map();   // "source\nkey" → count
+for (const h of held) {
+  const k = origin.get(h.inst).source + "\n" + h.key;
+  inInst.set(k, (inInst.get(k) || 0) + 1);
+}
 
 if (COLLECT) {
   const cmp = (x, y) => (x < y ? -1 : x > y ? 1 : 0);
@@ -383,7 +413,8 @@ if (COLLECT) {
   const unbound = [...agg.values()]
     .map(a => ({ hex: a.hex, kind: a.kind, count: a.count, nodes: [...a.nodes], grade: a.r.grade, nearest: a.r.nearest, tokens: a.r.tokens }))
     .sort((x, y) => byCount(x, y) || cmp(x.kind, y.kind) || x.grade - y.grade);
-  const inInstance = [...inInst].map(([hex, count]) => ({ hex, count })).sort(byCount);
+  const inInstance = [...inInst].map(([k, count]) => { const [source, hex] = k.split("\n"); return { hex, count, source }; })
+    .sort((x, y) => byCount(x, y) || cmp(x.source, y.source));
   return withNote({ dictionary, unbound, inInstance }, dictKeys.length || found ? null : "no colour tokens found in this file");
 }
 
@@ -409,7 +440,13 @@ for (const g of groups.values()) {
     : `${loc}: ${what} — no token within ${TH} per channel; a designer decides whether it needs one`);
 }
 
-const inside = [...inInst.values()].reduce((s, x) => s + x, 0);
-return withNote({ pass: issues.length === 0, findings: issues }, inside
-  ? `${inside} hand-typed colour${inside === 1 ? " sits" : "s sit"} inside component instances — run lint on the page that holds their masters`
-  : null);
+// The note splits by where the masters live. None of it changes `pass` or a count.
+const bySource = { local: 0, library: 0, unknown: 0 };
+for (const [k, n] of inInst) bySource[k.split("\n")[0]] += n;
+const pages = [...new Set(held.map(h => origin.get(h.inst)).filter(o => o.source === "local" && o.page).map(o => o.page))];
+const sits = n => `${n} hand-typed colour${n === 1 ? " sits" : "s sit"}`;
+const parts = [];
+if (bySource.local) parts.push(`${sits(bySource.local)} inside instances of this file's components — run lint on ${pages.length ? pages.map(p => `"${p}"`).join(", ") : "the page that holds their masters"}`);
+if (bySource.library) parts.push(`${sits(bySource.library)} inside library components — fix them in the library that publishes them`);
+if (bySource.unknown) parts.push(`${sits(bySource.unknown)} inside component instances — run lint on the page that holds their masters`);
+return withNote({ pass: issues.length === 0, findings: issues }, parts.length ? parts.join("; ") : null);

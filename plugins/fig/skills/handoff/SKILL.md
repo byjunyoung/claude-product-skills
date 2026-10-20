@@ -1,6 +1,6 @@
 ---
 name: handoff
-description: Hands the sections of a finished feature that pass /fig:lint to engineering when it is ready to build, as links pinned to a named version where that is on and one line in the task doc where a tracker is set, never as a Dev Mode status. Triggers - "/fig:handoff", "hand this off", "send this to engineering", "개발 넘겨줘", "핸드오프 해줘", "이 섹션 개발팀에 넘겨".
+description: Hands the sections of a finished feature that pass /fig:lint to engineering when it is ready to build, as links pinned to a named version where that is on and one line in the task doc where a tracker is set, marking them Ready for dev last only where a team switches that on. Triggers - "/fig:handoff", "hand this off", "send this to engineering", "개발 넘겨줘", "핸드오프 해줘", "이 섹션 개발팀에 넘겨".
 allowed-tools: AskUserQuestion, Bash, Read, Skill, mcp__plugin_figma_figma__use_figma, mcp__plugin_figma_figma__get_metadata, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-update-page, mcp__plugin_github_github__issue_read, mcp__plugin_github_github__search_issues, mcp__plugin_github_github__issue_write, mcp__plugin_github_github__add_issue_comment, mcp__claude-in-chrome__list_connected_browsers, mcp__claude-in-chrome__select_browser, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find
 ---
 
@@ -20,7 +20,7 @@ nothing.
 **Prerequisites**: load `figma:figma-use` before calling `use_figma`. Every write goes through
 preview → go.
 
-**Dev Mode status (*Ready for dev*, *Completed*) is not part of this skill, and is never offered.** `use_figma` rejects the getter and the setter alike — `"devStatus" is not a supported API` — on an Edit seat as much as a View one (checked on a live file, 2026-08-31), and Figma's REST API reads the status but has no endpoint that sets it. Kept as an option, it came back as "I can mark these ready for dev" run after run, a step the skill could not take. It was removed outright in 3.26.0. Do not propose it, and do not list it as something left to do; where the person wants the status, it is theirs to set in Dev Mode.
+**Dev Mode's *Ready for dev* is off unless a team switches it on.** `use_figma` rejects the getter and the setter alike — `"devStatus" is not a supported API` — on an Edit seat as much as a View one (checked on a live file, 2026-08-31, and again 2026-10-20), and Figma's REST API reads the status but has no endpoint that sets it. The web app can: where `handoff.ready_for_dev` is `true`, step 6 marks the handed-over sections there, last, and reads each back through REST, by `${CLAUDE_PLUGIN_ROOT}/_common/ready-for-dev.md`. With it `false` — the default, since marking notifies whoever follows the file — the status is not part of the run: do not propose it, and do not list it as something left to do. *Completed* is never set.
 
 ## When to invoke
 
@@ -104,6 +104,7 @@ The second write has its own preview, so a version that went in is never followe
 - the section links: `https://figma.com/design/{fileKey}/?node-id={section id with : replaced by -}` — the same links `/fig:prep` hands over, because engineering opens sections, not frames
 - where a version was pinned: the label, its date, and the `&version-id=` every link now carries
 - where `action` is not `print`: the one line that goes into the task doc — the links, "handed over {date}, {n} sections", and the pinned version written as `handoff.version.ref` — under `{heading}`: after the last hand-over line already there, or, where there is none, directly after the heading and whatever block opens the section, so the lines read oldest to newest, the way markdown's `append-under` leaves them. For `write` the preview names the file and shows the line under the heading; for `notion` it names the page and the line or heading it goes after, and for `github` the issue and whether it is the body or a comment. **That line is what `/pm:task publish` reads to fill a ticket's referenced-version row**, so the label and the date go in as they came back from the file, not as they were typed
+- where `handoff.ready_for_dev` is `true`: the sections step 6 will then mark *Ready for dev* in the web app — after the line has landed (under `print`, right after the go), because marking notifies whoever follows the file in Dev Mode. The go covers the line and the marks together; with the key `false`, this item is not shown
 
 Then the go. After it, the task-doc line, where `action` writes one — nothing in the Figma file. For `write`, with the heading and the line passed single-quoted and every `'` inside them written as `'\''` — a `"`, `$` or backtick in a version label then reaches the file as it is, rather than ending the argument or being expanded by the shell:
 
@@ -128,6 +129,10 @@ For `notion` and `github` the heading is `task_tracker.ui_section_heading`, or t
 
 Re-read the task doc where the line went and confirm it landed under the heading, with the pinned links as written. For a file, `Read` it: the line sits under the heading, once. A mismatch is reported, not retried.
 
+### 6. Mark Ready for dev — only where `handoff.ready_for_dev`
+
+With the key `false`, skip this step. With it `true`, it runs last, after the line was written and read back in step 5: a run that stopped earlier — no go, a version that could not be pinned, a line that did not land — marks nothing, so nobody is notified about a handover that is not there. Under `print` there is no write that could fail to land, so the marks follow right after the go, with the printed line in the response. For each section the step 4 preview named, follow `${CLAUDE_PLUGIN_ROOT}/_common/ready-for-dev.md`: open it in Dev Mode, click *Mark as ready for dev*, and read the status back through REST. A section already marked is skipped and said so. With no browser connected, or the wrong account signed in, hand the step back with the sections and where to click.
+
 ## Report
 
 ```
@@ -143,12 +148,13 @@ Re-read the task doc where the line went and confirm it landed under the heading
 
 [version]    {label} · {date} · version-id {id}   (or "not pinned — handoff.version is off")
 [task doc]   {the file or the page (with `note` after it where there is one), "printed — {note}", or "no tracker configured"}
+[dev status] {n} marked Ready for dev and read back · {m} already marked · {k} clicked, not read back — {why}   (or "off — handoff.ready_for_dev")
 ```
 
 ## Constraints
 
-- The writes are the version entry (through the web app) and the one doc line, each behind its own preview and go, in that order. Frames, sections, names, positions and Dev Mode status are never touched
+- The writes are the version entry (through the web app), the one doc line and — only where `handoff.ready_for_dev` — the sections' *Ready for dev* status (through the web app, last), in that order; the version has its own preview and go, and the line and the marks share one. Frames, sections, names and positions are never touched
 - A section carrying a lint **blocking** is never handed over, whoever asks. A warning alone never withholds one
 - **Never hand over unpinned where `handoff.version.enabled`.** An unpinned handover reads as pinned to whoever gets it, and that is worse than stopping
 - Never save a version without the go, rename one, or write a date that is not the version's own
-- Never offer to set *Ready for dev* or *Completed*, and never list it as remaining work
+- With `handoff.ready_for_dev` off, never offer *Ready for dev* and never list it as remaining work; never set *Completed* at all

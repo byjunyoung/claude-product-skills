@@ -79,13 +79,14 @@ Gather the documents the verdicts will rest on. **Internal assets first.** Where
 | Source | What to pull |
 |---|---|
 | The PRD (from the lookup above) | Detailed behaviour (Given/When/Then), states and cases, rules and exceptions |
-| The design | Screen composition, state variants, copy — read from the live file; the version a handover pinned is not yet compared (see the fig CHANGELOG, 3.31.0) |
+| The design | Screen composition, state variants, copy — at the version the last hand-over line pinned (its `version-id`); the live file where there is no pin (below) |
 | Existing tickets (`qa.baseline.tasks`, as `{ type, ref }`; `markdown` or `notion` — there is no GitHub read path) | Past decisions and reversals, undecided items. Where the type or ref is `null`, this row is skipped |
 | The request itself | What is newly asked for in this round |
 
 - Pull features and policies **exhaustively, by domain**. Look at only a handful and verification items leak out.
 - Read `archived` and `deprecated` entries too — **a deprecated feature still present on screen** is a common defect.
 - An entry whose status is not `confirmed` may still serve as a baseline, but the report marks it `baseline unconfirmed`.
+- **Which design.** Take the last hand-over line from the feature's task record — the lines read oldest to newest, so the last is the current handover — or a pinned link given in the request itself. The record is the one `qa.baseline.tasks` points at; where that is unset, it is `pm`'s, found the way `/fig:handoff` finds where to write: `python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/borrow-pm.py task {fileKey}`, and where its `action` is `write`, `python3 {script} list --dir {dir}` and the record whose title matches the feature (ask when several could), reading the lines under `{heading}`. Any other `action` gives no line here. Where its links carry `version-id`, read each frame at that version, by `${CLAUDE_PLUGIN_ROOT}/_common/version-pin.md`, *Reading a pinned version as an image*. The live file is read instead, and the report's head says why, where the line has no `version-id` (pinning was off), where there is no hand-over line to read, and where there is no token. A frame whose image comes back `null` at that version is read live on its own, and named. QA never stops on any of these.
 
 ## 3. Build the checklist
 
@@ -178,7 +179,7 @@ Whatever is common to the whole round goes at the head of the report **once** �
 
     project / version, build
     environment — server (dev, staging, production) · account permissions · data scope
-    baseline documents — feature and policy entries · design · spec
+    baseline documents — feature and policy entries · design (the pinned version's label and version-id, or "live file — {why}") · spec
 
 One defect:
 

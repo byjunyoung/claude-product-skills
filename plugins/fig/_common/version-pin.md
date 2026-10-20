@@ -1,8 +1,9 @@
 # Pinning a named version
 
-Used by `/fig:handoff` (Step 3) and `/fig:sync` (Step 6). Read it when `handoff.version.enabled`
-is set, or when `sync.named_version` is not `null`. With either off, no version is saved and
-nothing here runs.
+Used by `/fig:handoff` (Step 3) and `/fig:sync` (Step 6) to save a version, and by `/fig:qa` to
+read a pinned one back as an image (*Reading a pinned version as an image*, below). Read the saving steps when
+`handoff.version.enabled` is set, or when `sync.named_version` is not `null`. With either off, no
+version is saved and those steps do not run.
 
 **A named version is a moment in the file.** Without one, every later edit silently moves what
 "matches the design" means. Figma's named versions are a snapshot of the whole file, so every
@@ -73,6 +74,29 @@ recognises the entry by that exact title.
 ## The pinned link (handoff)
 
 Every section link handoff hands over carries the pin: `…/?node-id={id}&version-id={version id}`.
+
+## Reading a pinned version as an image
+
+Used by `/fig:qa`, so a build is judged against the design as it was handed over rather than as the
+file stands now. Read-only: nothing is saved or changed.
+
+1. Take the `version-id` from a pinned link (`…&version-id={id}`) and the ids of the frames to judge.
+2. Resolve the token as step 4 does, checking it is set before the call, and ask for those frames at
+   that version:
+
+   ```bash
+   curl -s -H "X-Figma-Token: ${!TOKEN_VAR}" \
+     "https://api.figma.com/v1/images/{fileKey}?ids={frame id},{frame id}&version={version id}&format=png"
+   ```
+
+   The answer maps each id to a short-lived image URL; download each and use it as that frame's
+   design. This call needs the `file_content:read` scope — the version list's `file_versions:read`
+   alone is not enough, so a token minted only for that needs this scope added.
+3. **An id that maps to `null`** — the frame did not exist at that version, or rendered nothing
+   there — is read from the live file instead, for that frame alone, and named as such.
+4. **No token, or anything but a 200** — a 401 or 403 (an expired or wrong token, or one without
+   `file_content:read`), a 400 or 404 (a version id the file does not have) → every frame is read
+   from the live file, and that is said once, with the status and Figma's `err` as they came back.
 
 ## Never
 
