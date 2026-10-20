@@ -128,7 +128,7 @@ The rest of this section has each step in full. From there, [**fig**](#fig--the-
 | **The Figma MCP plugin** (`plugin:figma`) | Every `fig` skill reads and writes Figma through it. Confirm it answers before going further |
 | **A Figma file** | `/fig:setup` infers conventions by measuring a file you already work in. An empty one, or a first one, takes the starter path instead — four rules proposed in plain words, then the first skeleton laid on a page |
 | **`python3` with PyYAML, and `node`** | Config resolution runs on the host. `node` is for `fig`'s audit scripts, which are syntax-checked with `node --check`, and on the `pm` side only for the importer that brings in an existing Notion log |
-| **A Figma personal access token** *(optional)* | A key you generate in Figma yourself (Settings → Security), which lets a skill ask Figma directly instead of going through the app. `/fig:handoff` and `/fig:sync` read a saved version back through the same API — handoff where `handoff.version` is on, sync where `sync.named_version` is set. With no token, `/fig:handoff` asks for the version's link to be pasted instead and never hands over unpinned; `/fig:sync`, which has no link to pin, reports that the version could not be confirmed |
+| **A Figma personal access token** *(optional)* | A key you generate in Figma yourself (Settings → Security), which lets a skill ask Figma directly instead of going through the app. `/fig:handoff` and `/fig:sync` read a saved version back through the same API — handoff where `handoff.version` is on, sync where `sync.named_version` is set (scope `file_versions:read`) — and handoff reads each *Ready for dev* mark back where `handoff.ready_for_dev` is on (scope `file_content:read`). With no token, `/fig:handoff` asks for the version's link to be pasted instead and never hands over unpinned; `/fig:sync`, which has no link to pin, reports that the version could not be confirmed |
 | **The `gh` command** *(pm, where the tracker is GitHub)* | GitHub's own command-line tool, installed on your machine and logged in separately from Claude. The GitHub side runs on it, not on Claude's connection. Log in with the account that can see the tracker — a personal account looking at a company repository sees nothing — and give it board access once with `gh auth refresh -s read:project` |
 
 `pm` needs none of the Figma side. If you only write specs, install it alone.
@@ -143,7 +143,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | Skill | Also needs |
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — they drive a real browser |
-| `/fig:handoff` `/fig:sync` | **Claude in Chrome** — optional, only to save a named version in Figma's web app; without it they hand the step back to you, with the name to use |
+| `/fig:handoff` `/fig:sync` | **Claude in Chrome** — optional, only to save a named version in Figma's web app, and for handoff to mark the sections Ready for dev where `handoff.ready_for_dev` is on (off by default); without it they hand the step back to you, with the name to use or the sections to mark |
 | `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — only where `task_tracker.type` / `task.mirror.type` is `github`. Two logins are involved: Claude's connection, and the `gh` command the tracker is read through — `/pm:task` uses `gh` alone. The check covers both, and names the account `gh` is on |
 | `/fig:handoff` | **Notion search, or GitHub issue search** — read-only, and only where no task page is passed to the run: handoff looks in the tracker `task_tracker.ref` names for the task, and lists what it found and asks, when it finds none or several; it uses the Notion/GitHub connection above |
@@ -374,7 +374,7 @@ flowchart TD
 | `/fig:draw` | Draw a screen or fill a stub — after `/fig:sketch` where the screen changes, following the file's own pattern, cloned from its nearest canonical screen, with copy from the PRD |
 | `/fig:arrows` | Create and re-sync flow arrows |
 | `/fig:lint` | Read-only audit gate (zero writes) |
-| `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task — `pm`'s markdown task file, a Notion page or a GitHub issue — or printed where there is none |
+| `/fig:handoff` | Pick from the lint-passed sections · pin the version · hand over the links · one line in the task — `pm`'s markdown task file, a Notion page or a GitHub issue — or printed where there is none · last, mark them Ready for dev where `handoff.ready_for_dev` is on (off by default) |
 | `/fig:tokens` | Bind the colours `/fig:lint` flags to design system tokens — the mapping shown first, binding after a go |
 | `/fig:sync` | Full canonical-page audit → apply → archive |
 | `/fig:proto` | Working single-file HTML prototype |

@@ -128,7 +128,7 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 | **Figma MCP 플러그인**(`plugin:figma`) | `fig` 스킬은 전부 이걸 거쳐 Figma를 읽고 씁니다. 응답하는지 먼저 확인하세요 |
 | **Figma 파일** | `/fig:setup`은 평소 쓰던 파일을 재서 관례를 뽑습니다. 빈 파일이나 첫 파일이면 스타터 경로로 갑니다 — 규칙 넷을 평어로 제안하고, 첫 뼈대를 페이지에 깝니다 |
 | **`python3` + PyYAML, `node`** | 설정 해석은 호스트에서 돕니다. `node`는 `fig`의 감사 스크립트 문법을 `node --check`로 보는 데 쓰고, `pm` 쪽에선 쓰던 노션 일지를 옮겨오는 스크립트에만 필요합니다 |
-| **Figma 개인 액세스 토큰** *(선택)* | Figma에서 직접 발급하는 열쇠입니다(설정 → Security). 앱을 거치지 않고 Figma에 바로 물어볼 수 있게 해 줍니다. `handoff.version`을 켜면 `/fig:handoff`가, `sync.named_version`을 정하면 `/fig:sync`가 같은 API로 저장된 버전을 되읽습니다. 토큰이 없으면 `/fig:handoff`는 버전 링크를 붙여넣어 달라고 하고 못박지 않은 채로는 넘기지 않으며, 못박을 링크가 없는 `/fig:sync`는 버전을 확인하지 못했다고 알립니다 |
+| **Figma 개인 액세스 토큰** *(선택)* | Figma에서 직접 발급하는 열쇠입니다(설정 → Security). 앱을 거치지 않고 Figma에 바로 물어볼 수 있게 해 줍니다. `handoff.version`을 켜면 `/fig:handoff`가, `sync.named_version`을 정하면 `/fig:sync`가 같은 API로 저장된 버전을 되읽습니다(권한 `file_versions:read`). `handoff.ready_for_dev`를 켜면 handoff가 *Ready for dev* 표시도 되읽습니다(권한 `file_content:read`). 토큰이 없으면 `/fig:handoff`는 버전 링크를 붙여넣어 달라고 하고 못박지 않은 채로는 넘기지 않으며, 못박을 링크가 없는 `/fig:sync`는 버전을 확인하지 못했다고 알립니다 |
 | **`gh` 명령** *(pm, 트래커가 GitHub일 때)* | GitHub가 만든 명령줄 도구입니다. 내 컴퓨터에 깔려 있고 로그인도 Claude와 따로 갑니다. GitHub 쪽은 Claude의 연결이 아니라 이걸로 돕니다. 트래커가 보이는 계정으로 로그인하고 — 회사 저장소를 개인 계정으로 보면 아무것도 안 보입니다 — 보드를 쓰면 `gh auth refresh -s read:project`로 권한 하나를 더 받으세요 |
 
 `pm`은 Figma 쪽이 하나도 필요 없습니다. 기획 문서만 쓴다면 그것만 깔면 됩니다.
@@ -143,7 +143,7 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 | 스킬 | 추가로 필요한 것 |
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — 실제 브라우저를 띄웁니다 |
-| `/fig:handoff` `/fig:sync` | **Claude in Chrome** — 선택. 피그마 웹앱에서 이름 붙인 버전을 저장할 때만 씁니다. 없으면 그 단계를 쓸 이름과 함께 사용자에게 넘깁니다 |
+| `/fig:handoff` `/fig:sync` | **Claude in Chrome** — 선택. 피그마 웹앱에서 이름 붙인 버전을 저장할 때, 그리고 `handoff.ready_for_dev`를 켰을 때(기본은 꺼짐) handoff가 섹션을 Ready for dev로 표시할 때만 씁니다. 없으면 그 단계를 쓸 이름이나 표시할 섹션과 함께 사용자에게 넘깁니다 |
 | `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — 설정이 Notion 페이지를 가리킬 때만 |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — `task_tracker.type` / `task.mirror.type`이 `github`일 때만. 로그인이 둘입니다 — Claude의 연결 하나, 트래커를 읽는 `gh` 명령 하나. `/pm:task`는 `gh`만 씁니다. 점검이 둘 다 보고 `gh`가 어느 계정인지 알려줍니다 |
 | `/fig:handoff` | **Notion 검색, 또는 GitHub 이슈 검색** — 읽기 전용이고, 실행에 일감 페이지를 넘기지 않았을 때만. `task_tracker.ref`가 가리키는 트래커에서 일감을 찾아보고, 없거나 여럿이면 찾은 것을 보여 주고 묻습니다. 위의 Notion·GitHub 연결을 그대로 씁니다 |
@@ -370,7 +370,7 @@ flowchart TD
 | `/fig:draw` | 화면이 달라지면 `/fig:sketch`로 합의한 뒤, 파일이 쓰는 패턴을 따라 가장 가까운 정본 화면을 복제해 화면을 그리거나 껍데기를 채운다. 문구는 기획서에서 가져온다 |
 | `/fig:arrows` | 흐름 화살표 생성과 재동기화 |
 | `/fig:lint` | 읽기 전용 검증 게이트 (쓰기 0) |
-| `/fig:handoff` | 검사 통과한 섹션에서 고르기 · 넘기는 버전 못박기 · 넘길 링크 정리 · 일감에 한 줄 — `pm`의 마크다운 일감 파일, 노션 페이지, GitHub 이슈 — 남길 곳이 없으면 출력 |
+| `/fig:handoff` | 검사 통과한 섹션에서 고르기 · 넘기는 버전 못박기 · 넘길 링크 정리 · 일감에 한 줄 — `pm`의 마크다운 일감 파일, 노션 페이지, GitHub 이슈 — 남길 곳이 없으면 출력 · 맨 마지막에, `handoff.ready_for_dev`를 켰으면(기본은 꺼짐) Ready for dev 표시 |
 | `/fig:tokens` | `/fig:lint`가 짚은 색을 디자인시스템 토큰에 묶기 — 매핑을 먼저 보여 주고 go 뒤에 묶음 |
 | `/fig:sync` | 정본 반영 전수 감사 → 반영 → 이관 |
 | `/fig:proto` | 동작하는 단일 HTML 프로토타입 |

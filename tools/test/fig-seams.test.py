@@ -124,6 +124,37 @@ check("prep loads generate-design with figma-use, names both in skillNames, and 
       and "component discovery" in prep and "page-level wrapper" in prep
       and pg < prep.find("**Seat check"), f"{pg}")
 
+# ---- 3e Task 1: handoff marks Ready for dev last, where a team switches it on (§11) -----------------------
+RFD = REPO / "plugins/fig/_common/ready-for-dev.md"
+rfd = RFD.read_text(encoding="utf-8") if RFD.exists() else ""
+hb = ex.split("\nhandoff:", 1)[1].split("\n# ---", 1)[0]
+check("handoff ready_for_dev ships off",
+      re.search(r"^\s+ready_for_dev:\s*false\b", hb, re.M) is not None
+      and "never offered" not in ho and "is not set by any skill" not in ex)
+h5, h6 = ho.find("### 5. Read back"), ho.find("### 6. Mark Ready for dev")
+s6 = ho[h6:].split("\n## ", 1)[0] if h6 >= 0 else ""
+check("handoff marks Ready for dev last, after the line is written and read back",
+      0 <= h5 < h6 and "ready-for-dev.md" in s6 and "handoff.ready_for_dev" in s6, f"{h5} {h6}")
+s4 = ho.split("### 4.", 1)[1].split("### 5.", 1)[0]
+check("handoff's line preview names the mark where it is switched on",
+      "handoff.ready_for_dev" in s4 and "Ready for dev" in s4)
+check("ready-for-dev.md names its route and its read-back",
+      all(k in rfd for k in ("m=dev", "Mark as ready for dev", "devStatus", "READY_FOR_DEV",
+                              "tools.figma_token_env", "/v1/files/")), rfd[:80])
+check("ready-for-dev.md hands it back with no browser or the wrong account",
+      "hand it back" in rfd and "wrong" in rfd)
+rfd1 = " ".join(rfd.split())   # prose wraps mid-sentence; judge sentences, not lines
+check("an already-marked section is skipped, not clicked again",
+      re.search(r"already[^.]*Ready for dev[^.]*skip|skip[^.]*already[^.]*Ready for dev", rfd1, re.I) is not None)
+check("nothing is marked when the run stops before the line",
+      "marks nothing" in s6 or "nothing is marked" in s6.lower())
+check("sync still leaves Completed unset",
+      "Dev Mode status (*Completed*) is not set and not offered" in read(SK + "sync/SKILL.md"))
+for rel in ("README.md", "README.ko.md"):
+    ch = next((l for l in read(rel).splitlines() if "Claude in Chrome" in l and "/fig:handoff" in l), "")
+    check(f"{rel} Chrome row says handoff marks Ready for dev where ready_for_dev is on",
+          "handoff.ready_for_dev" in ch and "Ready for dev" in ch, ch[:100])
+
 print()
 if failures:
     print(f"{len(failures)} failed: {', '.join(failures)}")

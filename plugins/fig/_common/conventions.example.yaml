@@ -194,9 +194,11 @@ sync:
                                               # because saveVersionHistoryAsync is not exposed to use_figma (see handoff below)
 
 # --- Handoff --------------------------------------------------------------------
-# Dev Mode status (Ready for dev / Completed) is not set by any skill: use_figma rejects
-# `"devStatus" is not a supported API` and Figma's REST API cannot set it. The
-# handoff.dev_status and handoff.ready_note keys were removed in 3.26.0.
+# Dev Mode status: use_figma rejects `"devStatus" is not a supported API` and Figma's
+# REST API cannot set it, so /fig:handoff marks Ready for dev through Figma's web app
+# (plugins/fig/_common/ready-for-dev.md), and only where ready_for_dev below is true.
+# Completed is never set. The handoff.dev_status and handoff.ready_note keys removed in
+# 3.26.0 are not read again; ready_for_dev is a new key, so an old config does not turn it on.
 handoff:
   # --- The moment a handover points at -------------------------------------------
   # A handover has to name a moment in the file. Without one, "matches the design"
@@ -212,6 +214,8 @@ handoff:
     name:  "{release} handover"               # what the person types into Figma's version history
     match: '^(.+) handover$'                  # picks handovers out of the autosaves. group 1 is the release
     ref:   "{label} · {date}"                 # how it is written into the task doc and the ticket
+  ready_for_dev: false                        # true marks the handed-over sections Ready for dev in Figma's web app,
+                                              # last, after the task line — it notifies whoever follows the file in Dev Mode
 
 # --- Task tracker --------------------------------------------------------------
 # Where the task doc lives — /fig:handoff writes its one line there. type decides how:
@@ -277,7 +281,7 @@ qa:
 
 # --- Tools ---------------------------------------------------------------------
 tools:
-  figma_token_env: FIGMA_TOKEN                # env var holding the PAT (scope file_versions:read), for the version read-back in handoff and sync; version-pin.md step 4 reads it and checks it is non-empty before calling
+  figma_token_env: FIGMA_TOKEN                # env var holding the PAT (scope file_versions:read), for the version read-back in handoff and sync; version-pin.md step 4 reads it and checks it is non-empty before calling. handoff's Ready for dev read-back (ready-for-dev.md) needs file_content:read on it too
   frame_count_guard: 20                       # above this many frames, confirm before collecting screenshots (/fig:read, default 20)
   proto_output_dir: "."                       # where working prototypes are written
   proto_publish:                              # an unset repo stays local and never offers to publish
