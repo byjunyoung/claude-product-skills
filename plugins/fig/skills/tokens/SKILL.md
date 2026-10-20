@@ -91,7 +91,7 @@ Run `audit-tokens.js` with `const MODE = "collect";`, and `const SECTION = "<sec
 
 - `dictionary` — `{ hex: [{ key, scopes }, …] }`, each colour the file's tokens render and the tokens that render it, each with the properties it may be bound to (`null` where they cannot be read)
 - `unbound` — `[{ hex, kind, count, nodes, grade, nearest, tokens }]`, the directly editable colours on no token, one row per colour and kind (`fill`, `text`, `stroke`, `effect`), split again where the tokens that fit differ — a frame's fill and a shape's, say. `count` is paints, `nodes` the node ids, `nearest` the dictionary entry it was graded against, and `tokens` the keys at `nearest` scoped for every paint in the row — `[]` where none is
-- `inInstance` — `[{ hex, count }]`, colours held inside instances, for the "component repair issue" line
+- `inInstance` — `[{ hex, count, source }]`, colours held inside instances, for the "component repair issue" line. `source` is where the outermost instance's master lives: `local` (this file — repair it on its page), `library` (repair it in the library that publishes it) or `unknown`
 - `note` — a dictionary left empty, or colour variables that could not be read; print it
 
 A colour at full opacity is written `#RRGGBB` and any other `#RRGGBBAA`, in every field. A section that is not on the page makes the scan throw; ask which one was meant.

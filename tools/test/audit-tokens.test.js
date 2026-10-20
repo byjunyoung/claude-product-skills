@@ -305,8 +305,8 @@ test("collect counts the colours held inside instances apart", async () => {
     node("VECTOR", "Home-Default --> Detail-Default", { strokes: [solid("#3366FF")] }), // scaffolding: not counted
   ])], LIB, { MODE: "collect" });
   assert.deepStrictEqual(out.unbound.map((u) => [u.hex, u.nodes]), [["#FF0000", ["id:Chip"]]], "the stroke the instance overrides is its own");
-  assert.deepStrictEqual(out.inInstance, [{ hex: "#111111", count: 3 }, { hex: "#3366FF", count: 1 }],
-    "the instance's own fill it does not override, and every layer inside it");
+  assert.deepStrictEqual(out.inInstance, [{ hex: "#111111", count: 3, source: "unknown" }, { hex: "#3366FF", count: 1, source: "unknown" }],
+    "the instance's own fill it does not override, and every layer inside it — masters these fakes cannot read are unknown");
   const audit = await run([section("01. Home", [node("INSTANCE", "Chip", { fills: [solid("#3366FF")] })])]);
   assert.strictEqual(audit.inInstance, undefined, "the audit result carries no inInstance");
 });
@@ -383,6 +383,37 @@ test("the audit notes hand-typed colours held inside instances, which it does no
     section("02. Other", [frame("Other-Default", {})]),
   ], LIB, { SECTION: "id:02. Other" });
   assert.strictEqual(scoped.note, undefined, "only the instances in the audited scope count");
+});
+
+// 3e: an instance's master is this file's (lint its page) or a library's (fix it in the library). The
+// note says which, since "run lint on the page that holds their masters" points nowhere for a library one.
+const localMaster = { type: "COMPONENT", name: "Card", remote: false, parent: { type: "PAGE", name: "Components" } };
+const libMaster = { type: "COMPONENT", name: "Button", remote: true };
+const inst = (name, master, kids) => node("INSTANCE", name, { getMainComponentAsync: async () => master }, kids);
+const typed = (name) => node("TEXT", name, { fills: [solid("#111111")] });
+const LOCAL_NOTE = "2 hand-typed colours sit inside instances of this file's components — run lint on \"Components\"";
+const LIB_NOTE = "3 hand-typed colours sit inside library components — fix them in the library that publishes them";
+
+test("the instance note tells this file's components from library ones", async () => {
+  const out = await run([section("01. Home", [frame("Home-Default", {}, [
+    inst("Card", localMaster, [typed("Card title"), typed("Card body")]),
+    inst("Lib button", libMaster, [typed("Label a"), typed("Label b"), typed("Label c")]),
+  ])])]);
+  assert.strictEqual(out.pass, true, "neither half changes the verdict");
+  assert.strictEqual(out.note, `${LOCAL_NOTE}; ${LIB_NOTE}`);
+});
+
+test("a library-only instance note has no local half", async () => {
+  const out = await run([section("01. Home", [inst("Lib button", libMaster, [typed("Label a"), typed("Label b"), typed("Label c")])])]);
+  assert.strictEqual(out.note, LIB_NOTE);
+});
+
+test("collect's inInstance rows carry where the master lives", async () => {
+  const out = await run([section("01. Home", [
+    inst("Card", localMaster, [typed("Card title"), typed("Card body")]),
+    inst("Lib button", libMaster, [typed("Label a"), typed("Label b"), typed("Label c")]),
+  ])], LIB, { MODE: "collect" });
+  assert.deepStrictEqual(out.inInstance, [{ hex: "#111111", count: 3, source: "library" }, { hex: "#111111", count: 2, source: "local" }]);
 });
 
 test("a colour loose on the canvas, outside every section, is a warning even where an exact token exists", async () => {
