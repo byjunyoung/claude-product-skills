@@ -1,0 +1,126 @@
+# Phase 3e — what the probes unlocked Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** The items 3d left *Gated* are settled by the 2026-10-20 probes: the ones that passed ship (handoff can mark *Ready for dev*, qa compares against the handed-over version), the ones that failed or needed nothing close, and one setup seam the probes' file walk exposed is fixed.
+
+**Architecture:** Prose changes to handoff, qa and the shared `_common` procedures, with one new shared procedure (`_common/ready-for-dev.md`) shaped like `version-pin.md`, because both are web-app writes read back through REST. One script change in `draft-conventions.py`. Every behaviour is pinned by a doc test in `tools/test/fig-seams.test.py` or a unit test in `tools/test/draft-conventions.test.py`. No new Figma script.
+
+**Tech Stack:** Markdown skills; Python 3.9 tests; Figma REST (`/v1/files/:key/nodes`, `/v1/files/:key/versions`, `/v1/images/:key`); claude-in-chrome for the web-app click.
+
+**Spec:** on branch `worktree-local-first-design`, `docs/design/2026-10-18-skill-review.md`: S5 handoff order (~155-166), S15 (~268-284), D4 (~336-350). 3d's *Gated* list (`docs/superpowers/plans/2026-10-19-phase3d-official-skills-and-seams.md:15-19`).
+
+**Probe record:** the owner's checklist `~/Documents/XYZ/fig_실측_1020/20261020_fig-pm_개편_실측_체크리스트.md`, table 「기록」, run 2026-10-20 on a Full seat (XYZ, pro) with fig 3.31.0. Facts below are from it and from main `1c5e552`.
+
+## What the probes settled
+
+| 3d gated item | Probe result (2026-10-20) | In this plan |
+|---|---|---|
+| S15 image export by version | `GET /v1/files/{key}/versions` → `GET /v1/images/{key}?ids={node}&version={versionId}&format=png` returns that version's image URL (View-seat token) | Task 2 |
+| §11 *Ready for dev* — probe A | Reached, clicked, read back. `?node-id={section}&m=dev` opens Dev Mode with the section selected; the left panel's **Mark as ready for dev** is a DOM button (no canvas coordinates); one click marks it, no confirmation dialog; `GET /v1/files/{key}/nodes?ids={section}` returns `devStatus: {type: "READY_FOR_DEV", description: ""}` at once (absent before). `use_figma` still rejects `devStatus` | Task 1 |
+| D4 Code layer | `whoami.code_layers_enabled` is `false` at the top level and on both plans (Full/pro, View/starter) | Closed — the Pages gallery stays proto's default, as D4 already decided. No file changes |
+| 3c: library-only token dictionary | All 8 team files have zero local colour variables; on one page 34/34 bound library variables resolved through `getVariableCollectionByIdAsync`, 30/30 aliases followed, the bound-paint fallback unused | Closed — no change |
+| 3c: translucent token opacity after a bind | 50% black paint bound to a local `#00000080` token renders 127/255 on white, equal to an unbound 50% swatch (25% renders 191): not multiplied | Closed — no opacity rule in `token-bind.js` |
+| 3c: sync's real page switch | With the working page current, 125/125 instances in the canonical frame resolve `getMainComponentAsync()`; `sameMasters: true` is real | Closed — no reordering in `sync-compare.js` |
+
+**Gated — not in this plan until probed:**
+- Paint opacity against token alpha when they differ (a 100% paint bound to a 50% token, and the reverse). The probe above had both at 50%, so it cannot say which wins. It decides whether `token-bind.js`'s accepted `opacity 100% → 50%` change shows what the screen will do.
+- Dev Mode *Completed* for `/fig:sync`. Probe A covered *Ready for dev* only; sync:159 keeps saying *Completed* is not set.
+
+**Found during the probes — not planned unless the owner adds it:** `sync-compare.js` collects every FRAME in a section, so `[label] A --> B` pills come back as `new — not on the canonical page` (17 of 57 entries on one queue page). The `<scaffolding>` block already names them.
+
+**Open — needs the owner:**
+- The checklist names a 3e candidate "tokens 보류 항목". It is not in the 3c/3d plans, the CHANGELOG or the shared memory read on 2026-10-20; the other Mac's memory may hold it. Not planned until named.
+- Task 1 contradicts the owner's 2026-10-08 rule that a handover ends at the named version, the ticket's link and Plan-Ready, with *Ready for dev* kept out of the procedure (the reason then: no tool could set it). The checklist's own rule says §11 ships when probe A passes. The plan therefore ships it **off by default**; confirm, or drop Task 1.
+- Task 3 reads "setup의 중첩 섹션 스타일" as the seam found at `draft-conventions.py:159` (inference). Confirm.
+
+## Global Constraints
+
+- Repo `CLAUDE.md`: CHANGELOG + version together (fig 3.32.0; pm untouched, no pm bump); both root READMEs, English first; a config key a doc names exists in `conventions.example.yaml`; rules in their general shape; no skill count in prose.
+- A default that ships off stays off in every README sentence that names it.
+- Descriptions one sentence + triggers, ≤500. `bash tools/verify-all.sh` ends `· PASS`, no WARN.
+- Tests that run git drop every `GIT_*` variable. Python 3.9.
+- Every web-app write keeps version-pin's shape: preview → go → act → read back through REST; no browser or the wrong account → hand it back, never claim it was done.
+
+## Review Focus
+
+1. **`handoff.ready_for_dev: true` with no browser connected, or signed in as another account** — nothing is marked; the report says where to click and the section stays unmarked in the report. Test: Task 1.
+2. **A section that is already *Ready for dev*** — no click (the button is absent and the canvas shows the badge); reported as already marked. Test: Task 1.
+3. **A handover that stops before its doc line** (version pin failed, token missing, no go) — nothing is marked, because the mark comes last. Test: Task 1.
+4. **qa where the last handover line has no `version-id`** (pinning off) — qa reads the live file and the report says the design was judged as it stands now. Test: Task 2.
+5. **qa with no token, or a frame id absent at the pinned version** — that frame (or every frame, with no token) falls back to the live file, named in the report; QA carries on. Test: Task 2.
+
+---
+
+### Task 1: handoff marks *Ready for dev* last, where a team switches it on (§11)
+
+**Files:**
+- Create: `plugins/fig/_common/ready-for-dev.md` — why the web app; steps; read back; never. Same headings as `version-pin.md`
+- Modify: `plugins/fig/skills/handoff/SKILL.md` — :3 description; :23 the "never offered" paragraph; step 4 (:99-125) preview and order; :144 report line; :150 and :154 constraints
+- Modify: `plugins/fig/_common/conventions.example.yaml` :197-199 comment and the `handoff` block (:200) — new key
+- Modify: both root READMEs where handoff's writes and "never a Dev Mode status" are described; *What each skill needs* (handoff gains the browser tools)
+- Test: `tools/test/fig-seams.test.py`
+
+**Interfaces:**
+- Produces: config key `handoff.ready_for_dev: false` (boolean). A new name on purpose: the `handoff.dev_status` retired in 3.26.0 may still sit in old configs, and must not switch this on.
+- Produces: `_common/ready-for-dev.md`, read by handoff step 4 only.
+
+**Decisions:**
+- Off by default, because marking notifies developers and the 2026-10-08 team rule ends a handover without it (see *Open*).
+- Order (S5): one preview for the doc line **and** the mark → go → write the line → read it back → mark each section → read each back. The mark is last; any earlier stop marks nothing.
+- The click: open `https://www.figma.com/design/{fileKey}/?node-id={section id, : → -}&m=dev`, find the button by its label "Mark as ready for dev", click it. A section showing the *Ready for dev* badge and no button is already marked: skip it and say so.
+- Read back: `GET /v1/files/{fileKey}/nodes?ids={section id}` and require `nodes[id].document.devStatus.type == "READY_FOR_DEV"`. The token is resolved the way `version-pin.md` step 4 does (`tools.figma_token_env`, checked non-empty before the call); the doc names the endpoint and says the token's scopes must allow reading file nodes — confirm the scope name against Figma's REST docs when writing it, since the probe token's scopes were not listed.
+- `use_figma` is still never used for the status (`"devStatus" is not a supported API`, re-checked 2026-10-20). handoff:23 keeps that fact and drops the conclusion that no tool can set it.
+
+- [ ] **Step 1: Failing tests** — `handoff ready_for_dev ships off`: `conventions.example.yaml` has `ready_for_dev: false` under `handoff`; no sentence in handoff says "never offered". `handoff marks last`: in step 4 the mark follows "write the line" and "Read back". `ready-for-dev.md names its route`: contains `m=dev`, `Mark as ready for dev`, `devStatus`, `READY_FOR_DEV`, `tools.figma_token_env`, and a hand-back sentence for no browser / wrong account. `already marked is skipped`: the skip sentence present. `sync still leaves Completed`: sync:159 unchanged.
+- [ ] **Step 2: Run** `python3 tools/test/fig-seams.test.py`. Expected: FAIL.
+- [ ] **Step 3: Write** `ready-for-dev.md`; edit handoff, the config comment and key, both READMEs.
+- [ ] **Step 4: Run** tests and `python3 tools/verify.py`. Expected: PASS.
+- [ ] **Step 5: Commit** `feat(fig): handoff가 켜 둔 팀에서만 웹 앱으로 Ready for dev를 맨 마지막에 표시하고 REST로 되읽는다`
+
+### Task 2: qa compares against the version the handover pinned (S15)
+
+**Files:**
+- Modify: `plugins/fig/_common/version-pin.md` — new section *Reading a pinned version as an image (qa)* after *The pinned link*; its first line under the title says qa uses it too
+- Modify: `plugins/fig/skills/qa/SKILL.md` — :82 baseline row; step 2's design reading; the report header's baseline line (~:181)
+- Modify: `plugins/fig/_common/conventions.example.yaml` `tools.figma_token_env` comment (:280) — qa reads with it too
+- Modify: both root READMEs' token row (names handoff and sync today) and qa's row in *What each skill needs*
+- Test: `tools/test/fig-seams.test.py`
+
+**Interfaces:**
+- Consumes: the handover line format from handoff step 4 — section links carrying `&version-id={id}`, oldest to newest under `task_tracker.ui_section_heading`.
+
+**Decisions:**
+- Where the line comes from: the task record qa already reads (`qa.baseline.tasks`, or pm's record through `borrow-pm.py`). The **last** handover line under the design heading wins, as pm publish reads it (3d Task 5).
+- Image: for each frame qa would have read live, `GET /v1/images/{fileKey}?ids={frame id}&version={version id}&format=png`, then download the returned URL. A `null` image for an id (the frame did not exist at that version) falls back to the live frame for that id only.
+- No `version-id` in the line, no line at all, or no token → the live file, and the report's baseline line says which and that the design was judged as it stands now. QA never stops on this.
+- qa:82 drops "not yet compared"; the CHANGELOG entry replaces the 3.31.0 pointer.
+
+- [ ] **Step 1: Failing tests** — `qa reads the pinned version`: qa names `version-pin.md` and the last handover line; qa:82 no longer says "not yet compared". `version-pin has the image read`: contains `/v1/images/` and `version=`. `qa falls back and says so`: the three fall-back cases and the per-frame `null` case each have a sentence. `token row names qa`: both READMEs' token row name `/fig:qa`.
+- [ ] **Step 2: Run.** Expected: FAIL.
+- [ ] **Step 3: Edit.**
+- [ ] **Step 4: Run** + verify.py. Expected: PASS.
+- [ ] **Step 5: Commit** `feat(fig): qa가 넘김 줄이 고정한 버전의 이미지와 비교하고, 못 찾으면 지금 파일로 보고 그렇다고 말한다`
+
+### Task 3: setup drafts `section_style` from top-level sections only
+
+**Files:**
+- Modify: `plugins/fig/_common/scripts/lib/draft-conventions.py:159` — `S` keeps `depth == 0`, as `secnames` does at :98
+- Test: `tools/test/draft-conventions.test.py`
+
+**Decision:** A nested section is grouping inside a section, often painted differently or not at all; counted alongside the top level it dilutes the mode below `DOMINANCE` (0.6, :24), or wins where nesting is common, and `/fig:prep` then paints new top-level sections with the inner style. Naming already ignores depth > 0 for the same reason. Exclusion candidates keep reading every depth (:232).
+
+- [ ] **Step 1: Failing test** — `nested sections do not vote on section_style`: probes with three depth-0 sections filled `#8306FF` at 0.04 and five depth-1 sections filled `#FFFFFF` at 1 (today the inner style wins 5/8 ≥ 0.6; three keeps the top level at `MIN_SUPPORT`, :23) → the drafted `section_style.fill` is `#8306FF` and `fill_opacity` 0.04.
+- [ ] **Step 2: Run** `python3 tools/test/draft-conventions.test.py`. Expected: FAIL.
+- [ ] **Step 3: Filter** `S` to `s.get("depth", 0) == 0`, with a comment pointing at :98.
+- [ ] **Step 4: Run** + verify.py. Expected: PASS.
+- [ ] **Step 5: Commit** `fix(fig): setup 초안의 섹션 스타일을 맨 위 섹션으로만 관찰한다`
+
+### Task 4: Release fig 3.32.0
+
+**Files:** `plugins/fig/.claude-plugin/plugin.json` 3.31.0 → 3.32.0, `plugins/fig/CHANGELOG.md`, `plugins/fig/README.md`, both root READMEs.
+
+- [ ] **Step 1:** Version + CHANGELOG. Opens with what a designer sees: qa judges against the handed-over version; handoff can mark *Ready for dev* where a team switches it on (off by default); setup's drafted section style ignores nested sections. One line records the probes that closed D4 and 3c's three live checks with no change.
+- [ ] **Step 2:** README sweep, English then Korean — the off default stated wherever handoff's writes are listed.
+- [ ] **Step 3:** `bash tools/verify-all.sh` → `· PASS`, no WARN.
+- [ ] **Step 4: Commit** `chore(release): fig 3.32.0 — qa가 넘긴 버전과 비교하고, handoff가 켜 둔 팀에서 Ready for dev를 표시한다`. The controller pushes, previews the PR, waits for go.
