@@ -726,8 +726,8 @@ test("a token that cannot be imported is reported, and an accepted change binds 
   assert.deepStrictEqual(dry.mapping, [
     { hex: "#3B66FF", variableKey: "key:libfill", nodes: ["id:Badge"] },
     { hex: "#3B66FF", variableKey: "key:primary", nodes: ["id:Badge"] },
-    { hex: "#3B66FF", variableKey: "key:primary", nodes: ["id:Badge"], accept: true, paints: [{ node: "id:Badge", prop: "strokes", index: 0 }] },
-  ], "the accepted entry carries the one paint the preview showed it binding");
+    { hex: "#3B66FF", variableKey: "key:primary", nodes: ["id:Badge"], accept: true, paints: [{ node: "id:Badge", prop: "strokes", index: 0, expect: "#3366FF" }] },
+  ], "the accepted entry carries the one paint the preview showed it binding, and the value it showed there");
 
   const real = await bind(figma, dry.mapping);
   assert.deepStrictEqual(figma.imports, ["key:libfill"]);
@@ -866,4 +866,48 @@ test("collect never offers a token the bind would refuse for that row's paints",
   assert.deepStrictEqual(dry.wouldBind.map((w) => [w.name, w.kind, w.variableKey]).sort(), [
     ["Bar", "fill", "key:b-fill"], ["Card-Default", "fill", "key:b-fill"], ["Card-Default", "stroke", "key:line"], ["Title", "text", "key:a-text"],
   ], "the grade-1 rows bind as offered; the near one waits for its accept");
+});
+
+// ── 3e: an accepted change is pinned to the value its preview showed ──
+// An opaque black paint, accepted onto a 50% token: the change the person said go to is "opacity 100% → 50%".
+const scrimLib = () => ({ vars: [colorVar("scrim", { m1: value("#000000", 0.5) })], local: ["scrim"] });
+const swatchPage = () => [section("01. Home", [node("RECTANGLE", "Swatch", { fills: [solid("#000000")] })])];
+const SCRIM = [
+  { hex: "#000000", variableKey: "key:scrim" },
+  { hex: "#000000", variableKey: "key:scrim", accept: true, nodes: ["id:Swatch"] },
+];
+
+test("the dry run's accepted paints carry the value the preview showed, as expect", async () => {
+  const dry = await bind(fakeFigma(swatchPage(), scrimLib()), SCRIM, { DRY_RUN: true });
+  assert.deepStrictEqual(dry.mapping[1].paints, [{ node: "id:Swatch", prop: "fills", index: 0, expect: "#00000080" }]);
+});
+
+test("an accepted change does not bind once the token renders something other than the preview showed", async () => {
+  const page = swatchPage();
+  const lib = scrimLib();
+  const figma = fakeFigma(page, lib);
+  const dry = await bind(figma, SCRIM, { DRY_RUN: true });
+  lib.vars[0].valuesByMode.m1 = value("#000000", 0.4);          // the token moved between the preview and the go
+  const real = await bind(figma, dry.mapping);
+  assert.strictEqual(real.bound, 0);
+  assert.deepStrictEqual(real.changed, []);
+  assert.ok(real.skipped.some((s) => /token scrim now renders #00000066 here; the preview showed #00000080 — run the dry run again/.test(s.reason)),
+    JSON.stringify(real.skipped));
+  assert.strictEqual(boundTo(find(page, "Swatch").fills[0]), null, "nothing written");
+});
+
+test("an accepted change still binds while the token renders what the preview showed", async () => {
+  const page = swatchPage();
+  const real = await viaPreview(fakeFigma(page, scrimLib()), SCRIM);
+  assert.deepStrictEqual([real.bound, real.changed.map((c) => c.change)], [1, ["opacity 100% → 50%"]]);
+  assert.strictEqual(boundTo(find(page, "Swatch").fills[0]), "scrim");
+});
+
+test("a real run's accepted paints without expect are refused before anything is written", async () => {
+  const page = swatchPage();
+  const figma = fakeFigma(page, scrimLib());
+  const dry = await bind(figma, SCRIM, { DRY_RUN: true });
+  const stale = dry.mapping.map((e) => (e.paints ? { ...e, paints: e.paints.map(({ expect, ...p }) => p) } : e));
+  await assert.rejects(bind(figma, stale), /expect/);
+  assert.strictEqual(boundTo(find(page, "Swatch").fills[0]), null, "nothing written");
 });
