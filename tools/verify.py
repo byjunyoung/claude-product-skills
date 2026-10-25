@@ -153,10 +153,16 @@ def check_plugin(name, root, yaml):
     team = Path.home() / ".claude" / TEAM_FILE.get(name, f"{name}-conventions.yaml")
     if team.exists() and known:
         tcfg = yaml.safe_load(team.read_text()) or {}
+        # Keys the schema leaves null and documents as a map once set — body_offset is
+        # { left, top }. YAML cannot list members under a null, so a set value's members
+        # are accepted wherever the key itself is in the schema.
+        null_keys = {k for k, v in leaf_kv(schema) if v is None}
         for p in leaf_paths(tcfg):
             # Maps whose keys the user names — a fileKey, an environment name. The schema
             # declares the map, never its members, so membership cannot be checked here.
             if any(p.startswith(f) for f in FREE_KEY_MAPS):
+                continue
+            if any(p.startswith(f"{n}.") for n in null_keys):
                 continue
             if p not in known:
                 fails.append(f"[{name}] key present only in the team config: {p}")
