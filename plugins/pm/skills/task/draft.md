@@ -9,6 +9,7 @@ Takes a **request source** — a chat thread, a document, a conversation someone
 - **Product language.** No engineering vocabulary. Write as far as *what* is being asked for; *how* is undecided or delegated.
 - **Cells are short.** A context table is a list of items, not a description. The sentence rules are in section 2.
 - **Provisional stays provisional.** If whether to build the thing at all is still open, the scope rows are provisional and the preview says so.
+- **Finished work stays finished.** A request that changes or adds to a task already closed becomes a new task that links back to it, never a reopened one. Reopening hides the follow-up inside a record whose history says it was done, and the count of work stops showing what was actually asked for.
 
 ## Configuration
 
@@ -91,7 +92,7 @@ Rewrite a filled cell **only where new information arrived** — another source,
 
 ### Create
 
-Before creating, look for a record that already carries the source link — only where the source is a link: pasted text has none, and an empty pattern matches every file. For a markdown record: `grep -rlF "{link}" {task.record.ref}`; a folder that does not exist yet means no match, not an error. For any other type, the adapter's search. Where one is found, offer fill or revise on it instead.
+Before creating, look for a record that already carries the source link — only where the source is a link: pasted text has none, and an empty pattern matches every file. For a markdown record: `grep -rlF "{link}" {task.record.ref}`; a folder that does not exist yet means no match, not an error. For any other type, the adapter's search. Where one is found and is still open, offer fill or revise on it instead. Where it is closed — the record finished or archived, or the ticket it links to closed — do not offer to reopen it: create a new record, put the closed one's link in the Request source row beside the new source, and say in the preview which closed task this follows on from. The same holds when the source itself is a closed task's link, or names one as the thing to change.
 
 Create the record in `task.record`, writing properties and body in a single write.
 
