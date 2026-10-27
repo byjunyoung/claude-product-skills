@@ -51,7 +51,7 @@ Read the record's properties — title, project, group, priority, assignee, stat
 Then read the two things step 2 is drafted from:
 
 - **The spec entry the record links to** — its behaviour table, its states and cases, its rules and exceptions. This is where most done conditions already exist as sentences somebody wrote on purpose
-- **The design the record links to**, where the tool can be read — **structure only**: which state variants are actually drawn, what the screens are called, and where the flow goes
+- **The design the record links to**, where the tool can be read — **structure only**: which state variants are actually drawn, what the screens are called, and where the flow goes. The one exception is the read-back in step 2, which looks inside the frames a condition names
 
 **Read the design for what exists, not for how it looks.** Colour, spacing and size never become conditions — step 2 says why. Copy is taken from the spec first: a design still carrying placeholder text would otherwise freeze a wrong string into the contract, and reading a screen in full costs far more than reading its structure. Go deeper on one screen only where the spec left its copy blank.
 
@@ -136,6 +136,16 @@ The done-conditions side stays a single line. It is the verdict; these are the w
 The screens come from the design's structure — every frame in the handed-over section that this contract's conditions touch, state variants included. An empty state that only exists as a variant is exactly the kind of screen a hurried comparison skips.
 
 **Where the count runs past `contract.design_match_max`, say so in the preview and offer to split the ticket.** Twenty comparison steps is a ticket covering twenty screens, not a rule that grew too heavy, and splitting is the same signal the grouping section already names. With the value unset there is no ceiling and no prompt.
+
+#### Read each condition back against the design
+
+**A condition the pinned design does not show is named before the ticket is filed.** Where the contract decides what appears, when and in what order, a gap between it and the design is not caught by comparing the build with the design: the build follows the contract, the design stays wrong, and the gap surfaces at QA as a design to redraw and a version to pin again. Reading each line back against the design costs one pass while the ticket is still cheap to change.
+
+- **Only against a pinned version that can be read.** With no handover line there is nothing fixed to read against, and where the design tool cannot be read there is nothing to read; the preview says which, rather than reporting no gaps
+- **Each condition that names something visible** — an element, a notice, a piece of copy, a state — is looked for on the frame it lives on in the pinned version, text layers included. This is the one place publish reads past structure, and only on the frames a condition names
+- **Order is checked where the design draws it** — a sequence of variants, a list in a fixed order. Timing, and anything else a still frame cannot show, is not a gap: skip it rather than flag it
+- **Found, nothing is said. Not found, it is listed** in the preview as the condition, the frame it should be on, and what is missing there
+- **The check never changes the contract.** The line stays as drafted from the spec, and the design is what gets fixed. Dropping or softening a condition because the design lacks it is the failure this check exists to expose, not a way to clear it
 
 #### QA checklist
 
@@ -349,6 +359,8 @@ Design section : {heading}
 Referenced ver.: {label} — from the last of {N} handover lines   ← only where N > 1
 Coverage     : behaviour {n}/{n} · states {n}/{n} · rules {n}/{n} · round trip {n}
                covered elsewhere: {row} — {which line}
+Not in design: {n} — {condition} → {frame}: {what is missing there}
+               (or "none", or "not checked — no pinned version" / "— design not readable")
 Materials    : {entry name} ({entry kind})
                {kind}: {why nothing came out — "rules table carries it", or
                         "nothing in the materials settles it"}
@@ -386,10 +398,11 @@ Where the tracker already gates on the sections existing — a column a ticket c
 
 **A placeholder is never filed silently.** The report says what it is, and the run says plainly that `/pm:task publish` has to be run again before work starts.
 
-**Three lighter forks sit alongside it.** None of them blocks — each offers the cheaper fix while the ticket is still cheap to change:
+**Five lighter forks sit alongside it.** None of them blocks — each offers the cheaper fix while the ticket is still cheap to change:
 
 - **Two or more kinds empty for want of material** → offer to fill the spec entry first. Filing anyway is fine and often right, but a coverage count that is really measuring the entry should not pass as a measure of the ticket
 - **No line specific to this task** → say which defaults it would be filed with, and ask what this one actually produces. A done-conditions list that would fit any sibling is not one
+- **Conditions the pinned design does not show** → offer to fix the design and pin a new version before filing. Filing anyway is fine; the list goes into the report either way, so the design side has it in writing
 - **Comparison steps past `contract.design_match_max`** → offer to split the ticket. The screens are the work; the ticket is what is too big
 - **Groups past `contract.split_offer_at`** → offer to split the parent, one per scenario, naming the groups as they would become parents. The contract is filed grouped whichever way the answer goes
 
