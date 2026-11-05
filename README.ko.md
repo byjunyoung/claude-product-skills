@@ -834,11 +834,9 @@ Claude Code 스킬(Markdown) + Figma Plugin API(JavaScript) + 설정 해석·집
 
 ## 라이선스
 
-© 2026 Junyoung Kim · [LICENSE](LICENSE)
+© 2026 Junyoung Kim · [MIT License](LICENSE)
 
-설치해서 쓰는 것은 자유입니다. 개인이든 팀 안에서든 쓰고, 필요하면 고쳐 써도 됩니다.
-
-포크해서 재배포하거나, 다른 이름으로 다시 배포하거나, 상업적으로 재판매하는 것은 허락이 필요합니다. 정식 오픈소스 라이선스를 붙이지 않은 이유입니다. 문의는 [Issues](https://github.com/byjunyoung/claude-product-skills/issues)나 링크드인으로 남겨주세요.
+쓰고, 고치고, 다시 배포하는 것 모두 자유입니다. 상업적으로 써도 됩니다. 다시 배포할 때는 저작권 표시와 라이선스 전문을 함께 남겨주세요.
 
 ---
 
