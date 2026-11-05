@@ -1,5 +1,9 @@
 # fig
 
+## 3.32.3 — 2026-11-05
+
+- **The plugin names its privacy policy.** `privacyPolicyUrl` points at the README's *What it runs and sends*, which already says what the plugin reads, runs and sends. Anthropic's plugin directory asks a submitter to confirm that the plugin's privacy policy describes the data it handles, and warned that none was set; the README section is that description, so the manifest now says where it is. No skill, config key or script changes
+
 ## 3.32.2 — 2026-11-05
 
 - **The plugin has a directory icon and a display name.** Anthropic's plugin directory takes a listing's icon from `.claude-plugin/icon.png` once, on the first submission, and never again, so it is in before the plugin is submitted; its source is `.github/icon-fig.html`, rendered by `bash tools/render-images.sh icon-fig`. `displayName` reads "fig — the design file": the directory held the bare name for looking like other listings, and a display name changes what the listing shows without changing `name`, so every `/fig:` command stays as it is. No skill, config key or script changes
