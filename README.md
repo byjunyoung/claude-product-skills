@@ -15,6 +15,14 @@ Most Claude Code plugins are aimed at the codebase. These two are aimed at the w
 
 <sub>**New to Claude Code?** It is Anthropic's assistant, and it runs in a terminal, a desktop app, or your editor. Install it from [claude.com/claude-code](https://claude.com/claude-code) first — a *plugin* like these two adds commands to it, and a *marketplace* is where it downloads them from.</sub>
 
+**Install** — in a terminal, or hand the line to Claude:
+
+```
+claude plugin marketplace add byjunyoung/claude-product-skills && claude plugin install fig@byjunyoung
+```
+
+Add `pm@byjunyoung` the same way if you write specs. The rest of the setup is in [Getting started](#getting-started).
+
 Neither needs the other. Most of what follows is about `fig`; `pm` has [its own section](#pm--product-docs), and what changes when you run both is in [Where the two meet](#where-the-two-meet).
 
 [What it solves](#what-it-solves) · [Who it's for](#who-its-for) · [Getting started](#getting-started) · [**fig**](#fig--the-design-file) · [**pm**](#pm--product-docs) · [Where the two meet](#where-the-two-meet) · [Configuration](#configuration) · [Troubleshooting](#troubleshooting) · [Where it fits](#where-it-fits) · [Design principles](#design-principles)
