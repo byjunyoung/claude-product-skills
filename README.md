@@ -839,11 +839,9 @@ Junyoung Kim · [LinkedIn](https://www.linkedin.com/in/byjunyoung/)
 
 ## License
 
-© 2026 Junyoung Kim · [LICENSE](LICENSE)
+© 2026 Junyoung Kim · [MIT License](LICENSE)
 
-Installing and using it is free. Use it personally or inside your organization, and modify it if you need to.
-
-Redistributing a fork, republishing it under another name, or reselling it commercially requires permission. That's why there's no standard open source license attached. Reach me through [Issues](https://github.com/byjunyoung/claude-product-skills/issues) or LinkedIn.
+Use it, modify it and redistribute it freely, commercially or not. Keep the copyright notice and the license text in any copy you pass on.
 
 ---
 
