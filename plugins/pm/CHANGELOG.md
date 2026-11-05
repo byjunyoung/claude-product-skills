@@ -1,5 +1,9 @@
 # pm
 
+## 0.44.2 — 2026-11-05
+
+- **The plugin has a directory icon and a display name.** Anthropic's plugin directory takes a listing's icon from `.claude-plugin/icon.png` once, on the first submission, and never again, so it is in before the plugin is submitted; its source is `.github/icon-pm.html`, rendered by `bash tools/render-images.sh icon-pm`. `displayName` reads "pm — product docs": the directory held the bare name for looking like other listings (one of them another plugin called `pm`), and a display name changes what the listing shows without changing `name`, so every `/pm:` command stays as it is. No skill, config key or script changes
+
 ## 0.44.1 — 2026-11-05
 
 - **The plugin lists `license: MIT` in its manifest, and its README says what it runs and sends.** Anthropic's plugin directory reads only the plugin folder, so the repository-root `LICENSE` was invisible to it and a submission would have been blocked; its security review also asks a plugin's README to name everything it runs, sends or fetches, which until now only the repository README did, for the session-start hook. No skill, config key or script changes
