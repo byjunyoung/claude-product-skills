@@ -1,6 +1,6 @@
 <img src=".github/social-preview.png" alt="fig · pm — Claude Code skills for product work, not code work" width="100%">
 
-# fig · pm
+# fig · pm — Claude Code skills for designers and PMs
 
 [한국어](README.ko.md) · **English**
 
