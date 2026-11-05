@@ -71,7 +71,7 @@ Images go up to Figma to get an imageHash, which is handed to the builder.
 
 ### 5. Build
 
-The order is **create the file → apply the team template (the user does this) → lay out with archetypes**.
+The order is **create the file → apply the team template (through the browser) → lay out with archetypes**.
 
 1. **Load the skills** — pass `figma-use` and `figma-use-slides` together in `skillNames`
 2. **Read the local assets** — `template-spec.md` and `template.js` from `deck.assets_dir`. They attach to the top of the build script in this order:
@@ -79,7 +79,7 @@ The order is **create the file → apply the team template (the user does this) 
    Generic helpers first, team constants and builders second (helpers are declarations and hoist; constants are read at call time).
    **Pick from the spec's archetype catalog first.** Where nothing fits the shape of the content, do not improvise a layout — cut the content to the nearest archetype, or split the slide. An invented layout always leaves the type scale
 3. **A new file** — check the planKey and the seat with `whoami`. A plan listed with `seat: View` cannot take the `use_figma` writes the build is made of, so a file created there could not be built; stop and say so rather than trying. Load `figma:figma-create-new-file` before every `create_new_file` call, then `create_new_file` (editorType `slides`). The file starts with Figma's default light theme, which is scaffolding only (`figma-use-slides`): take no colour or type from it, since the team template applied next is the source
-4. **MCP cannot apply the team template.** Once the file exists, ask the user to apply the team's shared template from the Templates panel, and wait. Applying it is what brings in the team fonts, colours, and named text styles. Without it, everything breaks into substitute fonts and 'Pick a style'
+4. **Apply the team template through the browser.** `use_figma` cannot apply a template, but Figma's web app can, and a connected browser tool (Claude in Chrome) drives it — the same route `/fig:handoff` takes for what `use_figma` cannot do. Open the file's URL; where Figma hands the file to the desktop app, click *Open here instead*. In the left *File* panel open the *New slide* ▾ menu, pick the team's template under the team's heading, and click *Add all slides*. **Confirm through `use_figma`, not the screen** — the slide count and `getLocalTextStylesAsync()`; the canvas can still be drawing when the click returns. Close the tab when done. With no browser tool, or a browser signed in to another account, ask the user to make the same clicks, and wait. Applying it is what brings in the team fonts, colours, and named text styles. Without it, everything breaks into substitute fonts and 'Pick a style'
 5. **Confirm what applying it did** — it can pull in the sample slides wholesale. Take one of them as the theme reference (`REF_SLIDE`) and `clone` it to make new slides, then **delete the samples once the build is done**
 6. **Upload the images** — get hashes with `upload_assets`. Uploading leaves frames on the page, so clear them along with everything else after the build
 7. **Three to five slides per call.** A slide is an isolated subtree, so batched building is safe
