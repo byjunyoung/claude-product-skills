@@ -1,5 +1,9 @@
 # fig
 
+## 3.32.1 — 2026-11-05
+
+- **The plugin lists `license: MIT` in its manifest, and its README says what it runs and sends.** Anthropic's plugin directory reads only the plugin folder, so the repository-root `LICENSE` was invisible to it and a submission would have been blocked; its security review also asks a plugin's README to name everything it runs, sends or fetches, which until now only the repository README did, for the session-start hook. No skill, config key or script changes
+
 ## 3.32.0 — 2026-10-20
 
 - **`/fig:qa` judges a build against the design as it was handed over.** Where the last hand-over line carries `version-id` — read from the task record `qa.baseline.tasks` points at, or, left unset, from `pm`'s task file where `/fig:handoff` wrote it (found through `borrow-pm.py task`, as handoff finds it), or a pinned link given in the request — each frame is read at that version through Figma's REST image export (`GET /v1/images/:key?version=`), by the new section of `_common/version-pin.md`. A design edited after the handover no longer moves what "matches the design" means. With no `version-id`, no hand-over line or no token, qa reads the live file and the report's head says which; a frame that did not exist at that version is read live on its own and named. QA never stops on any of these. The read needs the token's `file_content:read` scope — the version read-back's `file_versions:read` alone is not enough, and a token without it comes back 403; any status but a 200 falls back to the live file and is shown as it came back (handoff's read-back does the same, reporting the sections as clicked but not read back). The README's token troubleshooting entry now covers 403

@@ -154,6 +154,10 @@ Three layers merge, so **only the lines you actually want to change have to be w
 
 **It stops before writing.** Verification is read-only, publishing happens only after preview → "go", and even then split into skeleton → user groups → feature entries.
 
+## What it runs and sends
+
+Everything runs on your machine, with `python3` (and `node` for the Notion-log importer only). It writes local markdown files unless your config names a tracker or a doc tool; then it reaches Notion, Slack or Google Calendar through connectors you have connected, and GitHub through those connectors or the `gh` command line. At the start of a session a hook runs `git fetch` on the folder your config lives in, where that folder is a git repository, and changes no file unless you set `CLAUDE_SHARED_CONFIG=pull`; `off` turns it off. Nothing is sent anywhere else, and nothing is collected.
+
 ## The other half
 
 [`fig`](../fig/README.md) works the design file this spec is drawn into. Each works on its own. Installed together (`fig` 3.28.0 or later), `fig` reads the PRD where `pm` writes it and writes into task records through `pm`'s adapters. They still share two objects: the PRD and the task record. With nothing set in `figma-conventions.yaml`, `/fig:draw`, `/fig:sketch` and `/fig:qa` read the PRD from `prd.markdown.dir`, and `/fig:handoff` writes its one line into the markdown task file under `task.record.ref`, beneath the heading `task.design_heading` names (from `fig` 3.28.2), where `/pm:task publish` reads it back — as long as `prd.target` is `markdown` or `git` and `task.record.type` is `markdown`, which is how the local start sets them. Keep either in Notion, and `fig` does not follow it there: name the PRD page in `qa.baseline.prd`, and the task database in `task_tracker`. Where `task_tracker` names Notion or GitHub, `/fig:handoff` writes its line there with calls of its own. The [repository README](https://github.com/byjunyoung/claude-product-skills#where-the-two-meet) draws the whole loop.

@@ -1,5 +1,9 @@
 # pm
 
+## 0.44.1 — 2026-11-05
+
+- **The plugin lists `license: MIT` in its manifest, and its README says what it runs and sends.** Anthropic's plugin directory reads only the plugin folder, so the repository-root `LICENSE` was invisible to it and a submission would have been blocked; its security review also asks a plugin's README to name everything it runs, sends or fetches, which until now only the repository README did, for the session-start hook. No skill, config key or script changes
+
 ## 0.44.0 — 2026-10-27
 
 - **`/pm:task draft` makes a follow-up to closed work a new task, never a reopened one.** A teammate asked that a change or addition to a task already closed be filed as a new task rather than by reopening the old one: reopening buries the follow-up in a record whose history says it was done, and the list stops showing how much was actually asked for. Create's search for a record that already carries the source link had offered fill or revise on whatever it found, closed or not. Now it offers that only on an open record; a closed one — record finished or archived, or its ticket closed — gets a new record whose Request source row also carries the closed one's link, and the preview names the task it follows on from. The same holds when the source is itself a closed task's link. A principle line says why. It matches `sync`'s rule that a closed pair is terminal
