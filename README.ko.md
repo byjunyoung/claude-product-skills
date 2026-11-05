@@ -1,6 +1,6 @@
 <img src=".github/social-preview.png" alt="fig · pm — 코드가 아니라 제품 쪽 일을 맡는 Claude Code 플러그인" width="100%">
 
-# fig · pm
+# fig · pm — 디자이너와 PM을 위한 Claude Code 스킬
 
 **한국어** · [English](README.md)
 
