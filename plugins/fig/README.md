@@ -105,6 +105,10 @@ One file holds your team's rules — how screens are named, how far apart they s
 
 The skills that write to Figma check your seat first and stop on a View seat — one that can read a file but not edit it — instead of failing halfway.
 
+## What it runs and sends
+
+Everything runs on your machine, with `python3`. It talks to Figma through the Figma connector you have connected, and `/fig:handoff` and `/fig:qa` also call Figma's REST API (`api.figma.com`) with your own `FIGMA_TOKEN`, to pin and read back a version. Notion, GitHub or Slack are reached only through connectors you have connected, and only where your config names them. At the start of a session a hook runs `git fetch` on the folder your config lives in, where that folder is a git repository, and changes no file unless you set `CLAUDE_SHARED_CONFIG=pull`; `off` turns it off. Nothing is sent anywhere else, and nothing is collected.
+
 ## The other half
 
 ```
