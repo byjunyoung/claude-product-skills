@@ -144,6 +144,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — they drive a real browser |
 | `/fig:handoff` `/fig:sync` | **Claude in Chrome** — optional, only to save a named version in Figma's web app, and for handoff to mark the sections Ready for dev where `handoff.ready_for_dev` is on (off by default); without it they hand the step back to you, with the name to use or the sections to mark |
+| `/fig:deck` | **Claude in Chrome** — optional, only to apply the team's slide template to a new Slides file, which `use_figma` cannot do; without it that one step is handed back to you |
 | `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — only where a config key points at a Notion page |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — only where `task_tracker.type` / `task.mirror.type` is `github`. Two logins are involved: Claude's connection, and the `gh` command the tracker is read through — `/pm:task` uses `gh` alone. The check covers both, and names the account `gh` is on |
 | `/fig:handoff` | **Notion search, or GitHub issue search** — read-only, and only where no task page is passed to the run: handoff looks in the tracker `task_tracker.ref` names for the task, and lists what it found and asks, when it finds none or several; it uses the Notion/GitHub connection above |
@@ -644,7 +645,7 @@ Figma rejected the token — it exists, but it is expired or wrong, or it lacks 
 <details>
 <summary><b>`/fig:deck` asks for the team template and creates a file before building anything.</b></summary>
 
-That is the first-use measuring step: the slide template has not been measured into `deck.assets_dir` yet — `./deck-assets` in the folder you run it from, unless you pointed it at a shared folder, so a project opened from another folder measures again. It creates an empty mirror Slides file (after your go), asks you to apply the team template there, and reads the values from it. The plugin ships no template, because template backgrounds carry company wordmarks. It stops here if your seat in the plan is View (it checks first), or if there is no template to apply.
+That is the first-use measuring step: the slide template has not been measured into `deck.assets_dir` yet — `./deck-assets` in the folder you run it from, unless you pointed it at a shared folder, so a project opened from another folder measures again. It creates an empty mirror Slides file (after your go), applies the team template there through the browser — or asks you to, when Claude in Chrome is not connected — and reads the values from it. The plugin ships no template, because template backgrounds carry company wordmarks. It stops here if your seat in the plan is View (it checks first), or if there is no template to apply.
 
 </details>
 

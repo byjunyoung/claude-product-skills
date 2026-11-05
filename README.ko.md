@@ -144,6 +144,7 @@ Claude Code 플러그인은 대개 코드를 향해 있습니다. 이 둘은 그
 |---|---|
 | `/fig:proto` `/fig:code` `/fig:qa` | **Claude in Chrome** — 실제 브라우저를 띄웁니다 |
 | `/fig:handoff` `/fig:sync` | **Claude in Chrome** — 선택. 피그마 웹앱에서 이름 붙인 버전을 저장할 때, 그리고 `handoff.ready_for_dev`를 켰을 때(기본은 꺼짐) handoff가 섹션을 Ready for dev로 표시할 때만 씁니다. 없으면 그 단계를 쓸 이름이나 표시할 섹션과 함께 사용자에게 넘깁니다 |
+| `/fig:deck` | **Claude in Chrome** — 선택. 새 Slides 파일에 팀 슬라이드 템플릿을 적용할 때만 씁니다(`use_figma`로는 못 합니다). 없으면 그 한 단계만 사용자에게 넘깁니다 |
 | `/fig:prep` `/fig:draw` `/fig:handoff` `/fig:qa` | **Notion** — 설정이 Notion 페이지를 가리킬 때만 |
 | `/fig:handoff` `/pm:setup` `/pm:task` | **GitHub** — `task_tracker.type` / `task.mirror.type`이 `github`일 때만. 로그인이 둘입니다 — Claude의 연결 하나, 트래커를 읽는 `gh` 명령 하나. `/pm:task`는 `gh`만 씁니다. 점검이 둘 다 보고 `gh`가 어느 계정인지 알려줍니다 |
 | `/fig:handoff` | **Notion 검색, 또는 GitHub 이슈 검색** — 읽기 전용이고, 실행에 일감 페이지를 넘기지 않았을 때만. `task_tracker.ref`가 가리키는 트래커에서 일감을 찾아보고, 없거나 여럿이면 찾은 것을 보여 주고 묻습니다. 위의 Notion·GitHub 연결을 그대로 씁니다 |
@@ -639,7 +640,7 @@ Figma가 토큰을 거부했습니다 — 있긴 한데 만료됐거나 틀렸�
 <details>
 <summary><b>`/fig:deck`이 덱을 짓기 전에 팀 템플릿을 요청하고 파일부터 만듭니다.</b></summary>
 
-처음 쓸 때 도는 실측 단계입니다. 슬라이드 템플릿을 아직 `deck.assets_dir`로 재지 않았기 때문입니다. 공용 폴더로 지정하지 않았다면 실행한 폴더의 `./deck-assets`라서, 다른 폴더에서 연 프로젝트는 다시 잽니다. go를 받은 뒤 빈 미러 Slides 파일을 만들고, 거기에 팀 템플릿을 적용해 달라고 요청한 다음 값을 읽습니다. 플러그인엔 템플릿이 안 들어 있습니다 — 배경에 회사 워드마크가 있어서요. 플랜 좌석이 View이거나(먼저 확인합니다) 적용할 템플릿이 없으면 여기서 멈춥니다.
+처음 쓸 때 도는 실측 단계입니다. 슬라이드 템플릿을 아직 `deck.assets_dir`로 재지 않았기 때문입니다. 공용 폴더로 지정하지 않았다면 실행한 폴더의 `./deck-assets`라서, 다른 폴더에서 연 프로젝트는 다시 잽니다. go를 받은 뒤 빈 미러 Slides 파일을 만들고, 거기에 팀 템플릿을 브라우저로 적용한 다음 값을 읽습니다. Claude in Chrome이 연결돼 있지 않으면 적용을 사용자에게 요청합니다. 플러그인엔 템플릿이 안 들어 있습니다 — 배경에 회사 워드마크가 있어서요. 플랜 좌석이 View이거나(먼저 확인합니다) 적용할 템플릿이 없으면 여기서 멈춥니다.
 
 </details>
 

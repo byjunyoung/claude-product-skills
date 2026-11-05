@@ -1,5 +1,9 @@
 # fig
 
+## 3.33.0 — 2026-11-05
+
+- **`/fig:deck` applies the team template itself, through the browser.** `use_figma` still cannot apply a template, so the build used to stop and wait for the user to apply it by hand. The web app can, and Claude in Chrome drives it: open the file, *Open here instead* where Figma hands off to the desktop app, *File* panel → *New slide* ▾ → the team's template → *Add all slides*, then confirm through `use_figma` (slide count and local text styles) rather than the screen. The measuring step in `setup.md` applies it to the mirror file the same way. With no browser tool, or the wrong account signed in, the step is handed back as before. The README lists Claude in Chrome as optional for `/fig:deck`
+
 ## 3.32.0 — 2026-10-20
 
 - **`/fig:qa` judges a build against the design as it was handed over.** Where the last hand-over line carries `version-id` — read from the task record `qa.baseline.tasks` points at, or, left unset, from `pm`'s task file where `/fig:handoff` wrote it (found through `borrow-pm.py task`, as handoff finds it), or a pinned link given in the request — each frame is read at that version through Figma's REST image export (`GET /v1/images/:key?version=`), by the new section of `_common/version-pin.md`. A design edited after the handover no longer moves what "matches the design" means. With no `version-id`, no hand-over line or no token, qa reads the live file and the report's head says which; a frame that did not exist at that version is read live on its own and named. QA never stops on any of these. The read needs the token's `file_content:read` scope — the version read-back's `file_versions:read` alone is not enough, and a token without it comes back 403; any status but a 200 falls back to the live file and is shown as it came back (handoff's read-back does the same, reporting the sections as clicked but not read back). The README's token troubleshooting entry now covers 403

@@ -6,7 +6,7 @@ This is the measuring step of `/fig:deck`, run from its step 0 when the template
 
 **Prerequisites**: always load `figma:figma-use` and `figma:figma-use-slides` before calling `use_figma`. Step 2 (measure) is **zero writes** — the script only `return`s a report. The Figma writes are the mirror file (step 1) and the verification builds (step 5); each waits for its own preview and go. The local assets (step 4) are written without one.
 
-**Open with what this produces.** After this, `/fig:deck` builds slides from your own template's archetypes rather than a generic layout. Ten to fifteen minutes with the template to hand, and one thing is asked of you that MCP cannot do — applying the template. The template file itself is never touched. Name each step as it begins.
+**Open with what this produces.** After this, `/fig:deck` builds slides from your own template's archetypes rather than a generic layout. Ten to fifteen minutes with the template to hand, and one step MCP cannot do — applying the template — goes through the browser, or is asked of you when no browser tool is connected. The template file itself is never touched. Name each step as it begins.
 
 ## When to run it
 
@@ -29,7 +29,7 @@ The source template file is usually outside MCP's reach. When it is, make a mirr
 1. **Check the seat first** — `whoami`. A plan listed with `seat: View` cannot take the `use_figma` writes that steps 1 and 5 are made of; stop and say so rather than creating a file that cannot be built in
 2. **Preview, then wait for the go.** Say what will be created — a new empty Slides file named `deck-template-mirror`, in the person's drafts, which this run will leave behind and name in the closing report — and ask "go?" Nothing is created before it
 3. After the go, load `figma:figma-create-new-file` (before every `create_new_file` call), then create the empty Slides file — `create_new_file`, editorType `slides`. The file starts with Figma's default light theme, which is scaffolding only (`figma-use-slides`): take nothing from it. Keep its name and link for the report
-4. **Ask the user to apply the team template from the Templates panel, and wait.** MCP cannot apply it
+4. **Apply the team template through the browser** — the clicks are `SKILL.md` step 5.4: open the file in the web app (*Open here instead* if it hands off to the desktop app), *File* panel → *New slide* ▾ → the team's template → *Add all slides*. MCP cannot apply it. With no browser tool, ask the user to do it, and wait
 5. Applying it pulls in the sample slides wholesale. Those are the source for the catalog
 
 Confirm it was applied before going on. Text still reading `Inter` or 'Pick a style' means it has not been.
