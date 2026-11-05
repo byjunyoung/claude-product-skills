@@ -11,6 +11,7 @@
 # How each picture is sized (the method was never recorded, so this is inferred from the HTML
 # and from the committed PNGs):
 #   social-preview       1280x640 window, scale 1 -> 1280x640 (fixed size in its own CSS)
+#   icon-fig, icon-pm    512x512 window, scale 2 -> 1024x1024, written to plugins/<p>/.claude-plugin/icon.png
 #   arrows-before-after  width is the body width its own CSS sets, measured from the page, scale 1
 #   every other diagram  body is 1400px wide (base.css), scale 2000/1400 -> 2000px wide
 # Height is not fixed in the CSS. The script loads the page once, reads the document height
@@ -41,7 +42,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIR="$ROOT/.github"
 # Bottom margin every trimmed picture ends on, in CSS px; see the header.
 BOTTOM_CSS=26
-ALL=(arrows-before-after config-layers context-table lint-catches prep-stubs qa-report social-preview two-plugins)
+ALL=(arrows-before-after config-layers context-table lint-catches prep-stubs qa-report social-preview two-plugins icon-fig icon-pm)
 
 find_chrome() {
   local c
@@ -68,11 +69,14 @@ names=("$@")
 
 render() {
   local name="$1" html="$DIR/$1.html" png="$DIR/$1.png"
+  # A directory icon is written into its plugin, where the directory reads it.
+  case "$name" in icon-*) png="$ROOT/plugins/${name#icon-}/.claude-plugin/icon.png" ;; esac
   if [ ! -f "$html" ]; then echo "render-images: $html not found" >&2; return 1; fi
 
   local width height scale
   case "$name" in
     social-preview)      width=1280; height=640;  scale=1 ;;
+    icon-*)              width=512;  height=512;  scale=2 ;;
     arrows-before-after) width="";   height="";   scale=1 ;;
     *)                   width=1400; height="";   scale=$(awk 'BEGIN{printf "%.6f", 2000/1400}') ;;
   esac
@@ -95,7 +99,7 @@ render() {
     --force-device-scale-factor="$scale" --window-size="$width,$height" \
     --screenshot="$png" "file://$html" >/dev/null 2>&1
 
-  if [ "$name" != "social-preview" ]; then
+  if [ "$name" != "social-preview" ] && [[ "$name" != icon-* ]]; then
     local keep
     keep="$(awk -v c="$BOTTOM_CSS" -v s="$scale" 'BEGIN{printf "%d", c*s+0.5}')"
     if ! command -v python3 >/dev/null 2>&1; then
