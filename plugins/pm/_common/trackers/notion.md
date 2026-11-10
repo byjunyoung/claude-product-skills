@@ -89,3 +89,15 @@ line after it. Replacing the section throws away the history the section exists 
 - **Text typed by hand corrupts.** Copy the existing string and substitute into it.
 - **A table cell edit can push a line break into the cell behind it.** Keep the line count and
   edit row by row.
+- **A pipe table cannot carry column widths.** Where widths matter, write the table in tag form —
+  `<table fit-page-width="true" header-row="true">`, a `<colgroup>` with one `<col width="…" />` per
+  column, then `<tr>` rows of `<td>` — and never mix the two forms in one table. The widths survive a
+  read-back. Size them by what the cells hold: a column of single words gets the least, the column of
+  long names or mentions the most, a notes column room for a line or two, and the sum near a
+  normal-width page body, about 720.
+- **A cell is inline-only.** A line break inside it is `<br />`, so several items in one cell are
+  lines joined by `<br />`.
+- **A mention is `<mention url="…"/>`;** the older `<mention-page>` is converted with a warning.
+  `update_content` cannot find a table row that holds a mention, so such a table is changed by
+  fetching the page and rewriting the whole body with `replace_content` — nothing else on the page
+  may drop out.
