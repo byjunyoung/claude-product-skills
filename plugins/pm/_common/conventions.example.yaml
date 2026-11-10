@@ -474,3 +474,46 @@ log:
     sentence: xyz              # xyz = accomplished X as measured by Y by doing Z
                                # plain = what was done and what changed
     unknown_metric: "metric unconfirmed"   # stands in where you had no figure to give
+
+# --- Release notes (/pm:release-notes) ------------------------------------------
+# Engineering announces a release in its own words — ticket numbers and short
+# titles. The people who run the product cannot tell from that what changes for
+# them, or whether a customer has to hear about it. This turns one release notice
+# into notes those readers can act on: an entry per feature, written as the change
+# it makes, with a recording of the real screen, and a short reply on the notice
+# linking to them. The tickets come from task.mirror; the spec from prd.
+release:
+  channel: null                # chat channel id where release notices are posted. null = pass the notice's
+                               # link every time; set, "the latest <product> release" finds it there
+  lead_time_hours: 12          # how long before the release the notes should be up. past it, the preview says so
+  quiet_hours: null            # e.g. ["21:00", "09:00"] — a reply saved in this window is flagged, since its
+                               # mentions notify people. null = no check
+  notes:
+    target: markdown           # markdown | notion — where the notes are written
+    dir: "./docs/release-notes"  # markdown: <dir>/<slug(product)>/<date>-<slug(release)>.md, recordings beside it
+    section: "Release notes"   # notion: the heading, on the product's spec page, of the section that holds the
+                               # release-notes table, one row per release. A spec without it gets the section
+                               # copied from prd.notion.template, behind a go of its own
+    voice: null                # how the notes speak to their readers, in a sentence — e.g. "friendly polite form;
+                               # present tense before the release, past tense after". null = plain and polite,
+                               # in meta.language
+  actions: [Tell customers, Know it, None]
+                               # the three labels for what the readers have to do, in this order:
+                               #   1. a customer meets it — something is blocked or works differently — so someone
+                               #      tells them first. Judged from the customer's side; set apart at the top of the reply
+                               #   2. no customer is caught out, but the readers get something new, or need to know it
+                               #      to answer a question
+                               #   3. nothing reaches them
+                               # every entry carries one, and the third is written rather than left out
+  customers_operate: false     # true where your customers' own staff run some of the same screens yours do.
+                               # A change that blocks them then takes the first action even where the spec
+                               # names an internal role as the audience
+  audience: []                 # groups the reply tags, picked per feature by who uses it —
+                               # e.g. [{name: Operations, mention: "<!subteam^S0123ABCD>"}]. Empty = no tags
+  cc: []                       # mentions every reply ends with, e.g. your own team's group
+  forbidden_terms: [API, server, database, field, modal, epic, QA, ticket]
+                               # engineering words that never reach the readers. Write the language your notes
+                               # are in. A menu or button name shown on screen exactly so is the exception
+  capture:
+    dir: "~/Downloads/release-notes"   # recordings go to <dir>/<slug(product)>-<version>/
+    seconds: [10, 17]          # how long one recording runs

@@ -120,7 +120,7 @@ Follow whichever one you installed. With both, start at the top — what the two
 4  Read the table               the rows left empty are the interview you still owe someone
 ```
 
-**Neither writes into your tools without asking.** `fig` writes nothing to Figma at all; `pm` writes to your doc tool or tracker only after a preview and an explicit go. What step 2 writes is local and shown first — one settings file, and for `pm`, the folders and README of its local start. One `pm` skill writes without a preview: `/pm:log` puts the day's file into your own log folder, because it is built to run with nobody watching. It runs only when called by name — by you, or a scheduler you set up — never on Claude's own initiative.
+**Neither writes into your tools without asking.** `fig` writes nothing to Figma at all; `pm` writes to your doc tool or tracker, or leaves a draft in chat, only after a preview and an explicit go. What step 2 writes is local and shown first — one settings file, and for `pm`, the folders and README of its local start. One `pm` skill writes without a preview: `/pm:log` puts the day's file into your own log folder, because it is built to run with nobody watching. It runs only when called by name — by you, or a scheduler you set up — never on Claude's own initiative.
 
 **With `fig` you find out at step 3 whether this is for you; with `pm`, at step 4.** The `fig` report names specific screens: this one sits outside its section, this arrow points at empty space, this duplicate kept a setting nobody wanted. If almost everything comes back flagged, that is not your file being a mess — it is the rules from step 2 being wrong, and [Troubleshooting](#troubleshooting) says which one to loosen. The `pm` table is the other way round: the empty cells are the result — each one is something nobody has decided, and together they tell you whether there is enough here to write a spec against.
 
@@ -159,10 +159,11 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | `/fig:qa` `/pm:task draft` | **A chat tool** — only where the request source is a thread. For `pm`, `sources.chat_type` names it; `/fig:qa` takes the tool from the link. Slack ships |
 | `/pm:log` | **A calendar and a chat tool** — both optional, named by `sources.calendar_type` and `sources.chat_type`; Google Calendar and Slack ship. Named as `none` they are skipped and the log says so. A scheduler on your own machine, if you want it unattended |
 | `/pm:prd` | **Notion** — only where `prd.target` is `notion`. **Web search** — only where `prd.precedent.enabled` is true (the default), and only for a feature entry drafted for the first time. **A screen-reference connector** — optional, only for the services `prd.precedent.reference_sources` names. **Slack and Figma** — optional, only to read a thread or a design file among the material you hand it |
+| `/pm:release-notes` | **Claude in Chrome** — it records the real screen. **A chat tool** — named by `sources.chat_type`, to read the release notice and leave the reply as a draft; Slack ships. **The tracker** that `task.mirror.type` names — or `task.record.type`, where there is no mirror — to read the tickets. **Notion** — only where `release.notes.target` is `notion`. **Figma** — optional, for menu names and for a still where a screen cannot be run safely |
 | `/fig:draw` | **A screen-reference connector** — optional, only for the services `references.sources` names, and only when a new pattern has to be defined |
 | `/fig:draw` `/fig:sketch` `/fig:qa` `/fig:handoff` | **pm** — optional. Installed alongside (0.38.0 or later), its PRD and its markdown task files are read and written. Without it, they still run, and say what they could not borrow |
 
-The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The Claude in Chrome row for `/fig:proto`, `/fig:code` and `/fig:qa` is not — those three open a browser.
+The connection rows are conditional: point the config at `none` or at markdown and the skill still runs, it just writes somewhere else. The Claude in Chrome rows for `/fig:proto`, `/fig:code`, `/fig:qa` and `/pm:release-notes` are not — those four open a browser.
 
 Notion, GitHub, markdown, Slack and Google Calendar come with support built in; the rows read the same for any other tool your settings name.
 
@@ -430,6 +431,7 @@ A separate plugin covering the document and the work that comes out of it.
 | `/pm:setup` | Lay out a local start, then read a tracker's schema when one attaches, ids included |
 | `/pm:prd` | Write a requirements doc against a format, in language its readers can act on |
 | `/pm:task` | Three modes. `draft` turns a request thread into a task with its context table — a markdown file by default; `publish` files that task as a ticket in the engineering tracker, once one is attached; `sync` reconciles the planning list against that tracker |
+| `/pm:release-notes` | Turn engineering's release notice into notes the people who run the product can act on, with a recording of each changed screen |
 | `/pm:log` | Record a day's work as a file, from your task records — run by name, by you or a scheduler |
 | `/pm:log-review` | Turn a period of those files into accomplishment statements |
 
@@ -482,6 +484,12 @@ Five things it holds to.
 **A document with no blank left in it can still be wrong.** So the finished entries are read against each other, and then against the thing they describe: two that contradict, a condition with two branches and one outcome, a case row holding two conditions in one cell, a threshold nobody can count, a rule written only in the direction where something is switched on, a state with a way in and no way out, something hidden that another entry still needed to finish its job. Roles and the product's own state names come first, because two entries that look like they disagree are as often one thing under two names — which the entry holding that vocabulary settles and guessing does not. Last, an entry saying *this is how it works today* is read against what actually ships. Whatever turns up is quoted from both sides with the fact that would settle it, and nothing is reconciled toward the code: a build drifts from an approved decision as easily as a document drifts from a build.
 
 **It stops before writing.** Verification is read-only, publishing happens only after a preview and an explicit go, and even then in stages — skeleton, then user groups, then feature entries.
+
+### After a release — telling the people who run it
+
+Engineering's release notice lists tickets. The people who run the product read it and still cannot say what changes on their screens, or whether a customer has to hear about it before it lands. `/pm:release-notes` takes that notice and writes, per feature, the change as a sentence, a short recording of the real screen, where it is, who it reaches, and what they have to do — one of three actions, "nothing" included, never left blank.
+
+The notes go to a markdown file by default, or into a release-notes table on the product's spec page where `release.notes.target` is `notion`. The notice's thread gets a short reply linking to them, saved as a draft for you to send. Each feature is read ticket first, then spec, then design, so the menu names match the screen. The recording runs in a browser with every write request blocked, so it changes no data. The notes and the reply each go through their own preview and go.
 
 ### The log side — what you actually did
 
@@ -741,7 +749,7 @@ A tool can be where tasks are planned, or where engineering tracks them, and the
 <details>
 <summary><b>A skill wrote something you didn't expect.</b></summary>
 
-Every write to Figma, a spec page or a branch goes through a preview and an explicit go. `/pm:log`'s daily file in your own log folder is not one of them — it is written without a preview, and only when the skill is called by name. If one of those writes happened without a go, it's a bug worth [reporting](https://github.com/byjunyoung/claude-product-skills/issues).
+Every write to Figma, a spec page, a branch or a chat draft goes through a preview and an explicit go. `/pm:log`'s daily file in your own log folder is not one of them — it is written without a preview, and only when the skill is called by name. If one of those writes happened without a go, it's a bug worth [reporting](https://github.com/byjunyoung/claude-product-skills/issues).
 
 </details>
 
@@ -806,8 +814,8 @@ plugins/
     .claude-plugin/plugin.json
     README.md
     skills/
-      setup  prd  task  log  log-review   one SKILL.md each; task also holds
-                                          draft.md  publish.md  sync.md  filing.md
+      setup  prd  task  release-notes     one SKILL.md each; task also holds
+      log  log-review                     draft.md  publish.md  sync.md  filing.md
     _common/
       conventions.example.yaml           config schema + bundled defaults
       trackers/                          one file per tracker — notion, github, markdown; the contract and a template
