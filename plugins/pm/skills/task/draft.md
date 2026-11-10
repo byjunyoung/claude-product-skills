@@ -125,6 +125,8 @@ Every other type: the calls are in the record's adapter — *Adapters* in `SKILL
 
 **The body skeleton**, where `task.record.type` is `notion`, comes from `task.notion.body_template` where one is set. Where it is `null`, write the context table alone and say that no template was applied. Some tools do not apply a database template automatically, which is why the skeleton is written explicitly rather than assumed.
 
+On Notion, write the context table in tag form with widths — the row-name column narrow and the content column taking the rest, e.g. 160 / 560 — and break a cell's items with `<br />`, each led by `cell.bullet`. The form is under *Things that bite* in `_common/trackers/notion.md`.
+
 ## 5. Verify
 
 Read the record back — for a markdown record, `markdown-tracker.py list --dir {task.record.ref}` — and confirm the rows landed as intended and the table structure is intact. Report it in one line. In create mode, include the new record's URL.

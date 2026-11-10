@@ -1,5 +1,10 @@
 # pm
 
+## 0.45.0 — 2026-11-10
+
+- **Notion tables are written in tag form, with column widths.** A pipe table cannot carry widths, so a column of long names or mentions came out as narrow as a column of single words and wrapped into an unreadable strip. Notion's own markdown spec (*Tables*) accepts `<table>` with a `<colgroup>` of `<col width>`, and a page written that way kept its widths on read-back. The Notion adapter's *Things that bite* now says how to size the columns, that a cell's line break is `<br />`, and that a table holding mentions is changed by rewriting the page body with `replace_content`, since `update_content` cannot find its rows. `/pm:prd` Appendix C and `/pm:task draft` give starting widths for their own tables
+- No config key, script or README changes
+
 ## 0.44.3 — 2026-11-05
 
 - **The plugin names its privacy policy.** `privacyPolicyUrl` points at the README's *What it runs and sends*, which already says what the plugin reads, runs and sends. Anthropic's plugin directory asks a submitter to confirm that the plugin's privacy policy describes the data it handles, and warned that none was set; the README section is that description, so the manifest now says where it is. No skill, config key or script changes

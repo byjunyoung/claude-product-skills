@@ -304,3 +304,4 @@ References        source and evidence links, plus a `Precedent —` line for 2.1
 - Relation properties are **replaced wholesale** with an array of page URLs. There is no adding just one
 - Code blocks need their language stated. Left empty, they get read as another language
 - Reading back right after an edit can return an old snapshot. Confirm by content, not by the call succeeding
+- Pipe tables carry no column widths; the tag form in `_common/trackers/notion.md` does. Starting widths for this document's tables, adjusted to what the cells hold: the user-group body (`Row | Content`) 180 / 540; detailed behaviour (`behaviour | condition | input | result`) 200 / 180 / 140 / 200. Line breaks inside a cell are `<br />`
