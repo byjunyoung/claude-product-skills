@@ -1,5 +1,9 @@
 # fig
 
+## 3.32.4 — 2026-11-11
+
+- **`/fig:lint`'s component check no longer stops at a flow arrow.** Its collect pass asked each node in a section whether it had `findAll` by reading it (`c.findAll ? … : …`), and the plugin runtime now throws on that read for a node without children — so a flow-arrow vector sitting directly in a section ended the whole check with "no such property 'findAll' on VECTOR node". It asks with `"findAll" in c` instead. `/fig:setup`'s page probe had the same guard on `findOne` for a `[label]`, which a bare text label tripped; it is fixed the same way. Measured on a live file, only the `find…` methods throw: `children`, `clipsContent` and the other properties the audits read come back `undefined` on a node that lacks them, so those guards stay as they are. No verdict, count or config key changes
+
 ## 3.32.3 — 2026-11-05
 
 - **The plugin names its privacy policy.** `privacyPolicyUrl` points at the README's *What it runs and sends*, which already says what the plugin reads, runs and sends. Anthropic's plugin directory asks a submitter to confirm that the plugin's privacy policy describes the data it handles, and warned that none was set; the README section is that description, so the manifest now says where it is. No skill, config key or script changes

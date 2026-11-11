@@ -81,6 +81,20 @@ test("component compare and collect skip pages.exclude_sections", async () => {
   assert.deepStrictEqual(await runCollect(tree()), { "Button|Icon": { t: 0, f: 3 } });
 });
 
+// A leaf as the plugin runtime serves it: findAll is absent ("findAll" in it is false), and merely
+// reading it throws, so a `c.findAll ? … : …` guard dies on the first flow arrow in a section.
+const leaf = (type, name) => new Proxy({ type, name }, {
+  get(t, k) {
+    if (typeof k === "string" && k.startsWith("find")) throw new TypeError(`node.${k}: no such property '${k}' on ${type} node`);
+    return t[k];
+  },
+});
+
+test("collect walks past a flow-arrow VECTOR sitting directly in a section", async () => {
+  const withArrow = await runCollect([sec("Live", [screen(), leaf("VECTOR", "Home-Default --> Detail"), leaf("TEXT", "note")])]);
+  assert.deepStrictEqual(withArrow, await runCollect([sec("Live", [screen()])]));
+});
+
 test("body_offset null examines the whole frame", async () => {
   const r = await run([section("S1", [screen()])], null);
   assert.strictEqual(r.findings.length, 1);
