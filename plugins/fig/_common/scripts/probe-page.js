@@ -130,7 +130,7 @@ for (const { s, ax, ay } of walked) {
     if (!n.name.startsWith("[label]")) continue;
     out.labels.count++;
     if (out.labels.styles.length >= 5) continue;
-    const t = n.findOne ? n.findOne(x => x.type === "TEXT") : null;
+    const t = "findOne" in n ? n.findOne(x => x.type === "TEXT") : null;   // reading findOne on a leaf throws
     out.labels.styles.push({
       fill: paint(g(n, "fills")), stroke: paint(g(n, "strokes")),
       radius: g(n, "cornerRadius"),

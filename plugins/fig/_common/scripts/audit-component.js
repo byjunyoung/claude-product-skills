@@ -92,8 +92,9 @@ if (MODE === "collect") {
   // reaches into one twice), plus whatever sits loose on the page.
   const isInst = x => x.type === "INSTANCE" && x.componentProperties;
   const holders = [page.children, ...sectionsDeep(page.children, isExcluded).filter(d => !d.skipped).map(d => d.s.children)];
+  // `in`, never `c.findAll ?`: merely reading findAll on a leaf (a flow-arrow VECTOR, a TEXT) throws.
   const found = holders.flat().filter(c => c.type !== "SECTION")
-    .flatMap(c => (isInst(c) ? [c] : []).concat(c.findAll ? c.findAll(isInst) : []));
+    .flatMap(c => (isInst(c) ? [c] : []).concat("findAll" in c ? c.findAll(isInst) : []));
   for (const n of found) {
     const p = n.componentProperties, keys = boolKeys(p);
     if (!keys.length) continue;

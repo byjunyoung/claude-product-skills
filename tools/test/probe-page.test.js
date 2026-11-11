@@ -42,3 +42,17 @@ test("probe-page reports nested sections with their depth", async () => {
   assert.deepStrictEqual(out.suffixes, { Default: 3, Empty: 1 });
   assert.deepStrictEqual(out.gaps.frameX, [100]);       // B-Default to B-Empty, within one section
 });
+
+// A leaf as the plugin runtime serves it: findOne is absent and merely reading it throws.
+const leaf = (props) => new Proxy(props, {
+  get(t, k) {
+    if (typeof k === "string" && k.startsWith("find")) throw new TypeError(`node.${k}: no such property '${k}' on ${t.type} node`);
+    return t[k];
+  },
+});
+
+test("a [label] that is a bare TEXT is counted, with no font read from inside it", async () => {
+  const out = await probe([section("S", 0, 0, [frame("A-Default", 0, 0), leaf({ type: "TEXT", name: "[label] Note", x: 0, y: 200, width: 80, height: 20 })])]);
+  assert.strictEqual(out.labels.count, 1);
+  assert.strictEqual(out.labels.styles[0].font, null);
+});
