@@ -111,7 +111,7 @@
 
 **Decision:** A nested section is grouping inside a section, often painted differently or not at all; counted alongside the top level it dilutes the mode below `DOMINANCE` (0.6, :24), or wins where nesting is common, and `/fig:prep` then paints new top-level sections with the inner style. Naming already ignores depth > 0 for the same reason. Exclusion candidates keep reading every depth (:232).
 
-- [ ] **Step 1: Failing test** — `nested sections do not vote on section_style`: probes with three depth-0 sections filled `#8306FF` at 0.04 and five depth-1 sections filled `#FFFFFF` at 1 (today the inner style wins 5/8 ≥ 0.6; three keeps the top level at `MIN_SUPPORT`, :23) → the drafted `section_style.fill` is `#8306FF` and `fill_opacity` 0.04.
+- [ ] **Step 1: Failing test** — `nested sections do not vote on section_style`: probes with three depth-0 sections filled `#123ABC` at 0.04 and five depth-1 sections filled `#FFFFFF` at 1 (today the inner style wins 5/8 ≥ 0.6; three keeps the top level at `MIN_SUPPORT`, :23) → the drafted `section_style.fill` is `#123ABC` and `fill_opacity` 0.04.
 - [ ] **Step 2: Run** `python3 tools/test/draft-conventions.test.py`. Expected: FAIL.
 - [ ] **Step 3: Filter** `S` to `s.get("depth", 0) == 0`, with a comment pointing at :98.
 - [ ] **Step 4: Run** + verify.py. Expected: PASS.
@@ -151,7 +151,7 @@
 **Decisions:**
 - For each colour the walk passes up as `"instance"`, find its outermost INSTANCE ancestor through `parent` in `audit-tokens.js` itself — the shared `<paint-scope>` block stays byte-identical. After the walk, `await getMainComponentAsync()` once per distinct outermost instance; `remote === true` is library.
 - Note wording: `{a} hand-typed colours sit inside instances of this file's components — run lint on {page names}` and `{b} sit inside library components — fix them in the library that publishes them`. The page names come from the master's PAGE ancestor. Neither half changes `pass` or a count.
-- On BarisON `[UI] 🤖 운영관리` (2026-10-20) the note read "461 … run lint on the page that holds their masters" for a file with no local colour tokens, so most of it pointed at a page that is not in the file (inference — not split then).
+- On a product file (2026-10-20) the note read "461 … run lint on the page that holds their masters" for a file with no local colour tokens, so most of it pointed at a page that is not in the file (inference — not split then).
 
 - [ ] **Step 1: Failing tests** — `instance note splits local and library`: one instance of a local master on page `Components` holding 2 hand-typed colours, one of a remote master holding 3 → the note has both halves with 2, `Components`, and 3; `pass` unchanged. `library-only note`: only the remote instance → the local half absent. `inInstance carries source`.
 - [ ] **Step 2: Run** `node --test tools/test/audit-tokens.test.js`. Expected: FAIL.
