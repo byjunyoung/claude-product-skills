@@ -380,7 +380,10 @@ const LA = C.layout_audit || {};
 const FIELD_RE = reOrNull(LA.field_pattern);
 const OVERLAY_RE = reOrNull(LA.overlay_pattern);
 const shown = n => n.visible !== false;
-const flowKids = n => ("children" in n ? n.children.filter(c => shown(c) && c.layoutPositioning !== "ABSOLUTE" && !c.rotation) : []);
+// Measured on bounding boxes, so a rotated child counts with the room it takes — a divider line can
+// carry a rotation of 1e-7 from an earlier transform, and leaving it out reads its two gaps as one.
+const flowKids = n => ("children" in n ? n.children.filter(c => shown(c) && c.layoutPositioning !== "ABSOLUTE" && c.absoluteBoundingBox) : []);
+const box = n => n.absoluteBoundingBox;
 const strokedSides = n => Array.isArray(n.strokes) && n.strokes.some(p => p.visible !== false) &&
   (n.strokeWeight === figma.mixed ? n.strokeLeftWeight > 0 && n.strokeRightWeight > 0 : n.strokeWeight > 0);
 const inside = (b, a) => b.x >= a.x && b.y >= a.y && b.x + b.width <= a.x + a.width && b.y + b.height <= a.y + a.height;
@@ -402,7 +405,8 @@ for (const { s, skipped } of deep) {
         // so two blocks touched and the space between them pooled at the bottom.
         if (n.layoutWrap !== "WRAP" && n.primaryAxisAlignItems !== "SPACE_BETWEEN")
           for (let i = 0; i + 1 < ks.length; i++) {
-            const gap = H ? ks[i + 1].x - ks[i].x - ks[i].width : ks[i + 1].y - ks[i].y - ks[i].height;
+            const a = box(ks[i]), b = box(ks[i + 1]);
+            const gap = H ? b.x - a.x - a.width : b.y - a.y - a.height;
             if (Math.abs(gap - n.itemSpacing) > 1) { found["[stale layout]"].push(`${n.name} ${r(gap)} where its spacing says ${r(n.itemSpacing)}`); break; }
           }
         // Stretched row: a one-line row in a stack, told to fill the stack's height, so its content floats
@@ -411,7 +415,7 @@ for (const { s, skipped } of deep) {
         // tallest neighbour, or a field's inner box filling its input, is the component working as made.
         // A row with nothing in it is a spacer.
         if (H && n.type === "FRAME" && n.layoutSizingVertical === "FILL" && n.parent && n.parent.layoutMode === "VERTICAL" && ks.length && placedHere(n)) {
-          const natural = n.paddingTop + n.paddingBottom + Math.max(...ks.map(k => k.height));
+          const natural = n.paddingTop + n.paddingBottom + Math.max(...ks.map(k => box(k).height));
           if (natural <= 64 && n.height >= natural * 2 && n.height > natural + 24) found["[stretched row]"].push(`${n.name} ${r(n.height)}px tall for ${r(natural)}px of content`);
         }
         // Stacked fields: two or more fields one above the other with no space between them. A field
