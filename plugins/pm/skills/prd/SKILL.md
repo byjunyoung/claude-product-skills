@@ -55,7 +55,7 @@ A `null` setting means "skip that collection or integration". Do not stop for wa
 ```
 1. Prepare            mode (new / extend) + gather material + confirm the format
 2. Draft & interview  absorb the material → propose recommended answers, adopted with "go"
-3. Verify             terminology · format · vague wording · completeness (zero writes)
+3. Verify             terminology · format · vague wording · completeness · engineering's questions (zero writes)
 4. Preview & publish  preview → "go" → write (in stages)
 ```
 
@@ -227,7 +227,33 @@ Report what turns up; do not reconcile. A build drifts from a decision somebody 
 
 **8. Hiding something another entry still holds on to.** When an entry hides, removes or stops showing something, look through the other entries for any that reach that same thing to finish a job — closing it, archiving it, editing it, registering it — and say how that job ends now. An entry written to tidy one list can take away the only handle another list had; neither entry mentions the other, so the gap belongs to no entry. Item 5 follows a setting outward to the people it reaches; this one follows a removal inward to the entries that relied on what was removed.
 
+**9. What is already there on the day it ships.** Items 4 and 8 follow a change forward, to its undoing and to the entries that leaned on what it took away. This one follows it backward, to what existed before it. Where an entry brings a rule, a default or a state into a product people already use, find what was there before it took effect — the records, the accounts, the locations already running — and say what each of them shows and does on the first day: whether they start from the new default or keep what they had, whether somebody has to act before they work the new way, and what becomes of a record the new rule cannot hold — two values where the rule allows one, a state the new list has no name for. A spec written from a clean start describes the newcomer and leaves everyone already there to whoever writes the migration, who then decides it without anybody having chosen. On a product nobody uses yet there is nothing before it, and the check is skipped.
+
 **What to do with what it finds.** Whatever the material settles, settle it and rewrite the entry — bar item 6, where both sides are reported and which one gives way is somebody's decision rather than this document's. What needs a person becomes a question — asked together where the questions are independent, and **one at a time where one answer changes the next**, since resolving a contradiction usually moves other entries with it. What genuinely cannot be answered now becomes a TBD **carrying who decides it and by when**; without those two it does not pass, the same rule every other TBD in this document lives under.
+
+### 3.2 What engineering will ask
+
+3.1 reads the entries the way their readers will. Engineering reads them once more, from the system's side, when it starts to build — and the questions that read raises arrive after the handover, where each answer costs a round trip and an unanswered one is often settled by whoever is building and reported afterwards. Most of them are not engineering's to decide. The question is how the system holds something; the answer changes what a person sees. Ask them here, while the entry is still cheap to change.
+
+Run it on the entries that propose something not built yet — the ones item 6 leaves alone — and ask each question only where it applies. One that does not apply is skipped, not written down as not applicable.
+
+1. **Every value the screen shows has a source.** A countdown in minutes and seconds needs the system to know the seconds; a failure message that names its reason needs the system to report one. For each value an entry puts on a screen, find where it comes from
+2. **Where a value is kept, and who writes it.** A setting kept on the device and the same setting kept on the account behave differently the moment somebody signs in on a second device, and a state that no part of the system records never appears anywhere. Say which, where the entry depends on it
+3. **Where the product's categories and the system's part ways.** The entry sorts things one way and the system another — a bundle the entry treats as one kind of item, the system recognises by a category it may not be filed under; a status the system has and the screen has no place for, which then shows as its nearest neighbour
+4. **Other systems, and two things at once.** Where an entry leans on a service outside the product, or two actions can overlap — a refund still running when the customer starts to pay — what the person sees while the other side is slow, refuses, or answers late
+5. **What is already there.** The other half of 3.1's ninth item: whether the records that exist can be carried into the new rule as they stand
+
+Where the material includes code or a running build, read the answer off it; where it does not, the question stays open. **What becomes of an answer depends on whom it changes things for.**
+
+| The answer | Where it goes |
+|---|---|
+| Changes what a person sees or does — *settings follow the account, so a second device shows the same ones* | Into the entry, written from the reader's side by 2.4 |
+| Unknown, and it decides whether the entry can be built as written — *a source for the remaining seconds* | An open item owned by engineering, with when it is needed by — the same TBD rule as any other |
+| Changes nothing anybody sees — the table it is stored in, the call that fetches it | Nowhere in the spec. Engineering decides it, for the reasons 2.4 gives |
+
+The open items owned by engineering are the ones `/pm:task publish` carries into the ticket, so engineering meets each question before the work starts rather than in the middle of it.
+
+**This does not stand in for engineering's own review.** It moves the questions that review reliably asks to before the handover, so what reaches it is the part only an engineer can answer.
 
 ---
 
@@ -255,7 +281,7 @@ Where `task.record.type` is markdown, the **Linked tasks** section is regenerate
 
 **notion** — where `prd.notion.template` exists, start by duplicating it. Where it is null, create the document under `prd.notion.parent`; where both are null, ask for a page and offer to store its id in the config — never create at the workspace's top level. Rows go into the inline DB (`inline_db`), linked to `task_db` if there is one. **Re-read the template and the DB immediately before writing** to confirm the current heading formats, properties, and options, and match them — never trust option values pinned in this document or in the config. Read back after writing to verify. The things to watch are in appendix C.
 
-Once published, list the remaining TBDs and the manual follow-ups **once**. Do not repeat it every turn.
+Once published, list the remaining TBDs and the manual follow-ups **once**, with the open items owned by engineering named apart — those are the ones to raise before the handover. Do not repeat it every turn.
 
 ---
 

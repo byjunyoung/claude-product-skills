@@ -23,7 +23,7 @@ Config, the adapters, the rules every mode follows — matching, titles, mapping
 ## Inputs
 
 - `record` (required): the task record's url
-- `--contract` (optional): writes only the contract's own sections — the two binding ones, plus the requirements section where `contract.sections.requirements` is set — to whichever level `task.contract.level` names. Without it the run files or updates the task's ticket. Omitted with `level: parent`, a run that files a task says at the end whether its parent already has a contract, and offers to write it as a separate run
+- `--contract` (optional): writes only the contract's own sections — the two binding ones, plus the requirements section where `contract.sections.requirements` is set and the open items section where `contract.sections.open` is — to whichever level `task.contract.level` names. Without it the run files or updates the task's ticket. Omitted with `level: parent`, a run that files a task says at the end whether its parent already has a contract, and offers to write it as a separate run
 - `--template` (optional): reads both adapters as *Adapters* in `SKILL.md` says, then runs *Bringing a ticket back to the template* below on the ticket the record links to, and nothing else. A record with no link yet has no ticket to bring back, and with `task.template` null there is no template to bring it to — either way, say so and stop
 
 **Why the contract is its own run at `level: parent`.** One parent holds many tasks. Rewriting its contract every time a sibling is filed puts a large diff behind a preview nobody reads closely, and the moment the contract is actually written is a different moment — it is what lets the parent leave the planning column. Keeping it separate makes that moment visible.
@@ -161,6 +161,22 @@ Derived from the done conditions, **after** those are settled.
 - **Nothing that needs internal state or a server response.** That is engineering's own verification, not an acceptance step
 
 Entry paths come from the design's flow where it has one, and from the spec's behaviour table otherwise.
+
+#### Read the contract the way engineering will
+
+**Engineering reads every line of the contract to build from it**, and a line it cannot follow comes back as a question once the work has started — or is settled by whoever is building and reported afterwards. Most of those lines are visible in the draft. Once both sections are drafted, read the done conditions and the QA steps together for these:
+
+- **Two lines that cannot both come out true.** A QA step expecting something to begin one second after a tap, beside a done condition that counts the same wait down in whole seconds from ten; a permission prompt the QA steps ask for on first launch and the done conditions ask for after sign-up. Quote both
+- **A line that starts something and never says when it stops.** Reminders sent at fixed times after an order is ready, with nothing saying they stop once the order is picked up or cancelled. The question `/pm:prd`'s seventh consistency check asks of an entry, asked again of the line that will be built
+- **A stage of the work standing in for a requirement.** *All sub-tasks are closed*, *the design is handed over*, *the spec entry is revised* — each says the work happened, not what has to be true. In the contract it is not a condition. A task's own done conditions are a different thing: there, the artefact is the point
+- **A verdict left somewhere else.** *As settled in the other ticket*, *a target of two seconds, to be confirmed after measuring*, a design nobody pinned named as the standard — a line that hands its verdict to another place cannot come out true or false in this one
+- **A line against the entries, rather than against itself.** A QA step expecting the home screen on a new install where a settled entry opens new installs somewhere else; an offline step that contradicts the error behaviour another entry settles for every screen. Read each line against the entries the contract was drafted from, and against the entries that own any other screen the line reaches
+
+**Where the materials settle which side is right, fix the draft. Where they do not, the pair goes into step 3's round**, quoted, with the fact that would settle it. Nothing here is filed as it stands to be found by somebody else.
+
+#### What the entries leave to engineering
+
+**Where an entry the contract is drafted from has open items owned by engineering, they travel with the ticket.** `/pm:prd` leaves an item to engineering when its answer decides whether the entry can be built as written — whether the system knows a value the screen shows, say. The condition it decides is not written, since the materials do not settle it; the item is listed instead, one line each: the entry, what is open, and when it is needed by. They go under `contract.sections.open` where that is set, so engineering meets each question on the ticket it works from rather than in the spec it may not open. Where it is null, the preview and the report list them for whoever carries them across.
 
 #### Grouping, and when to split instead
 
@@ -301,6 +317,9 @@ Written into whichever ticket `task.contract.level` names — this one, or the p
 #### {the same groups, same names, same order}
 - [ ] {entry path → action → expected result}
 - [ ] {contract.design_match_step, one per screen}   ← design-side only, last
+
+### {contract.sections.open}                     ← only where the key is set and an entry left something open
+- {entry name} — {what is open} (needed by {when})
 ```
 
 **A contract small enough to read at a glance — one scenario, a handful of lines — is written without group headings.** A heading over every three lines is structure for its own sake.
@@ -361,6 +380,10 @@ Coverage     : behaviour {n}/{n} · states {n}/{n} · rules {n}/{n} · round tri
                covered elsewhere: {row} — {which line}
 Not in design: {n} — {condition} → {frame}: {what is missing there}
                (or "none", or "not checked — no pinned version" / "— design not readable")
+Read as built: {n} fixed from the materials · {n} asked in step 3
+               {line} ↔ {line, or entry}: {what does not hold}
+Open with engineering: {n} — {entry}: {what is open} (needed by {when})
+               → {contract.sections.open}, or "listed here only — the key is unset"
 Materials    : {entry name} ({entry kind})
                {kind}: {why nothing came out — "rules table carries it", or
                         "nothing in the materials settles it"}
@@ -414,7 +437,7 @@ Where the tracker already gates on the sections existing — a column a ticket c
 
 Follow `filing.md`, *Labels* and *Create*: look for the ticket already there, create it, and write the link property into the record right after — all inside the same "go".
 
-**At `contract.level: parent` the contract is a body edit on a ticket that already exists**, never a creation. Read the parent's current body, replace only the sections `contract.sections` names — the two binding ones, the requirements section where it is set, and the shared links section where `contract.sections.links` is set — and leave every other section of it byte for byte — a parent carries scenario, scope and links somebody else wrote, and this skill has no business rewriting them. Where the parent has no such sections yet, insert them **where `task.template.parent` puts them**, and where no template is named, where `contract.sections` orders them relative to what is already there, rather than appending to the end.
+**At `contract.level: parent` the contract is a body edit on a ticket that already exists**, never a creation. Read the parent's current body, replace only the sections `contract.sections` names — the two binding ones, the requirements section where it is set, the open items section where `contract.sections.open` is set, and the shared links section where `contract.sections.links` is set — and leave every other section of it byte for byte — a parent carries scenario, scope and links somebody else wrote, and this skill has no business rewriting them. Where the parent has no such sections yet, insert them **where `task.template.parent` puts them**, and where no template is named, where `contract.sections` orders them relative to what is already there, rather than appending to the end.
 
 **The rest of the ticket is not this edit's to change, but it is not out of reach either.** A parent filed before any of this — headings somebody invented, a label the rules now require — keeps them through a contract write. Where `task.template` is set and the body does not match it, say so and offer the pass below. Never fold it into the contract write silently: they are two different changes, and one "go" should not cover both.
 
