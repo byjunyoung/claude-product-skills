@@ -368,6 +368,12 @@ task:
                                  # of it
       done:  "Definition of done"
       qa:    "QA checklist"
+      open:  null                # the questions a spec entry left to engineering — one
+                                 # line each, the entry, what is open, when it is needed.
+                                 # The contract rewrites this section whole on every write,
+                                 # so name a heading only the contract fills, never one
+                                 # people also keep notes under. null lists them in the
+                                 # preview and the report instead
       links: null                # where the contract's level also carries the shared
                                  # links. null leaves that section alone
     link_rows:                   # rows written under contract.sections.links
