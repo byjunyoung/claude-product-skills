@@ -161,6 +161,23 @@ component_audit:
   # examined, so the shell itself is not reported. null exempts nothing: the whole frame is read.
   body_offset: null
 
+# --- Layout inside a screen ----------------------------------------------------
+# /fig:lint reads a screen's insides as well as its placement. Three of those checks are geometry
+# and always run (a child off its auto-layout spacing, a row stretched down a stack, a bordered part
+# doubling its box's border). The other three depend on which of your components are form fields and
+# which are meant to float over others, so each needs a pattern and is skipped while it is null.
+# Patterns are regular expressions matched against an instance's layer name.
+layout_audit:
+  # Your form-field component — a label beside or above a control. Set, it enables two checks:
+  # fields stacked with no space between them (in code the field usually carries that space as a
+  # margin, which the design file has no equivalent for), and a label whose centre sits more than
+  # 4px off its control's, as a switch does when both are pinned to the top. e.g. "Form\\.Item|FormField"
+  field_pattern: null
+  # Components drawn over others on purpose — an open menu, a tooltip, a toast. Set, any other
+  # instance lying wholly inside a sibling instance is reported, such as a button laid over a dialog
+  # that has its own. e.g. "Dropdown|Tooltip|Popover|Toast"
+  overlay_pattern: null
+
 # --- Design system -------------------------------------------------------------
 
 annotations:

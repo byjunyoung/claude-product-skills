@@ -264,7 +264,7 @@ The numeric audit is not here — `audit-flow` under `/fig:lint` is the single s
 
 ## Constraints
 
-- **The mandatory last action before completion — call `/fig:lint` (via the Skill tool).** Once arrows are created or synced, **always** call it and get a `PASS` from both the structure and the flow audit (frame membership and bounds come along with the flow). This skill has no audit code — every verdict comes from there. Fix what it reports and call again; **never report completion without a PASS**
+- **The mandatory last action before completion — call `/fig:lint` (via the Skill tool).** Once arrows are created or synced, **always** call it and get a `PASS` from both the structure and the flow audit (frame membership and bounds come along with the flow; the structure audit's six inside-a-screen warnings are not part of this gate — see `/fig:lint`, "Who reads which"). This skill has no audit code — every verdict comes from there. Fix what it reports and call again; **never report completion without a PASS**
 - **Preview → go before writing** (the flow list table). For sync, report how many will change first
 - Never call ConnectorNode or createConnector in a design file (FigJam only; it errors)
 - Newly created vectors, text, and pills use only the configured label font, so the local-font constraint does not apply. **Put a node in the right section at creation time** rather than reparenting an existing arrow

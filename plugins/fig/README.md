@@ -78,6 +78,9 @@ claude plugin install fig@byjunyoung
 ```
 Structure    screens outside a section · overlaps · names · a colour mode nobody set
              · a control cut off by its cell or hanging off the screen
+Inside       a child off its auto-layout spacing · a row stretched down a stack
+             · a doubled border · fields with no space · a label off its control
+             · a part laid over a dialog (the last three once you name the parts)
 Flow         arrows through unrelated screens · arrowheads into empty space
              · screens on no flow
 Components   variants stacked on each other · settings a duplicate carried along
