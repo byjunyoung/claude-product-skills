@@ -4,6 +4,8 @@
  * Checks: frame membership · out of bounds · frame overlap · section overlap · naming
  *         · variant stacking · library sibling overlap · implicit variable mode
  *         · clipped or overflowing content
+ *         · inside a screen: stale layout · stretched row · double border
+ *           · stacked fields · field alignment · overlay (the last three need layout_audit patterns)
  *
  * Usage
  *   1) python3 scripts/lib/resolve-config.py --js <fileKey>   → `const CFG = {...};`
@@ -362,6 +364,112 @@ for (const { s, skipped } of deep) {
     walk(f, false);
     if (hits.length)
       add("[clip]", "blocking", f.id, `${s.name} / ${f.name}: ${hits.length} (${hits.slice(0, 3).join("; ")}${hits.length > 3 ? ", \u2026" : ""})`);
+  }
+}
+
+// ── Inside a screen — what a rebuilt or reworked screen leaves behind in its layout ──
+// Every frame can sit where it should and still draw wrong inside: a form whose fields touch, a list
+// row stretched to fill a box, a button laid over a dialog instead of using the dialog's own. These
+// come in when a screen is rebuilt from another design system's parts — a part that carried its own
+// spacing in code carries none in the file — and they survive review because each screen is looked at
+// whole, at a zoom where a missing 24px gap does not show. All are warnings: the screen reads, but
+// engineering would build what it measures.
+// Three checks are pure geometry and always run. The other three need to know which components are
+// fields, and which may float over others; with those patterns null they are skipped.
+const LA = C.layout_audit || {};
+const FIELD_RE = reOrNull(LA.field_pattern);
+const OVERLAY_RE = reOrNull(LA.overlay_pattern);
+const shown = n => n.visible !== false;
+// Measured on bounding boxes, so a rotated child counts with the room it takes — a divider line can
+// carry a rotation of 1e-7 from an earlier transform, and leaving it out reads its two gaps as one.
+const flowKids = n => ("children" in n ? n.children.filter(c => shown(c) && c.layoutPositioning !== "ABSOLUTE" && c.absoluteBoundingBox) : []);
+const box = n => n.absoluteBoundingBox;
+const strokedSides = n => Array.isArray(n.strokes) && n.strokes.some(p => p.visible !== false) &&
+  (n.strokeWeight === figma.mixed ? n.strokeLeftWeight > 0 && n.strokeRightWeight > 0 : n.strokeWeight > 0);
+const inside = (b, a) => b.x >= a.x && b.y >= a.y && b.x + b.width <= a.x + a.width && b.y + b.height <= a.y + a.height;
+// Drawn on this page, not inside a component's own make-up: no instance between it and the screen,
+// or a slot nearer than any — a slot's contents are placed here, the rest of an instance is the library's.
+const placedHere = n => { for (let a = n.parent; a && a.type !== "PAGE"; a = a.parent) { if (a.type === "SLOT") return true; if (a.type === "INSTANCE") return false; } return true; };
+const mid = b => b.y + b.height / 2;
+for (const { s, skipped } of deep) {
+  if (skipped) continue;
+  for (const f of s.children.filter(isScreen)) {
+    const found = { "[stale layout]": [], "[stretched row]": [], "[double border]": [], "[stacked fields]": [], "[field align]": [], "[overlay]": [] };
+    const walk = (n, framed) => {
+      if (!shown(n)) return;
+      const H = n.layoutMode === "HORIZONTAL", V = n.layoutMode === "VERTICAL";
+      if (n !== f && (H || V)) {
+        const ks = flowKids(n);
+        // Stale layout: a child no longer where the spacing puts it. Seen after a slot's contents were
+        // restructured — the slot took its new height while its other children kept their old places,
+        // so two blocks touched and the space between them pooled at the bottom.
+        if (n.layoutWrap !== "WRAP" && n.primaryAxisAlignItems !== "SPACE_BETWEEN")
+          for (let i = 0; i + 1 < ks.length; i++) {
+            const a = box(ks[i]), b = box(ks[i + 1]);
+            const gap = H ? b.x - a.x - a.width : b.y - a.y - a.height;
+            if (Math.abs(gap - n.itemSpacing) > 1) { found["[stale layout]"].push(`${n.name} ${r(gap)} where its spacing says ${r(n.itemSpacing)}`); break; }
+          }
+        // Stretched row: a one-line row in a stack, told to fill the stack's height, so its content floats
+        // in empty space. Only a row filling down a vertical stack: one stretching to the height of the
+        // row beside it is ordinary alignment. Only frames drawn here: a table cell growing to its
+        // tallest neighbour, or a field's inner box filling its input, is the component working as made.
+        // A row with nothing in it is a spacer.
+        if (H && n.type === "FRAME" && n.layoutSizingVertical === "FILL" && n.parent && n.parent.layoutMode === "VERTICAL" && ks.length && placedHere(n)) {
+          const natural = n.paddingTop + n.paddingBottom + Math.max(...ks.map(k => box(k).height));
+          if (natural <= 64 && n.height >= natural * 2 && n.height > natural + 24) found["[stretched row]"].push(`${n.name} ${r(n.height)}px tall for ${r(natural)}px of content`);
+        }
+        // Stacked fields: two or more fields one above the other with no space between them. A field
+        // that kept its spacing as a margin in code has none of its own here; the container must give it.
+        if (FIELD_RE && V && n.itemSpacing === 0) {
+          const fields = ks.filter(k => k.type === "INSTANCE" && FIELD_RE.test(k.name));
+          if (fields.length >= 2) found["[stacked fields]"].push(`${fields.length} fields with no space between them in ${n.name}`);
+        }
+      }
+      // Field alignment: a label set beside a shorter control, both pinned to the top, so the label's
+      // centre sits below the control's — a switch or checkbox riding high beside its label.
+      if (FIELD_RE && n.type === "INSTANCE" && H && FIELD_RE.test(n.name) && n.counterAxisAlignItems === "MIN") {
+        const cols = flowKids(n);
+        if (cols.length >= 2) {
+          const label = cols[0].type === "TEXT" ? cols[0] : "findOne" in cols[0] ? cols[0].findOne(x => x.type === "TEXT" && shown(x)) : null;
+          const ctl = "findOne" in cols[1] ? cols[1].findOne(x => x.type === "INSTANCE" && shown(x)) : null;
+          if (label && ctl && label.absoluteBoundingBox && ctl.absoluteBoundingBox) {
+            const d = mid(label.absoluteBoundingBox) - mid(ctl.absoluteBoundingBox);
+            if (Math.abs(d) > 4) found["[field align]"].push(`${n.name}: label ${r(Math.abs(d))}px ${d > 0 ? "below" : "above"} its control's centre`);
+          }
+        }
+      }
+      // Double border: a bordered part flush against both sides of a bordered box it sits in, so the
+      // box's frame shows twice — a bordered list inside a bordered column is the usual one.
+      if (n.type === "INSTANCE" && framed && strokedSides(n)) {
+        const a = framed.absoluteBoundingBox, b = n.absoluteBoundingBox;
+        const flush = a && b && Math.abs(a.x - b.x) <= 1 && Math.abs(a.x + a.width - b.x - b.width) <= 1;
+        if (flush && !(Math.abs(a.y - b.y) <= 1 && Math.abs(a.height - b.height) <= 1))
+          found["[double border]"].push(`${n.name} inside ${framed.name}`);
+      }
+      // Overlay: a part laid over another part beside it rather than taken from it — a button drawn on
+      // a dialog that has its own. Open menus, tooltips and toasts float by design; overlay_pattern
+      // names them, and without it the check is skipped.
+      if (OVERLAY_RE && "children" in n) {
+        const kids = n.children.filter(shown);
+        for (let i = 0; i < kids.length; i++) {
+          const A = kids[i];
+          if (A.type !== "INSTANCE" || !A.absoluteBoundingBox) continue;
+          for (const B of kids.slice(i + 1))
+            if (B.type === "INSTANCE" && !OVERLAY_RE.test(B.name) && B.absoluteBoundingBox && inside(B.absoluteBoundingBox, A.absoluteBoundingBox))
+              found["[overlay]"].push(`${B.name} on top of ${A.name}`);
+        }
+      }
+      if ("children" in n) for (const c of n.children) walk(c, n.type === "FRAME" && n !== f && strokedSides(n) ? n : framed);
+    };
+    walk(f, null);
+    const say = list => `${s.name} / ${f.name}: ${list.length} (${list.slice(0, 3).join("; ")}${list.length > 3 ? ", …" : ""})`;
+    const F = found;
+    if (F["[stale layout]"].length) add("[stale layout]", "warning", f.id, say(F["[stale layout]"]));
+    if (F["[stretched row]"].length) add("[stretched row]", "warning", f.id, say(F["[stretched row]"]));
+    if (F["[double border]"].length) add("[double border]", "warning", f.id, say(F["[double border]"]));
+    if (F["[stacked fields]"].length) add("[stacked fields]", "warning", f.id, say(F["[stacked fields]"]));
+    if (F["[field align]"].length) add("[field align]", "warning", f.id, say(F["[field align]"]));
+    if (F["[overlay]"].length) add("[overlay]", "warning", f.id, say(F["[overlay]"]));
   }
 }
 
