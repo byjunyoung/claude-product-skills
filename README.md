@@ -159,6 +159,7 @@ Everything under `fig` runs on `plugin:figma`. These skills want something more.
 | `/fig:qa` `/pm:task draft` | **A chat tool** — only where the request source is a thread. For `pm`, `sources.chat_type` names it; `/fig:qa` takes the tool from the link. Slack ships |
 | `/pm:log` | **A calendar and a chat tool** — both optional, named by `sources.calendar_type` and `sources.chat_type`; Google Calendar and Slack ship. Named as `none` they are skipped and the log says so. A scheduler on your own machine, if you want it unattended |
 | `/pm:prd` | **Notion** — only where `prd.target` is `notion`. **Web search** — only where `prd.precedent.enabled` is true (the default), and only for a feature entry drafted for the first time. **A screen-reference connector** — optional, only for the services `prd.precedent.reference_sources` names. **Slack and Figma** — optional, only to read a thread or a design file among the material you hand it |
+| `/pm:review` | **Figma** — to read the design and capture the part of a screen a finding is about. **The tracker** that `task.mirror.type` names — or `task.record.type`, where there is no mirror — to read the parent ticket and its children. **A chat tool** — named by `sources.chat_type`, to read the request thread and the decisions around it, and to leave a reply as a draft when you ask for one; Slack ships. **Notion** — only where `prd.target` is `notion` |
 | `/pm:release-notes` | **Claude in Chrome** — it records the real screen. **A chat tool** — named by `sources.chat_type`, to read the release notice and leave the reply as a draft; Slack ships. **The tracker** that `task.mirror.type` names — or `task.record.type`, where there is no mirror — to read the tickets. **Notion** — only where `release.notes.target` is `notion`. **Figma** — optional, for menu names and for a still where a screen cannot be run safely |
 | `/fig:draw` | **A screen-reference connector** — optional, only for the services `references.sources` names, and only when a new pattern has to be defined |
 | `/fig:draw` `/fig:sketch` `/fig:qa` `/fig:handoff` | **pm** — optional. Installed alongside (0.38.0 or later), its PRD and its markdown task files are read and written. Without it, they still run, and say what they could not borrow |
@@ -434,6 +435,7 @@ A separate plugin covering the document and the work that comes out of it.
 | `/pm:setup` | Lay out a local start, then read a tracker's schema when one attaches, ids included |
 | `/pm:prd` | Write a requirements doc against a format, in language its readers can act on |
 | `/pm:task` | Three modes. `draft` turns a request thread into a task with its context table — a markdown file by default; `publish` files that task as a ticket in the engineering tracker, once one is attached; `sync` reconciles the planning list against that tracker |
+| `/pm:review` | Review a plan — a colleague's, or your own — just before it goes to engineering, each finding with the spec line, design capture or code it rests on, and say whether it can be handed over |
 | `/pm:release-notes` | Turn engineering's release notice into notes the people who run the product can act on, with a recording of each changed screen |
 | `/pm:log` | Record a day's work as a file, from your task records — run by name, by you or a scheduler |
 | `/pm:log-review` | Turn a period of those files into accomplishment statements |
@@ -489,6 +491,12 @@ Six things it holds to.
 **It asks what engineering will ask, before the handover.** Engineering reads a spec once more from the system's side when it starts to build, and the questions that read raises — a value the screen shows that the system does not know, where a setting is kept, a category the system draws differently, an outside service or two actions at once — mostly have answers that change what a person sees. So they are asked of each new entry while it is still cheap to change, answered from the code where the material has it. An answer somebody would see goes into the entry in the reader's words; an unknown that decides whether the entry can be built becomes an open item owned by engineering; an answer nobody sees stays out. It prepares engineering's review rather than replacing it.
 
 **It stops before writing.** Verification is read-only, publishing happens only after a preview and an explicit go, and even then in stages — skeleton, then user groups, then feature entries.
+
+### Before handover — the last read
+
+A plan reaches engineering as spec entries, a design and tickets written at different times, and the gaps between them are cheap to close now and expensive once building has started. `/pm:review` reads all three — and the threads where the decisions were made — just before handover: a colleague's plan when they ask for a review, or your own before you say it is ready. It checks for eight kinds of gap, from a state the spec names that is not drawn to work no engineering ticket covers, and keeps only what would change what gets built; what it leaves out is listed with the reason.
+
+Every finding carries what it rests on — the spec quoted word for word, a capture of the part of the screen in question, the ticket by its title, a code reference, a quoted message — so the reader can check it without opening anything else. The report is one HTML page with the captures inside it, and its first line says whether the plan can be handed over. A reply to a colleague is drafted only after you have read the report and ask for one, and it is never sent.
 
 ### After a release — telling the people who run it
 
@@ -820,7 +828,7 @@ plugins/
     README.md
     skills/
       setup  prd  task  release-notes     one SKILL.md each; task also holds
-      log  log-review                     draft.md  publish.md  sync.md  filing.md
+      log  log-review  review             draft.md  publish.md  sync.md  filing.md
     _common/
       conventions.example.yaml           config schema + bundled defaults
       trackers/                          one file per tracker — notion, github, markdown; the contract and a template
