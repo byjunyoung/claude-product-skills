@@ -60,6 +60,13 @@ prd:
     # in one policy entry, and the entries using those names are read against it.
     cases: [Normal, Empty, Loading, Error, No permission]
 
+  # --- What one entry may hold ---------------------------------------------------
+  # Past these, an entry is cut (what its reader would not act on comes out) or
+  # split (one entry per thing somebody sets out to do). null skips that check.
+  limits:
+    background: 3                # sentences in an entry's background
+    rule_topics: 6               # subheadings under an entry's rules before it is split in two
+
   # --- Entry properties. Use the words your team actually uses --------------------
   properties:
     type:     [Feature, Policy]
