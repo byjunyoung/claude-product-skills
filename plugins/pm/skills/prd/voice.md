@@ -30,11 +30,14 @@ This is not the terminology list. That list reads nouns, and a sentence containi
 
 **A spec is written, not spoken.** Declarative sentences in the written register. A conversational verb, a metaphor or slang standing in for the precise word becomes that word: *ping the operator* → *notify the operator*; *the alert keeps nagging* → *the alert repeats every 30 minutes*; *the shop goes dark* → *every menu item becomes unavailable*.
 
+**Written register changes how a sentence ends, not its words.** Keep the everyday word the reader would use; a rewrite that swaps plain words for dense nominal compounds reads worse than the speech it replaced. A cell that reads long is split into columns or rows, never compressed.
+
 **The register holds in the cells, the open items and the evidence lines too** — the parts written last and fastest, where speech gets back in.
 
-- A table cell ends as a noun phrase or a value, not a clause somebody would say aloud: *whether the drink goes in the powder dispenser* → *dispenser assignment for the drink*
+- A cell of a rules or open-items table ends as a short noun phrase or a value, not a clause somebody would say aloud (a behaviour or cases cell still says what happens, as above): *whether the drink goes in the powder dispenser* → *dispenser assignment for the drink*
 - An open item names what is to be settled and leaves the person to the owner column — not a question to the room, not an instruction: *block the change on the server* → *blocking the change on the server*
 - An evidence line states its reason or fact and its date, not how something looks to the writer: *it shows up as powder on screen* → *displayed as powder*
+- A definition, a condition or a source is not bracketed inside a rule sentence or a cell — it gets its own column, its own sentence or a references line. The date and source closing an evidence line, and a TBD's owner, are the format's own
 - A step from one thing to another is written out (*A is merged into B*), never chained with an arrow inside a sentence. Arrows in a flowchart are the flowchart's
 
 ## What stays out

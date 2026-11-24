@@ -98,7 +98,7 @@ Absorb what was gathered and produce a draft with a recommended answer in every 
 **Do not leave ambiguity — resolve it into a definition.** TBD is for what someone else has to decide, or what the material cannot settle. Anything decidable from context, confirmed material or precedent is written as a value — never deferred with 'appropriately', 'as the situation requires', 'if needed', 'and so on', never hedged with 'for now', 'enough', 'about', 'occasionally', 'once it settles'. A hedge is a value somebody has not written down yet: write the value, the condition or the person who owns it. Four things in particular do not work as blanks:
 
     the unit of judgement, aggregation, and dispatch
-    the target fields of filtering, search, and sorting
+    the target fields of filtering, search, and sorting — and a list's default order and its tie-break
     the criteria for picking a 'representative' or a 'priority'
     the definition of state transitions and recovery
 
@@ -131,13 +131,14 @@ Settle which entries there are before writing any of them. Entries cut at differ
 
 - **Adding an entry** — 2.1 decides whether it is a feature, a policy, or a rule that belongs in an entry already there. Appendix B's shape; status starts at the first value in `properties.status`. A feature gets 2.2's precedent check
 - **Extending or updating an entry** — lay out before and after so the user can see what changes. A decision that replaces an earlier one replaces its line; the old one does not stay beside it — the change log, or the earlier revision where the team keeps one, holds the history
+- **Every entry change carries its change-log line in the same preview**, where the document has a change log — re-read the log's last row just before writing
 - **An entry already over budget is not rebuilt to fit.** The budgets and step 3's length check apply to what this change adds or rewrites. An overrun already there is reported once — with the split 2.1 would make where the entry holds two units, as an overrun and nothing more where it holds one — for somebody to decide; 1.1 holds
 - **Adding a user group** — with the `user_group_rows` skeleton
 - **Adding a property option** — change the config first. Do not let each document grow its own
 
 ### 2.4 Interview principles
 
-Ask about the gaps **together, in one pass**, each with a material-backed recommendation marked (recommended), so a short answer finishes it. (The exception is 3.1: where one answer changes the next question, they go one at a time.) New ambiguity mid-write is asked again or marked TBD, never settled on your own.
+Ask about the gaps **together, in one pass**, each with a material-backed recommendation marked (recommended), so a short answer finishes it. (The exception is 3.1: where one answer changes the next question, they go one at a time.) New ambiguity mid-write is asked again or marked TBD, never settled on your own. Before the pass goes up, drop every question the material or an earlier decision already answers and say which were dropped; put each remaining one in the reader's words with one concrete case, not in the rule's own terms.
 
 **The gap list is not the list of blank fields.** A blank is a question the format already knew to ask; the ones that cost a second round are the questions an *answer* creates. Adopt *it can be deleted* and two decisions appear that were on no form — what becomes of what was already there, and what somebody on another screen sees. So for each recommendation about to go up, ask what adopting it would settle next, and put that into this pass rather than leaving it for 3.1 to find.
 
@@ -168,7 +169,7 @@ Self-check, read-only. Anything caught sends it back to step 2.
 4. **Length and repetition** — the budgets in Appendix B's last column. Then **every fact appears once in the body of an entry**: a rule in a table is not said again in a bullet, another table or an evidence line, and a rule another entry also states moves to a policy entry by 2.1. Its one other place is the decision-log line that settled it. References keep only the decisions in force. An entry over budget is first cut — repetition, then `voice.md`'s *What stays out* — never by dropping a decision. Rules still past `prd.limits.rule_topics` after that are a prompt to run 2.1's unit test, not a reason to split: two units, propose the split; one unit, it stays whole and the overrun is reported in one line. In extend mode this reads only what the change adds or rewrites (2.3)
 5. **Evidence** — no facts, quotations, or statistics without a source. Without one, TBD or "evidence needed"
 6. **Completeness** — the `structure.sections` skeleton is all present; user groups, domains and entries are not empty; every blank is an explicit TBD
-7. **Vague wording** — reject 'appropriately', 'as the situation requires', 'if needed', 'etc.', a hedge where the material has the value, a TBD with no reason or no owner, an empty **target** for filtering, search or sorting, an undefined **unit** for judgement, dispatch or aggregation. One TBD the material could have settled is not a pass
+7. **Vague wording** — reject 'appropriately', 'as the situation requires', 'if needed', 'etc.', a hedge where the material has the value, a TBD with no reason or no owner, an empty **target** for filtering, search or sorting, a list with no default order, an undefined **unit** for judgement, dispatch or aggregation. One TBD the material could have settled is not a pass
 8. **Language and notation** — as `meta.language` and `prd.emoji` have it; on `auto`, the conversation's language
 
 ### 3.1 Does it hold together
@@ -224,7 +225,7 @@ Where `task.record.type` is markdown, the **Linked tasks** section is regenerate
 
 **git** — written the same as markdown, then a `branch_prefix + product name` branch, and with `open_pr` true, a PR as well. Commits and PRs are external writes too, so they take a preview → go.
 
-**notion** — where `prd.notion.template` exists, start by duplicating it. Where it is null, create the document under `prd.notion.parent`; where both are null, ask for a page and offer to store its id in the config — never create at the workspace's top level. Rows go into the inline DB (`inline_db`), linked to `task_db` if there is one. **Re-read the template and the DB immediately before writing** to confirm the current heading formats, properties, and options, and match them — never trust option values pinned in this document or in the config. Read back after writing to verify. The things to watch are in appendix C.
+**notion** — where `prd.notion.template` exists, start by duplicating it; the published document keeps none of the template's scaffolding — its instructions, example rows and empty embeds go in the same staged write, named in the preview. Where it is null, create the document under `prd.notion.parent`; where both are null, ask for a page and offer to store its id in the config — never create at the workspace's top level. Rows go into the inline DB (`inline_db`), linked to `task_db` if there is one. **Re-read the template and the DB immediately before writing** to confirm the current heading formats, properties, and options, and match them — never trust option values pinned in this document or in the config. Read back after writing to verify. The things to watch are in appendix C.
 
 Once published, list the remaining TBDs and the manual follow-ups **once**, with the open items owned by engineering named apart — those are the ones to raise before the handover.
 
