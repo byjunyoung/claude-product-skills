@@ -34,7 +34,7 @@ This is not the terminology list. That list reads nouns, and a sentence containi
 
 - A table cell ends as a noun phrase or a value, not a clause somebody would say aloud: *whether the drink goes in the powder dispenser* → *dispenser assignment for the drink*
 - An open item names what is to be settled and leaves the person to the owner column — not a question to the room, not an instruction: *block the change on the server* → *blocking the change on the server*
-- An evidence line states the fact and its date, not how something looks to the writer: *it shows up as powder on screen* → *displayed as powder*
+- An evidence line states its reason or fact and its date, not how something looks to the writer: *it shows up as powder on screen* → *displayed as powder*
 - A step from one thing to another is written out (*A is merged into B*), never chained with an arrow inside a sentence. Arrows in a flowchart are the flowchart's
 
 ## What stays out
@@ -48,7 +48,7 @@ Research turns up far more than the spec needs, and most of it is the grounds fo
 | A value an operator enters and changes on a screen — a capacity, a threshold, a flag on some items — as it stands in today's data | Only the rule for entering and changing it: the range, who sets it, when a change takes effect. *A dispenser holds 2,000 g* is today's data; *capacity is set per container size and applies to every location* is the rule. Confirming or tidying today's value is a note to whoever owns the data, not an open item of the spec |
 | How something is enforced — what a check looks at, which condition has to change | What the person sees until it is done, and who still owes the work: *closed branches stay listed in the app until the app side is changed* |
 | A list of examples — vendors, models, codes | The kind of thing it is (*the card payment provider*), unless the reader picks from exactly that list on the screen |
-| How a decision was reached — who proposed what, what changed on which date | Nothing in the background. The decision in force, in an evidence line or one reference line |
+| How a decision was reached — who proposed what, what changed on which date | Nothing in the background. The decision in force gets one line in the references' decision log |
 | Something out of scope | Its name in the reader's words, not the command or channel it currently lives in |
 
 The system is what is being specified, not the values somebody keeps in it: today's value written as a rule is wrong the next time an operator changes it.
