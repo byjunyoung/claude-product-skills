@@ -10,9 +10,9 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion, WebSearch, 
 
 When a PRD is being written or worked on, the material is gathered and analysed first, and the result becomes a **recommended answer**. The user adopts it with a single "go", or writes a different answer instead. Every question carries the option judged most fitting, marked (recommended).
 
-A PRD keeps growing. Keep the body thin and push the detail out into the entry list, the tickets, and the design file.
+**It is read by people who cannot open the code** — whoever designs the screens, settles the scope, runs the product once it ships. A requirement is worth what the sentence carrying it is worth to them: 2.5 and `voice.md` are the rule, the second check in 3 is the gate.
 
-**And it is read by people who cannot open the code.** Whoever designs the screens, settles the scope, runs the product once it ships. A requirement is worth what the sentence carrying it is worth to them — 2.4 is the rule, and the second check in 3 is the gate.
+**It keeps growing, so every entry has a unit, a shape and a budget.** 2.1 decides what one entry is, Appendix B what it holds, section by section, and the fourth check in 3 holds it there. Detail that does not fit goes to the tickets and the design file, not into a longer entry.
 
 **The premise**: writes happen only after preview → "go" — a markdown file as much as a Notion page. Reading, searching, and gathering come first, without confirmation.
 
@@ -38,7 +38,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/resolve-config.py --name pm-co
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/preflight.py --quiet
 ```
 
-A FAIL stops the run only when its row concerns what this run touches — the connector `prd.target` needs, the record type read for Linked tasks, or a source this run reads; print its fix lines and nothing else. Any other FAIL row is reported in one line and the run continues. An UNKNOWN (exit 2, the last line says so) is likewise reported in one line and the run continues. `task.record.type` is asked for because the Linked tasks section is built from it (step 4); a config that never named it would otherwise run on the floor's copy without anyone having chosen it.
+A FAIL stops the run only when its row concerns what this run touches — the connector `prd.target` needs, the record type read for Linked tasks, or a source this run reads; print its fix lines and nothing else. Any other FAIL row, and an UNKNOWN (exit 2, the last line says so), is reported in one line and the run continues. `task.record.type` is asked for because the Linked tasks section is built from it (step 4); a config that never named it would otherwise run on the floor's copy without anyone having chosen it.
 
 The layers merge bundled defaults → `~/.claude/pm-conventions.yaml` → `./pm-conventions.yaml`. Later layers cover earlier ones, so **only the keys you need have to be written.** If it ran on bundled defaults alone, say so in the result.
 
@@ -48,14 +48,14 @@ The layers merge bundled defaults → `~/.claude/pm-conventions.yaml` → `./pm-
     git        written as markdown, then a branch and a PR
     notion     a Notion page. Requires the prd.notion section filled in
 
-A `null` setting means "skip that collection or integration". Do not stop for want of a value — record what was skipped in the result.
+A `null` setting means "skip that collection, integration or check". Do not stop for want of a value — record what was skipped in the result.
 
 ## The shape of it
 
 ```
 1. Prepare            mode (new / extend) + gather material + confirm the format
-2. Draft & interview  absorb the material → propose recommended answers, adopted with "go"
-3. Verify             terminology · format · vague wording · completeness · engineering's questions (zero writes)
+2. Draft & interview  decide the entries → absorb the material → recommended answers, adopted with "go"
+3. Verify             terminology · voice · shape · length · evidence · completeness · coherence (zero writes)
 4. Preview & publish  preview → "go" → write (in stages)
 ```
 
@@ -87,7 +87,7 @@ Read whatever comes back **immediately, without confirmation**. For several sour
 
 Look for what already exists before making anything new. Search for similar plans, research, and earlier PRDs first, and where personas or domains are already defined, use them as they are. One or two failed searches do not mean "nothing there" — change the keywords and look again.
 
-**Domain splitting** goes by the count in `prd.domains.range`, cut so the domains do not overlap. Where `align_with_design` is true, match the design file's page structure one to one.
+**Domain splitting** goes by the count in `prd.domains.range`, cut so the domains do not overlap. Where `align_with_design` is true, match the design file's page structure one to one; where the two disagree, the design file wins, and the range is what to aim for when there is no design file to follow yet.
 
 ---
 
@@ -95,87 +95,67 @@ Look for what already exists before making anything new. Search for similar plan
 
 Absorb what was gathered and produce a draft with a recommended answer in every slot. What could not be filled is not invented — it gets `prd.tbd_label`. Your own inference carries `prd.assumption_label` so it never mixes with what was found.
 
-**Do not leave ambiguity — resolve it into a definition.** TBD is for *what someone else has to decide, or what the material cannot settle*. **Anything decidable** from context, confirmed material, or precedent **must be specified concretely** — never deferred with 'appropriately', 'as the situation requires', 'if needed', 'and so on', and never hedged with 'for now', 'enough', 'about', 'occasionally', 'once it settles'. A hedge is a value somebody has not written down yet: write the value, the condition or the person who owns it.
-
-These four in particular do not work as blanks, so fill them with values.
+**Do not leave ambiguity — resolve it into a definition.** TBD is for what someone else has to decide, or what the material cannot settle. Anything decidable from context, confirmed material or precedent is written as a value — never deferred with 'appropriately', 'as the situation requires', 'if needed', 'and so on', never hedged with 'for now', 'enough', 'about', 'occasionally', 'once it settles'. A hedge is a value somebody has not written down yet: write the value, the condition or the person who owns it. Four things in particular do not work as blanks:
 
     the unit of judgement, aggregation, and dispatch
-    the target fields of filtering, search, and sorting
+    the target fields of filtering, search, and sorting — and a list's default order and its tie-break
     the criteria for picking a 'representative' or a 'priority'
     the definition of state transitions and recovery
 
-A status of 'under review' means *a concrete proposal has been put up for review*, not *this is left blank*. Only what genuinely cannot be decided stays TBD, and it carries (who, what, when).
+A status of 'under review' means a concrete proposal is up for review, not a blank. What genuinely cannot be decided stays TBD and carries who decides it and by when.
 
-### 2.1 New — what to fill in
+### 2.1 Deciding the entries
+
+Settle which entries there are before writing any of them. Entries cut at different sizes cannot be read against each other, and one that grew to hold three jobs is read as none of them.
+
+| Entry | What one is | Named |
+|---|---|---|
+| Feature | One thing a person sets out to do on the product — a list and its filters, registering and editing something, one settings screen. Usually one screen or one dialog | The way that person would say it: *the branch list*, *registering a product* |
+| Policy | A rule that holds whichever screen it is met on — the product's own state names, what a value may be, when something may be deleted, what a law or a contract requires. It is the business's constraint; a feature is what a person does under it | By what it rules: *branch states*, *product input rules* |
+
+| When | Then |
+|---|---|
+| Two feature entries state the same rule | The rule moves into one policy entry; both features name it (*see Product input rules*) and do not restate it |
+| An entry holds two things somebody sets out to do, or rules two things — different people reach its parts at different times, or one part changes without the other | It splits, one entry per unit. Length is never the reason: an entry that is one unit stays one entry however long, and a split by count leaves two halves that only make sense together |
+| Two entries always change together and are reached together | They merge |
+| The product has states of its own that several entries name | That vocabulary is settled first, as a policy entry — 3.1's item 0 reads it back |
+
+### 2.2 New — what to fill in
 
 1. **Product overview** — in `structure.overview` order. Background separates fact from supposition
-2. **User groups** — name groups by **role** (not by team name). Reuse the same persona names across documents so they stay consistent. Each group's body goes in the `structure.user_group_rows` table
-3. **Domains + feature and policy entries** — settle the domains, then each entry in the appendix format below. Where the product has states of its own that several entries will name, settle that vocabulary first as a policy entry — item 0 in 3.1 is what reads it back
-4. **A feature entry, the first time it is drafted, gets a precedent check.** Before its structure is proposed, look for how a comparable product covers the same ground — `prd.precedent.archive_dir` first if one is set, then each service in `prd.precedent.reference_sources` (a library of real product screens and flows, reached through a connector) for how shipped products lay out the same thing, then the web, skipped where `prd.precedent.enabled` is off. A listed service not connected in this session is skipped and named in the report rather than silently dropped. A connector named only under `reference_sources` is not in this skill's `allowed-tools`, so its first call will prompt for permission — that is expected, not a hang. And what a screen shows is read as a shape to compare, never as a fact about that product's rules. **1.3 goes first and outranks whatever this turns up**: a shape this team already decided against, for a reason a document or a prior PRD gives, is not a gap for precedent to fill — it is a decision, and precedent does not reopen one. What precedent does turn up is folded straight into the recommendation offered for that entry, never presented as a separate finding to react to, and its source is logged in the entry's References under a `Precedent —` line, apart from whatever there backs a stated fact. A policy entry does not get this — it is usually a business or legal call, not a shape to compare
+2. **User groups** — named by **role**, not by team name, with the same persona names across documents. Each group's body is the `structure.user_group_rows` table (Appendix A)
+3. **Domains, then the entries 2.1 decided**, each in Appendix B's shape
+4. **A feature entry, the first time it is drafted, gets a precedent check** — skipped where `prd.precedent.enabled` is off. Before its structure is proposed, look for how a comparable product covers the same ground: `prd.precedent.archive_dir` first if set, then each service in `prd.precedent.reference_sources` (a library of real product screens, reached through a connector), then the web. A listed service not connected in this session is skipped and named in the report; one named only there is not in this skill's `allowed-tools`, so its first call will prompt for permission — expected, not a hang. A screen is read as a shape to compare, never as a fact about that product's rules. **1.3 outranks it**: a shape this team already decided against, for a reason a document gives, is a decision, and precedent does not reopen it. What precedent turns up is folded into the recommendation for that entry, not presented as a separate finding, and logged in its references under a `Precedent —` line. A policy entry does not get this
 
-### 2.2 Extend — units of work
+### 2.3 Extend — units of work
 
-- **Adding an entry** — appendix B's format. Status starts at the first value in `properties.status`. A feature entry gets the same precedent check as 2.1's item 4
-- **Extending or updating an entry** — lay out before and after so the user can see what changes
+- **Adding an entry** — 2.1 decides whether it is a feature, a policy, or a rule that belongs in an entry already there. Appendix B's shape; status starts at the first value in `properties.status`. A feature gets 2.2's precedent check
+- **Extending or updating an entry** — lay out before and after so the user can see what changes. A decision that replaces an earlier one replaces its line; the old one does not stay beside it — the change log, or the earlier revision where the team keeps one, holds the history
+- **Every entry change carries its change-log line in the same preview**, where the document has a change log — re-read the log's last row just before writing
+- **An entry already over budget is not rebuilt to fit.** The budgets and step 3's length check apply to what this change adds or rewrites. An overrun already there is reported once — with the split 2.1 would make where the entry holds two units, as an overrun and nothing more where it holds one — for somebody to decide; 1.1 holds
 - **Adding a user group** — with the `user_group_rows` skeleton
-- **Adding a property option** — where a value is needed that is not on the list, change the config first. Do not let each document grow its own
+- **Adding a property option** — change the config first. Do not let each document grow its own
 
-### 2.3 Interview principles
+### 2.4 Interview principles
 
-Ask about the gaps **together, in one pass**. Do not scatter the questions. (The exception is 3.1: where one answer changes the next question, they go one at a time.) Attach a material-backed recommendation to each, marked (recommended), so a short answer finishes it. If new ambiguity turns up mid-write, do not settle it yourself — ask again, or mark it TBD.
+Ask about the gaps **together, in one pass**, each with a material-backed recommendation marked (recommended), so a short answer finishes it. (The exception is 3.1: where one answer changes the next question, they go one at a time.) New ambiguity mid-write is asked again or marked TBD, never settled on your own. Before the pass goes up, drop every question the material or an earlier decision already answers and say which were dropped; put each remaining one in the reader's words with one concrete case, not in the rule's own terms.
 
-**The gap list is not the list of blank fields.** A blank is a question the format already knew to ask. The ones that cost a second round are the questions an *answer* creates: adopt *it can be deleted* and two decisions appear that were on no form — what becomes of what was already there, and what somebody on another screen sees. So take each recommendation about to go up and ask what adopting it would settle next, and put whatever that turns up into this pass rather than leaving it for 3.1 to find once a draft exists. A format holds the questions somebody thought to give it a field for, which is why the ones it is missing are the ones nobody asked.
+**The gap list is not the list of blank fields.** A blank is a question the format already knew to ask; the ones that cost a second round are the questions an *answer* creates. Adopt *it can be deleted* and two decisions appear that were on no form — what becomes of what was already there, and what somebody on another screen sees. So for each recommendation about to go up, ask what adopting it would settle next, and put that into this pass rather than leaving it for 3.1 to find.
 
-### 2.4 The language it comes out in
+### 2.5 The language it comes out in
 
-**Who reads a spec is what decides how it is written.** The people who design the screens, settle what is in scope, run the product once it ships and answer for it when it breaks — some of them read code, and none of them should have to. Write at the level the reader is already standing at: the plainest sentence that still carries the whole requirement, and no word they have to look up before they can act on it. Plain is not simplified — the reader knows the product better than anyone, just not its internals, so nothing gets rounded off to make it read easily.
+**Read `voice.md` before drafting.** It holds the rules below with their examples, the table of what research leaves out, and the two guards. The reader is whoever designs the screens, settles the scope and runs the product: write at the level they already stand at — the plainest written sentence that still carries the whole requirement.
 
-This is not the terminology list. That list reads nouns, and a sentence containing none of them can still describe a machine rather than a product.
-
-**A rule says what a person sees and does** — not what the system decided on their behalf.
-
-| Written from the inside | Written from the reader's side |
-|---|---|
-| The view switches depending on whether an active job exists | While something is being made, the screen stays on the progress view |
-| The evaluation is valid for 30 minutes | If nothing has been confirmed for 30 minutes, it counts as finished and the screen goes back to normal |
-| Applied regardless of the account's state | Everyone sees it, signed in or not |
-
-**A number is written with its meaning beside it.** A threshold, a period or a count on its own is a value, not a requirement — say what it does to the person it happens to. "Locks after 3 failures" becomes *three wrong tries in a row locks it, and one correct entry clears the count*.
-
-**A cell in the behaviour or cases table says what happens** — not a noun standing in for it. Not *Transition*, *Restore*, *Refresh*, but *the banner clears*, *the list goes back to how it was*.
-
-**A table cell holds one piece of information.** *Repeats every 30 minutes until it is fixed* is three — an interval, a behaviour and an end condition — and a reader scanning the column has to take the sentence apart to compare one row with the next. Name a column for each and put one value in each cell: *repeat | every 30 min | until resolved*. Where a value shares its cell with its reason, or an action with its timing, split the column. The meaning a number carries still gets written — in its own column, or in the rule above the table — never folded into the value's cell. A list of the values one attribute can take is one piece of information and stays in one cell.
-
-**Where a rule branches, it is laid out, not narrated.** A rule that turns on several cases — what happens when a second event arrives while the first is still open, when a state changes before its timer runs out, when a higher-priority case overtakes a lower one — read as paragraphs makes every reader rebuild the table in their head, and each rebuilds it a little differently. Give it three things: a table of situation against outcome, one row per case; a flowchart of the order the rule is checked in; and one worked timeline that walks a concrete sequence of events through the rule, with times. An author who can only explain a rule as an essay has usually not noticed the case the essay skips; the table is where that case shows up as an empty row.
-
-**A word the reader may not have is explained where it first appears**, in three or four words, inside the sentence. Where the team's own term is the accurate one, keep the term and gloss it; a folksy substitute invented to avoid it reads worse than the term did.
-
-**A concept the field already has a name for is called by that name.** A threshold, a retry interval, a grace period, an incident — where the people who run this kind of product share a standard term, use it rather than a description invented to avoid it; a paraphrase makes every reader who knows the term translate it back, and every reader who does not learn a word nobody else uses. Prefer the form the term is established in for the document's language, and fall back to the original-language term only where no established equivalent exists. Terms the entries rely on go in a **terms table** — term, meaning, the original-language term — once per document: in the policy entry the others point to, or at the head of the entry that uses them. A term in that table means the same thing in every entry, and the official document it comes from is one line under references. The line this draws is between a field's standard vocabulary and engineering's private jargon: the first is defined and kept, the second is still rewritten from the reader's side.
-
-**A spec is written, not spoken.** Declarative sentences in the written register. A conversational verb, a metaphor or a bit of slang standing in for the precise word — *ping the operator*, *the alert keeps nagging*, *the shop goes dark* — becomes the word it stood in for: *notify the operator*, *the alert repeats every 30 minutes*, *every menu item becomes unavailable*. Plain does not mean spoken; the plainest sentence that carries the requirement is still a written one.
-
-**The register holds in the cells, the open items and the evidence lines too.** Those are the parts written last and fastest, and they are where speech gets back in after every rule sentence above them has passed. A table cell ends as a noun phrase or a value, not as a clause somebody would say aloud: *whether the drink goes in the powder dispenser* is half of a question asked in a meeting, and *dispenser assignment for the drink* names the thing to settle. An open item names what is to be settled and leaves the person to the owner column — not a question put to the room, and not an instruction to somebody: *block the change on the server* becomes *blocking the change on the server*. An evidence line states the fact and its date, not how something looks to the writer — *it shows up as powder on screen* becomes *displayed as powder*. A step from one thing to another is written out (*A is merged into B*), never chained with an arrow inside the sentence.
-
-**What the reader cannot act on stays out.** Plain sentences are half of it; the other half is what gets a sentence at all. Research for a spec turns up far more than the spec needs — where a value is stored, which service reads it, which condition a lookup filters on, a vendor's name, a command somebody types in a chat tool — and all of it is true, and most of it is the grounds for a decision rather than the decision. Before a line goes in, ask whether the person deciding scope, drawing the screen or answering for the product would do anything differently for having read it. Where they would not, it does not go in.
-
-| Found during research | What the entry carries |
-|---|---|
-| Where a fact comes from inside the system — a table, a lookup, a service, a document of engineering's | The fact, as the person meets it: *a branch with no location does not appear on the app's map*. The source, if it is worth keeping, is one line under references |
-| A value no screen shows and nobody chooses — a default engineering sets, a field left over from an older system | Nothing. If engineering needs telling, that is the ticket's job, not the spec's |
-| A value the system lets an operator enter and change on a screen — a capacity, a threshold, a flag switched on for some items — as it stands in today's data | Only the rule for entering and changing it: the range, who sets it, when a change takes effect. *a dispenser holds 2,000 g* is today's data; *capacity is set per container size and applies to every location* is the rule. Confirming where today's value came from, or tidying a few rows of it, is not an open item of the spec — it is a note to whoever owns the data |
-| How something is enforced — what a check looks at, which condition has to change | What the person sees until it is done, and who still owes the work: *closed branches stay listed in the app until the app side is changed* |
-| A list of examples — vendors, models, codes | The kind of thing it is (*the card payment provider*), unless the reader picks from exactly that list on the screen |
-| Something out of scope | Its name in the reader's words, not the command or the channel it currently lives in |
-
-The system is what is being specified, not the values somebody keeps in it. A spec that writes today's value as if it were a rule is wrong the next time an operator changes it, so the rule goes in and the current value stays on the screen it is set from.
-
-A reason earns one clause, not a paragraph. A rule that needs three sentences of background to justify itself is usually carrying research that belongs under references.
-
-**The guard runs here too: cutting a line must not cut a decision.** Before dropping one, check whether it held something somebody settled — a requirement, a default the reader chose, a dependency they have to track. Keep that and drop only the mechanism around it.
-
-**The guard: changing how it reads must not change what it says.** Values, decisions, section order and table structure stay exactly as they were, and only the sentences move. A pass over the wording that quietly rounds a number or softens a rule has broken the document it was tidying.
-
-Systems vocabulary is a symptom to watch for, not a list to ban — *active*, *trigger*, *propagate*, *the presence or absence of*, *upon*, *the relevant*, rules chained together with arrows in a sentence. Meeting one is a reason to read that sentence again from the reader's side; rewritten that way, the word usually has nowhere left to sit. A standard term from the terms table is not a symptom — *threshold* or *evaluation interval*, defined once there, is the accurate word, and the sentence around it is still read from the reader's side. Arrows in a flowchart are the flowchart's, not a sentence's. The examples above are English because this file is, and the rule is about the shape of the sentence rather than the language it is in — `meta.language` decides that, and every one of these reads the same way translated.
+| Rule | Not | But |
+|---|---|---|
+| A rule says what a person sees and does | *The view switches depending on whether an active job exists* | *While something is being made, the screen stays on the progress view* |
+| A number carries its meaning | *Locks after 3 failures* | *Three wrong tries in a row lock it; one correct entry clears the count* |
+| A cell says what happens, and holds one piece of information | *Restore* · *Repeats every 30 minutes until fixed* | *The list goes back to how it was* · *repeat │ every 30 min │ until resolved* |
+| A rule that branches is laid out | Paragraphs walking through the cases | A situation-against-outcome table, a flowchart, a worked timeline |
+| A word the reader may not have is glossed where it first appears; the field's standard term is used and defined once | A paraphrase invented to avoid the term | The term, in the terms table with its original-language form |
+| Written, not spoken — in cells, open items and evidence lines too | *ping the operator* · *whether the drink goes in the dispenser* | *notify the operator* · *dispenser assignment for the drink* |
+| What the reader cannot act on stays out | Where a value is stored, a vendor list, today's value of a setting | The fact as the person meets it; the rule for setting the value |
+| Wording changes, decisions do not | A number rounded or a rule softened while tidying | Values, decisions, section order and tables exactly as they were |
 
 ---
 
@@ -183,87 +163,53 @@ Systems vocabulary is a symptom to watch for, not a list to ban — *active*, *t
 
 Self-check, read-only. Anything caught sends it back to step 2.
 
-1. **Terminology** — look for `prd.forbidden_terms` in the body. Where they appear, replace with product-side wording. Write as far as "what" (the requirement) and leave "how" (the implementation) to engineering or to a TBD
-2. **Voice** — the check above reads nouns; this one reads sentences, which is where the same problem survives every string check there is. Read the rules, the behaviour rows and the case rows back as somebody who cannot open the code: does each one say what a person sees, or what the system decided? Rewrite whatever fails by 2.4 — and change nothing but the sentence. Then read each line once more for whether the reader would act on it at all, and cut what they would not by the same section — leaving every decision in place. Read each value once more for whether it is a rule or today's data: a value an operator enters and changes on a screen keeps only the rule for setting it, and an open item that only checks or tidies such a value comes out. Read once more for register: a conversational verb, a metaphor or slang where the precise word belongs is rewritten into the written sentence 2.4 asks for. That read covers the open-items table, the evidence lines and the references as well as the rules — every cell a noun phrase or a value, no question or instruction standing in for an open item
-3. **Format** — re-read only the places that are easy to break
-   - Functional requirements go in a **table** (behaviour │ condition │ input │ result). Not bullet sentences
-   - States and cases go in a **table**, with the rows fixed to `structure.cases`. Not applicable is `—`; anything off the list is `other`
-   - Sources and evidence collect in the **references** section. Never dissolved into a rule or exception sentence as "source:"
-   - **One piece of information per table cell.** Read every cell: a value sharing its cell with its condition, its reason or its timing is split into columns (2.4). A list of the values one attribute takes passes
-   - **A rule that branches is laid out.** Where a rule turns on more than two cases, it has a situation-against-outcome table, a flowchart and a worked timeline (2.4) — not paragraphs
-   - **Standard terms are in the terms table.** Every domain term the entries rely on appears there once, with the original-language term, and its source is under references; a term used in an entry and missing from the table, or used in two senses, fails
-4. **Evidence** — no facts, quotations, or statistics without a source. Without one, mark it TBD or "evidence needed"
-5. **Completeness** — the `structure.sections` skeleton is all present, and the user groups, domains, and feature entries are not empty. Every blank is explicitly a TBD
-6. **Vague-wording scan** — reject on 'appropriately', 'as the situation requires', 'if needed', 'etc.', on a hedge — 'for now', 'enough', 'about', 'occasionally', 'once it settles' — where the material has the value, a TBD with no reason; on an empty **target** for filtering, search, or sorting; on an undefined **unit** for judgement, dispatch, or aggregation. **One slot left TBD that the material could have settled is not a pass**
-7. **Language and notation** — as `meta.language` and `prd.emoji` have it. On `auto`, follow the conversation's language
+1. **Terminology** — `prd.forbidden_terms` in the body is replaced with product-side wording. Write as far as "what" (the requirement) and leave "how" to engineering or a TBD
+2. **Voice** — the check above reads nouns; this one reads sentences, against every row of 2.5 with `voice.md` beside it, in the rules, the cells, the open items, the evidence lines and the references. Change nothing but the sentence; cut what the reader would not act on, never a decision. A value an operator sets on a screen keeps only the rule for setting it
+3. **Shape** — Appendix B, section by section: every section present and in order, each holding only what its row says. Sources sit in an evidence line or the references, never folded into a rule sentence as "source:". One piece of information per table cell. A rule turning on more than two cases is laid out. Every standard term is in the terms table, in one sense
+4. **Length and repetition** — the budgets in Appendix B's last column. Then **every fact appears once in the body of an entry**: a rule in a table is not said again in a bullet, another table or an evidence line, and a rule another entry also states moves to a policy entry by 2.1. Its one other place is the decision-log line that settled it. References keep only the decisions in force. An entry over budget is first cut — repetition, then `voice.md`'s *What stays out* — never by dropping a decision. Rules still past `prd.limits.rule_topics` after that are a prompt to run 2.1's unit test, not a reason to split: two units, propose the split; one unit, it stays whole and the overrun is reported in one line. In extend mode this reads only what the change adds or rewrites (2.3)
+5. **Evidence** — no facts, quotations, or statistics without a source. Without one, TBD or "evidence needed"
+6. **Completeness** — the `structure.sections` skeleton is all present; user groups, domains and entries are not empty; every blank is an explicit TBD
+7. **Vague wording** — reject 'appropriately', 'as the situation requires', 'if needed', 'etc.', a hedge where the material has the value, a TBD with no reason or no owner, an empty **target** for filtering, search or sorting, a list with no default order, an undefined **unit** for judgement, dispatch or aggregation. One TBD the material could have settled is not a pass
+8. **Language and notation** — as `meta.language` and `prd.emoji` have it; on `auto`, the conversation's language
 
 ### 3.1 Does it hold together
 
-The checks above find what is missing, malformed or unreadable. They do not find a document that is complete and wrong — and a spec with no blank left in it can still contradict itself, skip a case, or name a number nobody can count. Read the entries against each other, in this order, and then against the thing they describe.
+The checks above find what is missing, malformed or unreadable — not a document that is complete and wrong. **Read `coherence.md` and run its items in this order**:
 
-**0. Every role and every state it names is defined.** Collect the roles, permissions and account words the entries actually use, and look each one up in the user-group table. Then collect the product's own state names — whatever the entries call the condition a machine, a screen or an order is in right now — and look those up too. A word with nothing behind it is reported as exactly that — *this one is not defined anywhere* — and never as a contradiction.
+| # | Reads | For |
+|---|---|---|
+| 0 | the roles and product states the entries name | each one defined — in the user groups, or the policy entry holding the states |
+| 1 | entries against each other | one allowing what another forbids |
+| 2 | each condition | the branch nobody wrote, and the case row holding two cases in one cell |
+| 3 | each number | what resets it, its boundary, its unit |
+| 4 | each switch | the off, delete or undo half |
+| 5 | each setting | who else it reaches, one step away |
+| 6 | entries describing today | against the code or a running build — reported, not reconciled |
+| 7 | each state | a way out that does not wait on the thing that stopped |
+| 8 | each removal | another entry that still needed what was removed |
+| 9 | a change to a live product | what already exists shows and does on day one |
 
-This one comes first because the rest cannot be judged without it. Two entries that look like they disagree may be naming the same thing twice under different words, or two genuinely different things; only the definition settles which. Judged without it, the report is confident and wrong, which costs more than saying nothing.
-
-**The states need somewhere to be looked up in, and `structure.cases` is not it.** Those rows are the shapes any screen can be in, the same list in every document. A product's own states are its own, they are what entries disagree about, and nothing in the skeleton holds them. One policy entry does, written in `structure.policy_sections` like any other. Where no such entry exists yet and the names have already gone three ways across three entries, propose one and settle it there — reconciling entries against each other pair by pair grows with how many of them there are, and leaves nothing behind for the next entry somebody writes.
-
-**1. Entries that contradict each other.** One entry allows what another forbids, or two say different things about the same object. Quote both, and say which fact would settle it.
-
-**2. The case nobody wrote.** A condition with two branches and one outcome. A states-and-cases row left at `—` where the case plainly applies. Ask about the branch, not about the table.
-
-**And the row that holds two cases in one cell.** The same failure inverted, and it survives every check there is because the cell is not blank: an empty state written *nothing registered yet / nothing matched the filter*, an error row written *save failed / a required field is missing*. Each pair becomes two screens — one a whole page somebody reaches with no data at all, the other a line beside the field they just typed in — so whoever draws from that row draws one of them, and the other is never built or ever noticed missing. Split the cell, or say in it which of the two this entry means.
-
-**3. A number with no rule around it.** A threshold, a count or a period that is stated but not countable — what resets it, what the boundary is, what unit it is in. "Locks after 3 failures" is not a requirement until it says when the counter goes back to zero.
-
-**4. The other half of the switch.** An entry that says how something is turned on, created or added, but never what happens when it is turned off, deleted or undone. Ask what is left behind — the values that were stored, the places that displayed them, what somebody opening the screen again would find. A rule written in one direction only is half a rule, and the half nobody wrote is the half that gets built by accident.
-
-**5. What it does outside the screen it is written for.** Where an entry's setting reaches somebody it never mentions — the end customer, another surface, a display further down — say in one line what that person sees. Entries are usually split by the screen an operator works in, so a consequence that lands one step away belongs to no entry unless one claims it.
-
-**6. An entry that says this is how it works today, against what actually works today.** The five above read the entries against each other; this one reads an entry against the thing it claims to describe. It runs on those entries only — one proposing something not built yet is *supposed* to differ from what ships, and a check that flags those is a check nobody reads twice. Where the material included the code or a running build, take the entries of the first kind and read the values, the cases and the state names off it.
-
-Report what turns up; do not reconcile. A build drifts from a decision somebody approved as easily as a document drifts from a build, and an entry quietly rewritten to match the code is how an approved decision disappears with nobody deciding to drop it. Quote both sides and name the fact that would settle it, exactly as item 1 does. Where the material had no code or build in it, say the check did not run — an entry nobody could check is not an entry that was confirmed.
-
-**7. A state with a way in and no way out.** Collect the states an entry expects to pass through — in progress, waiting, paused, stopped on an error — and find the line that says how each one ends. Where every way out waits on a signal from the very thing that stopped — a device that broke down or was switched off, a service that went quiet — the state outlives everyone's interest in it, still on screen with nobody able to clear it. Ask for one exit that does not wait on that signal: after a stated time, or by somebody's hand, and say which. Then ask the case underneath it: what the screen shows while the signal is not arriving at all. A spec written from the signals a working device sends has no row for the device that sends nothing.
-
-**8. Hiding something another entry still holds on to.** When an entry hides, removes or stops showing something, look through the other entries for any that reach that same thing to finish a job — closing it, archiving it, editing it, registering it — and say how that job ends now. An entry written to tidy one list can take away the only handle another list had; neither entry mentions the other, so the gap belongs to no entry. Item 5 follows a setting outward to the people it reaches; this one follows a removal inward to the entries that relied on what was removed.
-
-**9. What is already there on the day it ships.** Items 4 and 8 follow a change forward, to its undoing and to the entries that leaned on what it took away. This one follows it backward, to what existed before it. Where an entry brings a rule, a default or a state into a product people already use, find what was there before it took effect — the records, the accounts, the locations already running — and say what each of them shows and does on the first day: whether they start from the new default or keep what they had, whether somebody has to act before they work the new way, and what becomes of a record the new rule cannot hold — two values where the rule allows one, a state the new list has no name for. A spec written from a clean start describes the newcomer and leaves everyone already there to whoever writes the migration, who then decides it without anybody having chosen. On a product nobody uses yet there is nothing before it, and the check is skipped.
-
-**What to do with what it finds.** Whatever the material settles, settle it and rewrite the entry — bar item 6, where both sides are reported and which one gives way is somebody's decision rather than this document's. What needs a person becomes a question — asked together where the questions are independent, and **one at a time where one answer changes the next**, since resolving a contradiction usually moves other entries with it. What genuinely cannot be answered now becomes a TBD **carrying who decides it and by when**; without those two it does not pass, the same rule every other TBD in this document lives under.
+What the material settles is settled and rewritten (item 6 excepted). What needs a person becomes a question — together where independent, one at a time where an answer moves the next. What cannot be answered now is a TBD carrying who decides it and by when.
 
 ### 3.2 What engineering will ask
 
-3.1 reads the entries the way their readers will. Engineering reads them once more, from the system's side, when it starts to build — and the questions that read raises arrive after the handover, where each answer costs a round trip and an unanswered one is often settled by whoever is building and reported afterwards. Most of them are not engineering's to decide. The question is how the system holds something; the answer changes what a person sees. Ask them here, while the entry is still cheap to change.
-
-Run it on the entries that propose something not built yet — the ones item 6 leaves alone — and ask each question only where it applies. One that does not apply is skipped, not written down as not applicable.
-
-1. **Every value the screen shows has a source.** A countdown in minutes and seconds needs the system to know the seconds; a failure message that names its reason needs the system to report one. For each value an entry puts on a screen, find where it comes from
-2. **Where a value is kept, and who writes it.** A setting kept on the device and the same setting kept on the account behave differently the moment somebody signs in on a second device, and a state that no part of the system records never appears anywhere. Say which, where the entry depends on it
-3. **Where the product's categories and the system's part ways.** The entry sorts things one way and the system another — a bundle the entry treats as one kind of item, the system recognises by a category it may not be filed under; a status the system has and the screen has no place for, which then shows as its nearest neighbour
-4. **Other systems, and two things at once.** Where an entry leans on a service outside the product, or two actions can overlap — a refund still running when the customer starts to pay — what the person sees while the other side is slow, refuses, or answers late
-5. **What is already there.** The other half of 3.1's ninth item: whether the records that exist can be carried into the new rule as they stand
-
-Where the material includes code or a running build, read the answer off it; where it does not, the question stays open. **What becomes of an answer depends on whom it changes things for.**
+On the entries that propose something not built yet, ask the five questions in `coherence.md` — a source for every value shown, where a value is kept and who writes it, where the product's categories and the system's part ways, other systems and two things at once, what is already there. Read the answers off the code where the material has it.
 
 | The answer | Where it goes |
 |---|---|
-| Changes what a person sees or does — *settings follow the account, so a second device shows the same ones* | Into the entry, written from the reader's side by 2.4 |
-| Unknown, and it decides whether the entry can be built as written — *a source for the remaining seconds* | An open item owned by engineering, with when it is needed by — the same TBD rule as any other |
-| Changes nothing anybody sees — the table it is stored in, the call that fetches it | Nowhere in the spec. Engineering decides it, for the reasons 2.4 gives |
+| Changes what a person sees or does | Into the entry, in the reader's words |
+| Unknown, and it decides whether the entry can be built as written | `TBD (engineering, needed by …)` in the cell it decides, or one row of the entry's open-items table — one line, no more. `/pm:task publish` carries it to the ticket, where the question is worked |
+| Changes nothing anybody sees | Nowhere in the spec |
 
-The open items owned by engineering are the ones `/pm:task publish` carries into the ticket, so engineering meets each question before the work starts rather than in the middle of it.
-
-**This does not stand in for engineering's own review.** It moves the questions that review reliably asks to before the handover, so what reaches it is the part only an engineer can answer.
+This does not stand in for engineering's own review; it moves the questions that review reliably asks to before the handover.
 
 ---
 
 ## 4. Preview and publish
 
-**Always** show the full content and take a "go" before a write — to a markdown file, a branch, or a Notion page alike. A file in the repo is previewed → go in the same stages as the others. The preview names the **target** and the **added, changed, and deleted items**, and closes with `shall I proceed? (go / changes)`.
+**Always** show the full content and take a "go" before a write — to a markdown file, a branch, or a Notion page alike. The preview names the **target** and the **added, changed, and deleted items**, and closes with `shall I proceed? (go / changes)`. A "go" approves what was shown; nothing else gets slipped in at execution time. If the content changes, preview again → go.
 
-A "go" approves what was shown. Nothing that was not in the preview gets slipped in at execution time because it seemed better. If the content changes, preview again → go.
-
-**Do not write a lot at once.** Split it: skeleton → user groups → feature entries per domain, each preview → go → next.
+**Do not write a lot at once.** Split it: skeleton → user groups → entries per domain, each preview → go → next.
 
 ### Publishing by target
 
@@ -273,15 +219,15 @@ A "go" approves what was shown. Nothing that was not in the preview gets slipped
     split: domain    {dir}/{slug(product)}/index.md             Overview, User groups, Linked tasks, Design, Change log
                      {dir}/{slug(product)}/{slug(domain)}.md    that domain's entries
 
-With `front_matter` true, the front matter carries `title`, `product`, `domain` (domain files only), `status` and `updated`. Tables are pipe tables, and entry properties go in the front matter or as table columns. Each feature or policy entry gets its anchor from Appendix B, so that a task or a ticket can link to it.
+With `front_matter` true, the front matter carries `title`, `product`, `domain` (domain files only), `status` and `updated`. Tables are pipe tables, and entry properties go in the front matter or as table columns. Each entry gets its anchor from Appendix B, so that a task or a ticket can link to it.
 
 Where `task.record.type` is markdown, the **Linked tasks** section is regenerated on every publish from `markdown-tracker.py list --dir {task.record.ref}`: the records whose `project` equals the product, one line each, `- [{title}]({path relative to the PRD file}) — {status}`. Its first line is `<!-- generated from {task.record.ref}; edits here are replaced -->`. Other record types leave the section as it was.
 
 **git** — written the same as markdown, then a `branch_prefix + product name` branch, and with `open_pr` true, a PR as well. Commits and PRs are external writes too, so they take a preview → go.
 
-**notion** — where `prd.notion.template` exists, start by duplicating it. Where it is null, create the document under `prd.notion.parent`; where both are null, ask for a page and offer to store its id in the config — never create at the workspace's top level. Rows go into the inline DB (`inline_db`), linked to `task_db` if there is one. **Re-read the template and the DB immediately before writing** to confirm the current heading formats, properties, and options, and match them — never trust option values pinned in this document or in the config. Read back after writing to verify. The things to watch are in appendix C.
+**notion** — where `prd.notion.template` exists, start by duplicating it; the published document keeps none of the template's scaffolding — its instructions, example rows and empty embeds go in the same staged write, named in the preview. Where it is null, create the document under `prd.notion.parent`; where both are null, ask for a page and offer to store its id in the config — never create at the workspace's top level. Rows go into the inline DB (`inline_db`), linked to `task_db` if there is one. **Re-read the template and the DB immediately before writing** to confirm the current heading formats, properties, and options, and match them — never trust option values pinned in this document or in the config. Read back after writing to verify. The things to watch are in appendix C.
 
-Once published, list the remaining TBDs and the manual follow-ups **once**, with the open items owned by engineering named apart — those are the ones to raise before the handover. Do not repeat it every turn.
+Once published, list the remaining TBDs and the manual follow-ups **once**, with the open items owned by engineering named apart — those are the ones to raise before the handover.
 
 ---
 
@@ -302,26 +248,24 @@ Based on the `structure.user_group_rows` default. Where the config differs, foll
 
 Product-specific rows are absorbed into the row content rather than added to the skeleton. A skeleton that differs per document cannot be compared.
 
-## Appendix B — the feature and policy entry format
+## Appendix B — the entry contract
 
-**Properties** — type, status, and priority from `prd.properties`, plus target users and the design link.
+**Properties** — type, status, and priority from `prd.properties`, plus target users and the design link. 'Who' goes in the target-users property and 'when' into the background; neither gets a row.
 
-**The anchor** — on a markdown target, the line before each feature or policy entry's heading is `<a id="entry-{n}"></a>`. `n` is one more than the highest `entry-` id across all of the product's files, and 1 when none exists yet. Extending an old file anchors the new entries only; old ones are never back-filled. An id is never renumbered and never reused: an entry is not deleted from the file, a removed one stays as a short "(removed)" tombstone that keeps its anchor, so the highest id can never come round again. A link to an entry is `{path}#entry-{n}`; that is the form `spec_url` and `task.ticket.link_rows.spec` take.
+**The anchor** — on a markdown target, the line before each entry's heading is `<a id="entry-{n}"></a>`. `n` is one more than the highest `entry-` id across all of the product's files, and 1 when none exists yet. Extending an old file anchors the new entries only. An id is never renumbered or reused: a removed entry stays as a short "(removed)" tombstone that keeps its anchor. A link to an entry is `{path}#entry-{n}`; that is the form `spec_url` and `task.ticket.link_rows.spec` take.
 
-**A feature entry's body** (`structure.feature_sections`):
+**A feature entry** (`structure.feature_sections`) holds these sections, in this order, and nothing else:
 
-```
-Background        why + when and in what context
-Core requirement  one line on what this feature does as a whole
-Detailed behaviour  | behaviour | condition | input | result |
-States and cases    | case | screen, behaviour |   ← rows fixed to structure.cases
-Rules and exceptions  rules and exceptions (sources are not dissolved in here)
-References        source and evidence links, plus a `Precedent —` line for 2.1 item 4's find
-```
+| Section | Holds | Budget |
+|---|---|---|
+| Background | Why the entry exists and in what context. How a decision was reached is not background — its line in the decision log carries it | `prd.limits.background` sentences |
+| Core requirement | What the feature does as a whole | One sentence |
+| Detailed behaviour | Table: behaviour │ condition │ input │ result | One behaviour per row |
+| States and cases | Table: case │ screen, behaviour. Rows in `structure.cases` order, every one present, `—` where it does not apply, `other` for anything off the list. A case that is two screens gets two rows under the same case name, the difference after a dash | One case per row |
+| Rules and exceptions | An optional lead of one or two sentences; then one subheading per topic, each with an `item │ rule` table — or, for a rule that branches, a situation │ outcome table, a flowchart and a worked timeline — and under it at most one line `Evidence — {why the table's rules are so, in a sentence} ({date}, {source})` — the reason, not the table's values again. Anything unsettled that is not a cell of those tables goes last, in an `item │ owner │ needed by` table | No other bullets or paragraphs. Past `prd.limits.rule_topics` topics, step 3's fourth check asks whether it is still one entry |
+| References | The sources behind the entry, one per line: what the source is and its date, with the link. Then a decision log, one line per decision: `{date} {occasion} ({who}) — {what it settled, as noun phrases}`; a decision that is replaced is replaced here too. A `Precedent —` line for 2.2 item 4's find, which says what the shape was checked against rather than backing a fact | One line per source or decision; decisions in force only |
 
-'Who' and 'when' do not get their own rows — who goes in the target-users property, when is absorbed into the background. A `Precedent —` line is not evidence for a stated fact — it says what this entry's shape was checked against, and reads separately from the evidence lines beside it.
-
-**A policy entry's body** (`structure.policy_sections`): background / rules / references.
+**A policy entry** (`structure.policy_sections`): background and references as above, and its rules in the same shape as a feature's rules and exceptions. Where the document has a terms table — term │ meaning │ original-language term — it lives in the policy entry the others point to.
 
 ## Appendix C — things to watch when target is notion
 

@@ -60,6 +60,14 @@ prd:
     # in one policy entry, and the entries using those names are read against it.
     cases: [Normal, Empty, Loading, Error, No permission]
 
+  # --- What one entry may hold ---------------------------------------------------
+  # Past these, an entry is cut (what its reader would not act on comes out) or
+  # asked whether it is still one entry. Length alone never splits one: an entry
+  # that is one unit stays whole and the overrun is reported. null skips that check.
+  limits:
+    background: 3                # sentences in an entry's background
+    rule_topics: 6               # subheadings under an entry's rules before it is asked whether it holds two units
+
   # --- Entry properties. Use the words your team actually uses --------------------
   properties:
     type:     [Feature, Policy]
