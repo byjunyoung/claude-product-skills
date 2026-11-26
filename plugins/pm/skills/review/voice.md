@@ -26,6 +26,10 @@ The renderer counts characters, sentences, dashes, middle dots, arrows, quotatio
 
 **A ticket is named by what it is.** In evidence: its title as written, its number, its link. In a cell, and in the folded notes: a short name the reader recognises, and the number in brackets, such as *the store server ticket (#682)*. Never a bare number, and never the full title with its bracketed tags in a sentence. With `ticket_url` set, each number on the page links to its ticket.
 
+**The to-do is the ask cut to its verb and object.** *Add the field to the payment response*, not a restatement of the problem. It is read in a list of others under one role, so it starts with the verb.
+
+**A paste is the spec's sentence, not yours.** Written in the register the spec itself is written in, ready to drop in where `to` says. Where you would have to choose the wording, there is no paste.
+
 **The location names the place, not the problem.** *Spec, order status and remake, requirements, the bulk remake row*, linked. What is wrong there is the problem cell's job.
 
 **Identifiers stay out of the cells.** Revision ids, node ids, commit hashes, file paths and version ids belong to an evidence `source` or to `more`. A cell says *an archived revision*, *the list frame*, *the main branch*.

@@ -26,7 +26,8 @@ def item(**kw):
             "if_left": "The screen ships and saves nothing.",
             "evidence": [{"kind": "ticket", "source": "Store setup (#12)", "link": "https://example.com/12",
                           "quote": "Children: screen only"}],
-            "ask": "Open a server ticket under the parent before handover."}
+            "ask": "Open a server ticket under the parent before handover.",
+            "owner": "Planning", "todo": "Open the server ticket"}
     base.update(kw)
     return base
 
@@ -54,7 +55,7 @@ check("clean data exits 0", r.returncode == 0, r.stderr)
 check("verdict counts the items", "1 fix, 1 opinion" in page)
 check("verdict names the item that surfaces last", "Surfaces last if nobody acts: 1, No ticket covers" in page)
 check("every card has the four cells", all(page.count(f"<dt>{c}</dt>") == 2 for c in ("Problem", "If left", "Evidence", "Ask")))
-check("items table links to the cards", 'href="#i2"' in page and 'id="i2"' in page)
+check("the to-do list links to the cards", 'href="#i2"' in page and 'id="i2"' in page)
 check("summary line on stdout", "items 2 (fix 1, opinion 1), over budget 0" in r.stdout)
 
 # Own plan: the verdict is about handing over
@@ -108,7 +109,8 @@ check("html embeds the capture", "data:image/png;base64," in out.read_text())
 r, out = run(doc(items=[item(evidence=[{"kind": "design", "source": "Frame 1:2", "image": "shot.png"}])]), fmt="markdown")
 md = out.read_text()
 check("markdown links the copied capture", "](report/shot.png)" in md and (out.parent / "report" / "shot.png").is_file(), md)
-check("markdown has the four cells", all(f"**{c}**" in md for c in ("Problem", "If left", "Evidence", "Ask")))
+check("markdown puts the capture above the cells", all(f"**{c}**" in md for c in ("Problem", "If left", "Ask"))
+      and md.index("](report/shot.png)") < md.index("**Problem**"))
 
 # Ticket numbers: named in a cell, linked on the page
 r, _ = run(doc(items=[item(ask="Open a ticket under #12 before handover.")]))
@@ -136,21 +138,24 @@ check("--help prints the budgets in numbers", "problem 150" in h.stdout and "pro
 
 # The brief: the plan before the findings
 BRIEF = {"what": "Head office registers and edits stores in one screen.", "why": "Store settings are hard-coded today.",
-         "flow": ["Register a store", "Set its status", "Save the kiosk setup"], "in": ["registration"], "out": ["the app list"],
+         "flow": [{"label": "Register", "text": "Register a store"}, {"label": "Status", "text": "Set its status"},
+                  {"label": "Kiosk", "text": "Save the kiosk setup"}], "in": ["registration"], "out": ["the app list"],
          "links": [{"name": "Spec", "link": "https://example.com/spec"}],
          "capture": {"source": "Store list", "image": "shot.png"}}
 r, out = run(doc(brief=BRIEF))
 page = out.read_text()
-check("a brief renders", r.returncode == 0 and "<h2>The plan</h2>" in page and "<dt>How it works</dt>" in page, r.stderr)
+check("a brief renders", r.returncode == 0 and ">The plan<" in page and "<dt>How it works</dt>" in page, r.stderr)
+check("the first screen shows the plan in a sentence and its steps by name",
+      "Register › Status › Kiosk" in page and page.index("Register › Status") < page.index("<details>"))
 check("the brief comes before the verdict", page.index("The plan") < page.index('class="verdict'))
 check("the brief carries its capture", page.count("data:image/png;base64,") == 1)
-r, _ = run(doc(brief=dict(BRIEF, flow=[f"step {k}" for k in range(8)])))
+r, _ = run(doc(brief=dict(BRIEF, flow=[{"label": f"s{k}", "text": f"step {k}"} for k in range(8)])))
 check("a flow over six steps is flagged", "brief flow: 8 lines, budget 6" in r.stderr, r.stderr)
 r, _ = run(doc(brief=dict(BRIEF, what="It registers stores. It edits them.")))
 check("a two-sentence what is flagged", "brief brief_what: 2 sentences" in r.stderr, r.stderr)
 r, out = run(doc(brief=BRIEF), fmt="markdown")
 md = out.read_text()
-check("markdown brief before the verdict", md.index("## The plan") < md.index("> **") and "  2. Set its status" in md)
+check("markdown brief before the verdict", md.index("**The plan**") < md.index("> **") and "  2. **Status** Set its status" in md)
 
 # What the reference reports do: a handover answer, grounds, labels glossed, locations, empty sections dropped
 r, out = run(doc(not_checked=["the kiosk repo"], unread=["a DM"], reviewer="Reviewer A",
@@ -160,7 +165,7 @@ check("a colleague's verdict answers the handover", "Not yet: 1 fix, 0 opinions"
 check("the verdict carries its grounds as counts", "Grounds: 1 not checked, 1 sources unread" in page and 'href="#nc"' in page)
 check("unread sources are listed under not checked", page.index('id="nc"') < page.index("Could not read: a DM"))
 check("the labels are glossed once", page.count("an opinion is the author&#x27;s call") == 1)
-check("reviewer and latest edit sit at the foot", page.index("Reviewed by") > page.index("<h1>") and 'class="meta foot"' in page
+check("reviewer and latest edit sit at the foot", page.index("Reviewed by") > page.index("<h1>") and 'class="foot"' in page
       and page.index("Reviewed by") > page.index('class="card"'))
 r, out = run(doc(items=[item(kind="opinion")]))
 check("a colleague's plan with no fixes is ready", "Ready to hand over, 1 opinion" in out.read_text())
@@ -170,7 +175,7 @@ check("an empty left-out section is not drawn", "Left out" not in page)
 check("no grounds line when everything was seen", "Grounds:" not in page)
 r, out = run(doc(items=[item(where=[{"name": "Spec, store setup, rules", "link": "https://example.com/s"}])]))
 page = out.read_text()
-check("a card opens with where the fix goes", "<dt>Where</dt>" in page and page.index("<dt>Where</dt>") < page.index("<dt>Problem</dt>"))
+check("a card opens with where the fix goes", 'class="where">Where:' in page and page.index('class="where"') < page.index("<dt>Problem</dt>"))
 r, _ = run(doc(items=[item(where=[{"name": "a"}, {"name": "b"}, {"name": "c"}])]))
 check("more than two locations is flagged", "item 1 where: 3, budget 2" in r.stderr, r.stderr)
 PREV = {"date": "01-02", "items": [{"title": "No server ticket", "status": "resolved", "note": "Opened (#12)."},
@@ -182,12 +187,44 @@ r, out = run(doc(previous=PREV), fmt="markdown")
 md = out.read_text()
 check("markdown carries the re-review and the foot", "resolved 1, withdrawn 1, still open 0" in md and "Not yet:" in md)
 
+# The first screen answers who does what; captures carry marks; a paste never sits beside options
+r, out = run(doc(items=[item(owner="Planning", todo="Fix the spec row"), item(owner="Server", todo="Add the field"),
+                        item(owner="Planning", todo="Delete the stale line")]))
+page = out.read_text()
+check("the to-do list groups by who moves first", page.index("<dt>Planning</dt>") < page.index("<dt>Server</dt>")
+      and page.count("<dt>Planning</dt>") == 1 and page.index("Delete the stale line") < page.index("<dt>Server</dt>"))
+check("the to-do list comes before the first card", page.index('class="todo"') < page.index('class="card"'))
+check("no items table any more", "<th>Title</th>" not in page)
+SHOT = {"kind": "design", "source": "Dialog (1:2)", "image": "shot.png", "marks": [{"box": [0.1, 0.2, 0.3, 0.1]}]}
+r, out = run(doc(items=[item(evidence=[SHOT, ev])]))
+page = out.read_text()
+check("a mark is drawn on its capture", 'class="mk" style="left:10.00%;top:20.00%;width:30.00%;height:10.00%"><b>1</b>' in page, r.stderr)
+check("the capture sits above the cells", page.index('class="shot"') < page.index("<dt>Problem</dt>"))
+check("the evidence cell keeps the quotes", page.index("<dt>Evidence</dt>") < page.index("<blockquote>"))
+r, out = run(doc(items=[item(evidence=[dict(SHOT, crop=[0.0, 0.1, 0.5, 0.5])])]))
+page = out.read_text()
+check("a crop shows part of the capture and moves the marks with it",
+      'class="frame crop"' in page and 'class="mk" style="left:20.00%;top:20.00%;width:60.00%;height:20.00%"' in page, r.stderr)
+r, out = run(doc(items=[item(evidence=[SHOT])]), fmt="markdown")
+check("markdown says the marks are in the html", "(marked in the HTML report)" in out.read_text())
+r, _ = run(doc(items=[item(paste={"to": "Spec, rules", "text": "Saved values follow the last save."}, options=["a", "b"])]))
+check("a paste beside options is flagged", "paste beside options decides for the author" in r.stderr, r.stderr)
+r, out = run(doc(items=[item(paste={"to": "Spec, rules", "text": "Saved values follow the last save."})]))
+check("a paste renders under the ask", r.returncode == 0 and 'class="paste">Saved values follow the last save.' in out.read_text(), r.stderr)
+
 # Bad data: exit 2, nothing written
 for label, data in (("items missing", {"title": "t", "as_of": "now"}),
                     ("previous with an unknown status", doc(previous={"date": "x", "items": [{"title": "a", "status": "done"}]})),
                     ("where that is not a list of names", doc(items=[item(where=["a"])])),
                     ("brief without flow", doc(brief={"what": "x"})),
-                    ("brief without what", doc(brief={"flow": ["a"]})),
+                    ("brief without what", doc(brief={"flow": [{"label": "a", "text": "b"}]})),
+                    ("flow steps without labels", doc(brief={"what": "x", "flow": ["a"]})),
+                    ("an item without an owner", doc(items=[item(owner="")])),
+                    ("an item without a to-do", doc(items=[item(todo="")])),
+                    ("a mark outside the capture", doc(items=[item(evidence=[dict(SHOT, marks=[{"box": [0.8, 0, 0.5, 0.1]}])])])),
+                    ("marks without an image", doc(items=[item(evidence=[{"kind": "design", "marks": [{"box": [0, 0, 1, 1]}]}])])),
+                    ("a paste without text", doc(items=[item(paste={"to": "x"})])),
+                    ("a crop outside the capture", doc(items=[item(evidence=[dict(SHOT, crop=[0.6, 0, 0.6, 1])])])),
                     ("more entry without a kind", doc(items=[item(more=[{"source": "x"}])])),
                     ("more table with a row that is not a list", doc(items=[item(more=[{"table": {"head": ["a"], "rows": ["b"]}}])])),
                     ("left_out without a reason", doc(left_out=[{"what": "x"}])),

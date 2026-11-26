@@ -1,7 +1,7 @@
 ---
 name: review
 description: Reviews a plan — spec entries, design and tickets — just before it goes to engineering, whether a colleague asked for the review or the plan is your own, keeping only what would change what gets built, writing each finding as four short cells on one fixed page with the spec line, design capture, code or message it rests on, and saying whether the plan can be handed over. Triggers - "/pm:review", "review this plan", "is this ready for engineering", "기획 리뷰해줘", "이거 검토해줘", "개발 넘기기 전에 봐줘", "최종 검토".
-allowed-tools: AskUserQuestion, Read, Write, Bash, Glob, Grep, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-version-changes, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Slack__slack_send_message_draft, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
+allowed-tools: AskUserQuestion, Read, Write, Bash, Glob, Grep, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-version-changes, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Slack__slack_send_message_draft, mcp__plugin_figma_figma__create_session, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
 ---
 
 # review — the last read before a plan goes to engineering
@@ -50,9 +50,9 @@ Before any check, write the plan down as its materials describe it. The reader m
 |---|---|---|
 | what | what is being built, for whom | one sentence |
 | why | the problem it answers | two sentences |
-| flow | how it works, in the order a person meets it: one step a line, each something someone does or sees | six steps |
+| flow | how it works, in the order a person meets it: a label of two or three words, then the step as something someone does or sees | six steps |
 | in, out | what this round builds, and what it leaves for later or to others | four each |
-| capture | the one screen that shows the plan best | one |
+| capture | the one screen that shows the plan best, whole | one |
 | links | the spec, the design, the parent ticket | four |
 
 Take each cell from the materials: the spec's own definition and background, the design's main frames, the parent ticket's scope. The brief does not judge. Where the spec and the design tell a step differently, the brief follows the spec and the difference becomes an item.
@@ -87,20 +87,23 @@ Everything out goes in *Left out*, one line with its reason, so nobody has to as
 
 ## The item
 
-Each finding is a location and four cells. What does not fit goes in `more`, folded under the card. A cell is never squeezed to fit and a budget is never raised.
+Each finding names who moves first and where the fix goes, then four cells. What does not fit goes in `more`, folded under the card. A cell is never squeezed to fit and a budget is never raised; `--help` prints the budgets.
 
-| Cell | Holds | Budget |
-|---|---|---|
-| title | the problem as a statement, not a topic; the same words in the items table | one line |
-| where | where the fix goes: the spec entry and section, the frame, the ticket, linked | two places |
-| problem | what is wrong, and between which materials | two sentences |
-| if left | what gets built, or does not, if nobody acts | one sentence |
-| evidence | the one or two things that prove it | two pieces |
-| ask | what to change and where, the recommendation first; options only where the choice is real | one sentence, three options |
-| more | the full comparison, further quotes, code, what you inferred | folded |
-| looked | where you looked, behind a claim that something is not there | folded |
+| Cell | Holds |
+|---|---|
+| title | the problem as a statement, not a topic |
+| owner, todo | who moves first on the ask, as a role (planning, design, server); a person's name only where a ticket's assignee field gives it. The to-do is the ask as a short action, listed by owner on the first screen |
+| where | where the fix goes: the spec entry and section, the frame, the ticket, linked |
+| problem | what is wrong, and between which materials, in two sentences |
+| if left | what gets built, or does not, if nobody acts, in one sentence |
+| evidence | the one or two things that prove it; a capture goes above the cells |
+| ask | what to change and where, the recommendation first; options only where the choice is real |
+| paste | the exact text for the spec or ticket, only where the evidence already settles it: a typo, a stale link, wording another document or the code already uses. Never beside options, which would decide for the author |
+| more, looked | the full comparison, further quotes, code, what you inferred; where you looked, behind a claim that something is not there |
 
-Evidence is one of: `spec`, the deciding sentence verbatim with the entry, section and link; `design`, a capture of the smallest node that shows it (the frame cropped where no node fits) with the node link, saved when looked at as `{item}-{what it shows}`; `ticket`, the line verbatim; `code`, path, lines and commit; `chat`, author, time, link and the words as written; `screen`, the running screen, where, as whom, when. What you reasoned rather than found is marked `inferred`. An item with no evidence is rendered *evidence needed*, or dropped.
+Evidence is one of: `spec`, the deciding sentence verbatim with the entry, section and link; `design`, a capture with the problem marked on it; `ticket`, the line verbatim; `code`, path, lines and commit; `chat`, author, time, link and the words as written; `screen`, the running screen, where, as whom, when. What you reasoned rather than found is marked `inferred`. An item with no evidence is rendered *evidence needed*, or dropped.
+
+**A capture shows the problem, marked.** Capture the whole frame, as a PNG, saved when looked at as `{item}-{what it shows}`. Read the frame's metadata for the node at fault: positions are relative to each parent, so add them up to the frame and divide by the frame's width and height. That box, padded a little, is a mark; for something missing, mark where it should be. Where the frame is much larger than the problem, `crop` shows the region around it. Capture the frame, not an instance inside it: an instance's capture takes in its shadow and no longer lines up with its positions. A finding with no screen in it gets no capture.
 
 ## The report
 
@@ -116,21 +119,22 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/review-report.py review.json \
 The renderer owns the layout, the order of sections, the verdict and its counts, and the budgets. Exit 1 lists each cell over budget, and each sentence carrying a dash aside, a list strung on middle dots, an arrow, a pile of quotations or a ticket number with no name. Rewrite those cells and render again. Exit 2 is bad data and nothing is written.
 
 ```
-head              whose plan, who asked and when, as of
-brief             what, why, how it works, scope, materials, one capture
-verdict           whether it can be handed over now, with the counts:
-                  "not yet: N fixes, M opinions" or "ready", and for a colleague's plan
-                  the item that surfaces last; then the grounds, as counts of what was
-                  not checked or could not be read; then what a fix and an opinion mean
+head              the title; whose plan, asked when, as of when
+the plan          what, in a sentence; the steps by their labels; the rest of the brief folded
+verdict           whether it can be handed over now, with the counts, and for a colleague's
+                  plan the item that surfaces last; the grounds, as counts of what was not
+                  checked or could not be read
+to do             each to-do under the role that moves first, linked to its card;
+                  then what a fix and an opinion mean
 previous          when the plan was reviewed before: resolved, withdrawn, still open
-items, cards      one row and one card per item, more and looked folded
-then              before handover, not checked, left out, sources read
-foot              who reviewed, the latest edit
+cards             one per item: capture marked, then the cells; more and looked folded
+then              before handover, not checked, left out, sources read; a foot with
+                  who reviewed and the latest edit
 ```
 
-A section with nothing in it is not drawn. The grounds are counts rather than a confidence you assign: the reader weighs "ready" differently when four things went unchecked.
+The first screen, at a laptop's height, answers whether the plan can go and who does what. A section with nothing in it is not drawn. The grounds are counts rather than a confidence you assign: the reader weighs "ready" differently when four things went unchecked.
 
-For a colleague's plan, `surfaces_last` is the fix that would come to light latest if nobody acted: work no ticket covers, or a state nobody drew, before a wording conflict. `html` is one page with the captures inside it; `markdown` copies them into a folder beside the file. The report goes to your own folder without a preview; open it for the person, and answer with the brief's *what* and its steps, the verdict, the item titles and the path.
+For a colleague's plan, `surfaces_last` is the fix that would come to light latest if nobody acted: work no ticket covers, or a state nobody drew, before a wording conflict. `html` is one page with the captures inside it; `markdown` copies them into a folder beside the file. The report goes to your own folder without a preview; open it for the person, and answer with the plan's sentence and steps, the verdict, the to-do list by owner and the path.
 
 ## Voice
 
