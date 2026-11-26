@@ -531,3 +531,19 @@ release:
   capture:
     dir: "~/Downloads/release-notes"   # recordings go to <dir>/<slug(product)>-<version>/
     seconds: [10, 17]          # how long one recording runs
+
+# --- Review (/pm:review) ---------------------------------------------------------
+# The last read before a plan goes to engineering — a colleague's, when they ask
+# for a review, or your own, before you say it is ready. Each finding carries the
+# spec line, design capture, code or message it rests on, and only what would
+# change what gets built stays in. The report is written into your own folder.
+review:
+  report_dir: null             # where reports are written. null = ./reviews
+  format: html                 # html | markdown. html is one self-contained page with the captures inside it;
+                               # markdown is a file with the captures in a folder beside it
+  ready_statuses: null         # the spec-entry statuses (from prd.properties.status) that count as settled
+                               # enough to hand over, e.g. [Planned, Live]. Every entry the plan links is read
+                               # against it. null = that check is skipped
+  ready_checks: []             # sentences your team's own handover gate requires, each checked against the
+                               # materials and reported as met or not — e.g. "the parent ticket links a pinned
+                               # design version". Empty = no extra checks
