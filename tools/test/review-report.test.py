@@ -205,6 +205,8 @@ r, out = run(doc(items=[item(evidence=[dict(SHOT, crop=[0.0, 0.1, 0.5, 0.5])])])
 page = out.read_text()
 check("a crop shows part of the capture and moves the marks with it",
       'class="frame crop"' in page and 'class="mk" style="left:20.00%;top:20.00%;width:60.00%;height:20.00%"' in page, r.stderr)
+r, out = run(doc(items=[item(looked=["searched the tracker", "read the parent"])]))
+check("where-I-looked may be a list", "<li>read the parent</li>" in out.read_text(), r.stderr)
 r, out = run(doc(items=[item(evidence=[SHOT])]), fmt="markdown")
 check("markdown says the marks are in the html", "(marked in the HTML report)" in out.read_text())
 r, _ = run(doc(items=[item(paste={"to": "Spec, rules", "text": "Saved values follow the last save."}, options=["a", "b"])]))

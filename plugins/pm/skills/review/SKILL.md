@@ -96,7 +96,7 @@ Each finding names who moves first and where the fix goes, then four cells. What
 | where | where the fix goes: the spec entry and section, the frame, the ticket, linked |
 | problem | what is wrong, and between which materials, in two sentences |
 | if left | what gets built, or does not, if nobody acts, in one sentence |
-| evidence | the one or two things that prove it; a capture goes above the cells |
+| evidence | the one or two things that prove it. A capture counts as one and goes above the cells; the deciding spec sentence is usually the other |
 | ask | what to change and where, the recommendation first; options only where the choice is real |
 | paste | the exact text for the spec or ticket, only where the evidence already settles it: a typo, a stale link, wording another document or the code already uses. Never beside options, which would decide for the author |
 | more, looked | the full comparison, further quotes, code, what you inferred; where you looked, behind a claim that something is not there |
@@ -118,19 +118,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/review-report.py review.json \
 
 The renderer owns the layout, the order of sections, the verdict and its counts, and the budgets. Exit 1 lists each cell over budget, and each sentence carrying a dash aside, a list strung on middle dots, an arrow, a pile of quotations or a ticket number with no name. Rewrite those cells and render again. Exit 2 is bad data and nothing is written.
 
-```
-head              the title; whose plan, asked when, as of when
-the plan          what, in a sentence; the steps by their labels; the rest of the brief folded
-verdict           whether it can be handed over now, with the counts, and for a colleague's
-                  plan the item that surfaces last; the grounds, as counts of what was not
-                  checked or could not be read
-to do             each to-do under the role that moves first, linked to its card;
-                  then what a fix and an opinion mean
-previous          when the plan was reviewed before: resolved, withdrawn, still open
-cards             one per item: capture marked, then the cells; more and looked folded
-then              before handover, not checked, left out, sources read; a foot with
-                  who reviewed and the latest edit
-```
+`--help` also prints the page from top to bottom.
 
 The first screen, at a laptop's height, answers whether the plan can go and who does what. A section with nothing in it is not drawn. The grounds are counts rather than a confidence you assign: the reader weighs "ready" differently when four things went unchecked.
 

@@ -30,7 +30,7 @@ DATA.json (title, as_of and items are required; leave out what does not apply)
   brief            the plan itself, before any finding: see below
   previous         {date, link, items: [{title, status, note}]} when the plan comes back after an
                    earlier review; status is resolved, withdrawn or open
-  surfaces_last    the item number the verdict names, for a colleague's plan
+  surfaces_last    the item number (from 1) the verdict names, for a colleague's plan
   ticket_url       the tracker's address for one ticket, with {n} for its number; every #123 on the
                    page then links to its ticket
   items            [item]
@@ -57,13 +57,14 @@ item (kind, title, problem, ask, owner and todo are required; evidence may be []
   where            [{name, link}] where the fix goes: the spec entry and section, the frame, the ticket
   problem          what is wrong
   if_left          what gets built, or does not, if nobody acts
-  evidence         [evidence] shown on the card, captures first; [] marks the item evidence-needed
+  evidence         [evidence] shown on the card, at most two; a capture counts as one and goes above
+                   the cells; [] marks the item evidence-needed
   ask              what to change and where, the recommendation first
   options          [str] where there is a choice, the recommended one first
   paste            {to, text}: the exact text for the spec or ticket, only where the evidence already
                    settles it (a typo, a stale link, wording another document uses); never beside options
   more             [evidence | {"table": {caption, head, rows}} | {"note", "inferred"}], folded
-  looked           where you looked, behind a claim that something is not there; folded
+  looked           where you looked, behind a claim that something is not there: a sentence or a list; folded
 
 evidence
   kind             spec | design | ticket | code | chat | screen
@@ -266,6 +267,11 @@ def text(v):
     return v.strip() if isinstance(v, str) else ""
 
 
+def looked(item):
+    v = item.get("looked")
+    return [text(x) for x in v if text(x)] if isinstance(v, list) else ([text(v)] if text(v) else [])
+
+
 def safe_link(v):
     v = text(v)
     return v if re.match(r"https?://", v) else ""
@@ -331,6 +337,8 @@ def load(path):
             raise BadData(f"item {i}: `where` must be a list of {{name, link}}")
         if not isinstance(item.get("options") or [], list):
             raise BadData(f"item {i}: `options` must be a list")
+        if item.get("looked") is not None and not isinstance(item["looked"], (str, list)):
+            raise BadData(f"item {i}: `looked` is a sentence or a list of them")
         paste = item.get("paste")
         if paste is not None and not (isinstance(paste, dict) and text(paste.get("text"))):
             raise BadData(f"item {i}: `paste` is {{to, text}}")
@@ -365,8 +373,10 @@ def load(path):
                 isinstance(x, dict) and text(x.get("name")) for x in brief.get("links") or []):
             raise BadData("`brief.links` must be a list of {name, link}")
         cap = brief.get("capture")
-        if cap is not None and not isinstance(cap, dict):
-            raise BadData("`brief.capture` is {source, link, image}")
+        if cap is not None:
+            if not isinstance(cap, dict):
+                raise BadData("`brief.capture` is {source, link, image}")
+            check_evidence("brief capture", dict(cap, kind="design"))
     n = data.get("surfaces_last")
     if n is not None and not (isinstance(n, int) and 1 <= n <= len(data["items"])):
         raise BadData("`surfaces_last` must be an item number")
@@ -424,8 +434,8 @@ def check(data, lang):
         for j, m in enumerate(item.get("more") or [], 1):
             if text(m.get("note")):
                 b.style(f"{where} more {j}", "note", text(m["note"]))
-        if text(item.get("looked")):
-            b.style(where, "looked", text(item["looked"]))
+        for x in looked(item):
+            b.style(where, "looked", x)
     for r in (data.get("previous") or {}).get("items") or []:
         b.cell("previous", "what", text(r.get("title")), prose=False)
         b.cell("previous", "why", text(r.get("note")))
@@ -647,8 +657,9 @@ def html_card(L, base, k, item):
     if more:
         out.append(f'<details><summary>{E(L["more"])} ({len(more)})</summary>'
                    + "".join(html_more(L, base, m) for m in more) + "</details>")
-    if text(item.get("looked")):
-        out.append(f'<details><summary>{E(L["looked"])}</summary><p class="note">{E(item["looked"])}</p></details>')
+    if looked(item):
+        out.append(f'<details><summary>{E(L["looked"])}</summary><ul class="plain">'
+                   + "".join(f"<li>{E(x)}</li>" for x in looked(item)) + "</ul></details>")
     return "".join(out) + "</article>"
 
 
@@ -861,8 +872,8 @@ def render_markdown(data, L, lang, base, out_path):
                 else:
                     out += md_evidence(L, base, m, assets, indent="") + [""]
             out.append("</details>")
-        if text(item.get("looked")):
-            out += ["", f"<details><summary>{L['looked']}</summary>", "", md_text(item["looked"]), "", "</details>"]
+        if looked(item):
+            out += ["", f"<details><summary>{L['looked']}</summary>", ""] + [f"- {md_text(x)}" for x in looked(item)] + ["", "</details>"]
     lines = [md_text(x) for x in data.get("before_handover") or [] if text(x)]
     if lines:
         out += ["", f"## {L['before']}", ""] + [f"- {x}" for x in lines]
