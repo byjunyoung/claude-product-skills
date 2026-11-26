@@ -40,6 +40,7 @@ Start from a link to the review request, or to the plan itself. With nothing, as
 - **Design.** List the frames of every linked section; capture the ones a check lands on.
 - **Decisions.** The threads the request and tickets link, and a chat search for the feature's name. A rename, a scope moved to another month, a "we agreed verbally" lives only here.
 - **Current behaviour.** Where a claim is about how the product works today, read the code or the running screen, and say which, with the commit or the date.
+- **An earlier review.** When the plan comes back after one, read that report and give each of its items a status in `previous`: resolved, withdrawn by the author, or still open. One still open is raised again as an item of this review.
 
 ## The brief
 
@@ -86,11 +87,12 @@ Everything out goes in *Left out*, one line with its reason, so nobody has to as
 
 ## The item
 
-Each finding is four cells. What does not fit goes in `more`, folded under the card. A cell is never squeezed to fit and a budget is never raised.
+Each finding is a location and four cells. What does not fit goes in `more`, folded under the card. A cell is never squeezed to fit and a budget is never raised.
 
 | Cell | Holds | Budget |
 |---|---|---|
-| title | the problem as a statement, not a topic | one line |
+| title | the problem as a statement, not a topic; the same words in the items table | one line |
+| where | where the fix goes: the spec entry and section, the frame, the ticket, linked | two places |
 | problem | what is wrong, and between which materials | two sentences |
 | if left | what gets built, or does not, if nobody acts | one sentence |
 | evidence | the one or two things that prove it | two pieces |
@@ -114,13 +116,19 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/review-report.py review.json \
 The renderer owns the layout, the order of sections, the verdict and its counts, and the budgets. Exit 1 lists each cell over budget, and each sentence carrying a dash aside, a list strung on middle dots, an arrow, a pile of quotations or a ticket number with no name. Rewrite those cells and render again. Exit 2 is bad data and nothing is written.
 
 ```
-head              whose plan, who asked and when, who reviewed, as of, the latest edit
+head              whose plan, who asked and when, as of
 brief             what, why, how it works, scope, materials, one capture
-verdict           own plan: ready, or N fixes before handover
-                  colleague's: N fixes, M opinions, and the item that surfaces last
+verdict           whether it can be handed over now, with the counts:
+                  "not yet: N fixes, M opinions" or "ready", and for a colleague's plan
+                  the item that surfaces last; then the grounds, as counts of what was
+                  not checked or could not be read; then what a fix and an opinion mean
+previous          when the plan was reviewed before: resolved, withdrawn, still open
 items, cards      one row and one card per item, more and looked folded
 then              before handover, not checked, left out, sources read
+foot              who reviewed, the latest edit
 ```
+
+A section with nothing in it is not drawn. The grounds are counts rather than a confidence you assign: the reader weighs "ready" differently when four things went unchecked.
 
 For a colleague's plan, `surfaces_last` is the fix that would come to light latest if nobody acted: work no ticket covers, or a state nobody drew, before a wording conflict. `html` is one page with the captures inside it; `markdown` copies them into a folder beside the file. The report goes to your own folder without a preview; open it for the person, and answer with the brief's *what* and its steps, the verdict, the item titles and the path.
 
@@ -138,7 +146,7 @@ A colleague's plan only, once the person has read the report and asks. Preview t
 
 ## Never cut
 
-The brief. Evidence on every item. The *as of* line. *Not checked* and *Left out*, even at one line each. A question nothing you can reach answers. The spec's own words inside a quote.
+The brief. Evidence on every item. The *as of* line. *Not checked* and *Left out* whenever anything went unchecked or was left out, even at one line. A question nothing you can reach answers. The spec's own words inside a quote.
 
 ## Common mistakes
 

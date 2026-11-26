@@ -152,8 +152,40 @@ r, out = run(doc(brief=BRIEF), fmt="markdown")
 md = out.read_text()
 check("markdown brief before the verdict", md.index("## The plan") < md.index("> **") and "  2. Set its status" in md)
 
+# What the reference reports do: a handover answer, grounds, labels glossed, locations, empty sections dropped
+r, out = run(doc(not_checked=["the kiosk repo"], unread=["a DM"], reviewer="Reviewer A",
+                 latest={"name": "Parent ticket", "at": "10:00"}))
+page = out.read_text()
+check("a colleague's verdict answers the handover", "Not yet: 1 fix, 0 opinions" in page)
+check("the verdict carries its grounds as counts", "Grounds: 1 not checked, 1 sources unread" in page and 'href="#nc"' in page)
+check("unread sources are listed under not checked", page.index('id="nc"') < page.index("Could not read: a DM"))
+check("the labels are glossed once", page.count("an opinion is the author&#x27;s call") == 1)
+check("reviewer and latest edit sit at the foot", page.index("Reviewed by") > page.index("<h1>") and 'class="meta foot"' in page
+      and page.index("Reviewed by") > page.index('class="card"'))
+r, out = run(doc(items=[item(kind="opinion")]))
+check("a colleague's plan with no fixes is ready", "Ready to hand over, 1 opinion" in out.read_text())
+r, out = run(doc())
+page = out.read_text()
+check("an empty left-out section is not drawn", "Left out" not in page)
+check("no grounds line when everything was seen", "Grounds:" not in page)
+r, out = run(doc(items=[item(where=[{"name": "Spec, store setup, rules", "link": "https://example.com/s"}])]))
+page = out.read_text()
+check("a card opens with where the fix goes", "<dt>Where</dt>" in page and page.index("<dt>Where</dt>") < page.index("<dt>Problem</dt>"))
+r, _ = run(doc(items=[item(where=[{"name": "a"}, {"name": "b"}, {"name": "c"}])]))
+check("more than two locations is flagged", "item 1 where: 3, budget 2" in r.stderr, r.stderr)
+PREV = {"date": "01-02", "items": [{"title": "No server ticket", "status": "resolved", "note": "Opened (#12)."},
+                                   {"title": "Who cancelled", "status": "withdrawn", "note": "The author withdrew it."}]}
+r, out = run(doc(previous=PREV))
+page = out.read_text()
+check("a re-review says what became of the last one", "Since the last review (01-02): resolved 1, withdrawn 1, still open 0" in page)
+r, out = run(doc(previous=PREV), fmt="markdown")
+md = out.read_text()
+check("markdown carries the re-review and the foot", "resolved 1, withdrawn 1, still open 0" in md and "Not yet:" in md)
+
 # Bad data: exit 2, nothing written
 for label, data in (("items missing", {"title": "t", "as_of": "now"}),
+                    ("previous with an unknown status", doc(previous={"date": "x", "items": [{"title": "a", "status": "done"}]})),
+                    ("where that is not a list of names", doc(items=[item(where=["a"])])),
                     ("brief without flow", doc(brief={"what": "x"})),
                     ("brief without what", doc(brief={"flow": ["a"]})),
                     ("more entry without a kind", doc(items=[item(more=[{"source": "x"}])])),

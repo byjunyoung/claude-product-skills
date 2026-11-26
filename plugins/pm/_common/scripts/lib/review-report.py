@@ -20,6 +20,8 @@ DATA.json (title, as_of and items are required; leave out what does not apply)
   as_of            when the review started
   latest           {name, at, link}: the material edited last
   brief            the plan itself, before any finding: see below
+  previous         {date, link, items: [{title, status, note}]} when the plan comes back after an
+                   earlier review; status is resolved, withdrawn or open
   unread           [str] sources the run could not read
   surfaces_last    the item number the verdict names, for a colleague's plan
   ticket_url       the tracker's address for one ticket, with {n} for its number; every #123 on the
@@ -41,6 +43,7 @@ brief (what and flow are required): what the plan is and how it works, as its ma
 item (kind, title, problem and ask are required; evidence may be [])
   kind             "fix" | "opinion"
   area, title      short noun phrases
+  where            [{name, link}] where the fix goes: the spec entry and section, the frame, the ticket
   problem          what is wrong
   if_left          what gets built, or does not, if nobody acts
   evidence         [evidence] shown on the card; [] marks the item evidence-needed
@@ -57,7 +60,7 @@ evidence
   image            a capture, relative to DATA.json
   inferred         true where this is your reasoning rather than something you found
 
-Besides length and sentence count, a prose cell is flagged for a dash setting off an aside, a list
+The page leaves out a section with nothing in it. Besides length and sentence count, a prose cell is flagged for a dash setting off an aside, a list
 strung on middle dots, an arrow standing in for a verb, more than two quotations, or a ticket number
 standing alone: a cell names the ticket and keeps the number in brackets, as in "the server ticket
 (#12)". Text inside quotation marks or backticks is not read for any of these.
@@ -76,6 +79,8 @@ BUDGET = {"brief_what": 80, "brief_why": 150, "step": 70, "scope": 50,
 SENTENCES = {"problem": 2, "if_left": 1, "ask": 1, "brief_what": 1, "brief_why": 2}
 SHOWN_EVIDENCE = 2
 BRIEF_LIMITS = {"flow": 6, "in": 4, "out": 4, "links": 4}
+WHERE = 2
+PREVIOUS_STATUS = ("resolved", "withdrawn", "open")
 OPTIONS = 3
 DENSE = {"ko", "ja", "zh"}
 
@@ -90,6 +95,10 @@ LABELS = {
         "as_of": "As of", "latest": "Last edited", "unread": "Could not read",
         "type": "Type", "area": "Area", "title": "Title", "what": "Candidate", "why": "Why it is out",
         "ready": "Ready to hand over",
+        "where": "Where", "grounds": "Grounds", "not_checked_n": "{n} not checked", "unread_n": "{n} sources unread",
+        "gloss": "A fix is made before handover; an opinion is the author's call.",
+        "previous": "Since the last review ({date})", "earlier": "Earlier finding", "status": "Status", "note": "Note", "earlier_n": "{n} earlier findings",
+        "statuses": {"resolved": "resolved", "withdrawn": "withdrawn", "open": "still open"},
         "brief": "The plan", "b_what": "What", "b_why": "Why", "b_flow": "How it works",
         "b_scope": "Scope", "b_in": "In", "b_out": "Out", "b_links": "Materials",
         "kinds": {"spec": "Spec", "design": "Design", "ticket": "Ticket", "code": "Code",
@@ -105,6 +114,10 @@ LABELS = {
         "as_of": "기준 시각", "latest": "마지막으로 고친 자료", "unread": "못 읽은 자료",
         "type": "구분", "area": "영역", "title": "제목", "what": "후보", "why": "뺀 이유",
         "ready": "넘겨도 됩니다",
+        "where": "위치", "grounds": "판단 근거", "not_checked_n": "보지 않은 것 {n}건", "unread_n": "못 읽은 자료 {n}건",
+        "gloss": "고칠 것은 넘기기 전에 고칠 것, 의견은 작성자가 정할 것",
+        "previous": "지난 리뷰({date}) 뒤", "earlier": "지난 지적", "status": "판정", "note": "근거", "earlier_n": "지난 지적 {n}건",
+        "statuses": {"resolved": "반영", "withdrawn": "철회", "open": "남음"},
         "brief": "기획 브리핑", "b_what": "무엇", "b_why": "왜", "b_flow": "동작",
         "b_scope": "범위", "b_in": "넣는 것", "b_out": "빼는 것", "b_links": "자료",
         "kinds": {"spec": "스펙", "design": "시안", "ticket": "일감", "code": "코드",
@@ -124,12 +137,28 @@ def budget_help():
 def verdict(lang, own, fixes, opinions):
     if lang == "ko":
         if own:
-            return "넘겨도 됩니다" if not fixes else f"넘기기 전에 고칠 것 {fixes}건"
-        return f"고칠 것 {fixes}건, 의견 {opinions}건"
+            return "넘겨도 된다" if not fixes else f"넘기기 전에 고칠 것 {fixes}건"
+        if not fixes:
+            return f"넘겨도 된다. 의견 {opinions}건"
+        return f"아직 넘기지 않는다. 고칠 것 {fixes}건, 의견 {opinions}건"
     plural = lambda n, w: f"{n} {w}" + ("" if n == 1 else ("es" if w.endswith("x") else "s"))
     if own:
         return "Ready to hand over" if not fixes else f"{plural(fixes, 'fix')} before handover"
-    return f"{plural(fixes, 'fix')}, {plural(opinions, 'opinion')}"
+    if not fixes:
+        return f"Ready to hand over, {plural(opinions, 'opinion')}"
+    return f"Not yet: {plural(fixes, 'fix')}, {plural(opinions, 'opinion')}"
+
+
+def grounds(L, data):
+    """What the verdict could not see, as counts; a review that read less says so beside its answer."""
+    parts = [L[k].format(n=len(data.get(f) or [])) for k, f in (("not_checked_n", "not_checked"), ("unread_n", "unread"))
+             if data.get(f)]
+    return f"{L['grounds']}: " + ", ".join(parts) if parts else ""
+
+
+def previous_line(L, prev):
+    counts = ", ".join(f"{L['statuses'][st]} {sum(1 for x in prev['items'] if x['status'] == st)}" for st in PREVIOUS_STATUS)
+    return f"{L['previous'].format(date=text(prev.get('date')))}: {counts}"
 
 
 def surfaces_line(lang, n, title):
@@ -239,6 +268,9 @@ def load(path):
                     raise BadData(f"{where}: an empty note")
             elif m.get("kind") not in EVIDENCE_KINDS:
                 raise BadData(f"{where}: a table, a note, or evidence whose kind is one of {', '.join(EVIDENCE_KINDS)}")
+        where = item.get("where") or []
+        if not isinstance(where, list) or not all(isinstance(w, dict) and text(w.get("name")) for w in where):
+            raise BadData(f"item {i}: `where` must be a list of {{name, link}}")
         if not isinstance(item.get("options") or [], list):
             raise BadData(f"item {i}: `options` must be a list")
     for key in ("before_handover", "not_checked", "unread"):
@@ -251,6 +283,12 @@ def load(path):
     url = text(data.get("ticket_url"))
     if url and ("{n}" not in url or not re.match(r"https?://", url)):
         raise BadData("`ticket_url` is an http(s) address with {n} where the number goes")
+    prev = data.get("previous")
+    if prev is not None:
+        rows = prev.get("items") if isinstance(prev, dict) else None
+        if not isinstance(rows, list) or not all(
+                isinstance(r, dict) and text(r.get("title")) and r.get("status") in PREVIOUS_STATUS for r in rows):
+            raise BadData(f"`previous.items` must be a list of {{title, status, note}}, status one of {', '.join(PREVIOUS_STATUS)}")
     brief = data.get("brief")
     if brief is not None:
         if not isinstance(brief, dict) or not text(brief.get("what")):
@@ -291,6 +329,11 @@ def check(data, lang):
         where = f"item {i}"
         for key in ("title", "area", "problem", "if_left", "ask"):
             b.cell(where, key, text(item.get(key)))
+        where_ = item.get("where") or []
+        if len(where_) > WHERE:
+            b.warnings.append(f"{where} where: {len(where_)}, budget {WHERE}")
+        for w in where_:
+            b.cell(where, "source", text(w.get("name")), prose=False)
         options = item.get("options") or []
         if len(options) > OPTIONS:
             b.warnings.append(f"{where} options: {len(options)}, budget {OPTIONS}")
@@ -307,6 +350,9 @@ def check(data, lang):
                 b.style(f"{where} more {j}", "note", text(m["note"]))
         if text(item.get("looked")):
             b.style(where, "looked", text(item["looked"]))
+    for r in (data.get("previous") or {}).get("items") or []:
+        b.cell("previous", "what", text(r.get("title")), prose=False)
+        b.cell("previous", "why", text(r.get("note")))
     for key, label in (("before_handover", "before handover"), ("not_checked", "not checked")):
         for line in data.get(key) or []:
             b.cell(label, "line", text(line))
@@ -367,6 +413,8 @@ details{margin-top:12px;font-size:14px}
 summary{cursor:pointer;color:var(--muted);font-weight:600}
 details>*:not(summary){margin-top:8px}
 .note{margin:8px 0 0}
+.foot{margin-top:28px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted)}
+h2 a{color:inherit}
 .brief{border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 18px}
 .brief h2{margin:0 0 12px}
 ol.flow{margin:0;padding-left:1.4em}
@@ -462,25 +510,28 @@ def render_html(data, L, lang, base):
     asked = data.get("asked") or {}
     if text(asked.get("by")) or text(asked.get("at")):
         meta.append((L["asked"], a(", ".join(x for x in (text(asked.get("by")), text(asked.get("at"))) if x), asked.get("link"))))
-    if text(data.get("reviewer")):
-        meta.append((L["reviewer"], E(data["reviewer"])))
     meta.append((L["as_of"], E(data["as_of"])))
-    latest = data.get("latest") or {}
-    if text(latest.get("name")):
-        meta.append((L["latest"], a(latest["name"], latest.get("link")) + (f", {E(latest.get('at'))}" if text(latest.get("at")) else "")))
-    if data.get("unread"):
-        meta.append((L["unread"], E(", ".join(text(u) for u in data["unread"]))))
     out += [f"<dt>{E(k)}</dt><dd>{v}</dd>" for k, v in meta]
     out.append("</dl>")
     if data.get("brief"):
         out.append(html_brief(L, base, data["brief"]))
 
-    ok = own and not fixes
-    out.append(f'<div class="verdict{" ok" if ok else ""}">{E(verdict(lang, own, fixes, opinions))}')
+    out.append(f'<div class="verdict{"" if fixes else " ok"}">{E(verdict(lang, own, fixes, opinions))}')
     n = data.get("surfaces_last")
     if n and not own:
         out.append(f"<p>{E(surfaces_line(lang, n, items[n - 1]['title']))}</p>")
+    g = grounds(L, data)
+    if g:
+        out.append(f'<p><a href="#nc">{E(g, False)}</a></p>')
     out.append("</div>")
+    if items:
+        out.append(f'<p class="caption">{E(L["gloss"])}</p>')
+    prev = data.get("previous")
+    if prev and prev.get("items"):
+        out.append(f'<h2>{a(previous_line(L, prev), prev.get("link"))}</h2><details><summary>{E(L["earlier_n"].format(n=len(prev["items"])))}</summary>'
+                   + html_table({"head": ["#", L["earlier"], L["status"], L["note"]],
+                                 "rows": [[k, r.get("title"), L["statuses"][r["status"]], r.get("note")]
+                                          for k, r in enumerate(prev["items"], 1)]}) + "</details>")
 
     if items:
         out.append(f'<h2>{E(L["items"])}</h2><div class="tw"><table><thead><tr><th>#</th><th>{E(L["type"])}</th>'
@@ -496,6 +547,8 @@ def render_html(data, L, lang, base):
         if text(item.get("area")):
             out.append(f"<span>{E(item['area'])}</span>")
         out.append(f'</header><h3>{E(item["title"])}</h3><dl class="cells">')
+        if item.get("where"):
+            out.append(f'<dt>{E(L["where"])}</dt><dd>' + ", ".join(a(w.get("name"), w.get("link")) for w in item["where"]) + "</dd>")
         out.append(f'<dt>{E(L["problem"])}</dt><dd>{E(item["problem"])}</dd>')
         if text(item.get("if_left")):
             out.append(f'<dt>{E(L["if_left"])}</dt><dd>{E(item["if_left"])}</dd>')
@@ -517,15 +570,17 @@ def render_html(data, L, lang, base):
             out.append(f'<details><summary>{E(L["looked"])}</summary><p class="note">{E(item["looked"])}</p></details>')
         out.append("</article>")
 
-    for key in ("before_handover", "not_checked"):
-        lines = [text(x) for x in data.get(key) or [] if text(x)]
-        if lines:
-            out.append(f'<h2>{E(L["before" if key == "before_handover" else key])}</h2><ul class="plain">'
-                       + "".join(f"<li>{E(x)}</li>" for x in lines) + "</ul>")
+    lines = [text(x) for x in data.get("before_handover") or [] if text(x)]
+    if lines:
+        out.append(f'<h2>{E(L["before"])}</h2><ul class="plain">' + "".join(f"<li>{E(x)}</li>" for x in lines) + "</ul>")
+    lines = [E(x) for x in data.get("not_checked") or [] if text(x)]
+    if data.get("unread"):
+        lines.insert(0, f'{E(L["unread"])}: {E(", ".join(text(u) for u in data["unread"]))}')
+    if lines:
+        out.append(f'<h2 id="nc">{E(L["not_checked"])}</h2><ul class="plain">' + "".join(f"<li>{x}</li>" for x in lines) + "</ul>")
     left = data.get("left_out") or []
-    out.append(f'<h2>{E(L["left_out"])} ({len(left)})</h2>')
     if left:
-        out.append(f'<details><summary>{E(L["left_out"])}</summary>' + html_table(
+        out.append(f'<h2>{E(L["left_out"])} ({len(left)})</h2><details><summary>{E(L["left_out"])}</summary>' + html_table(
             {"head": [L["what"], L["why"]], "rows": [[r.get("what"), r.get("why")] for r in left]}) + "</details>")
     srcs = data.get("sources") or []
     if srcs:
@@ -533,6 +588,14 @@ def render_html(data, L, lang, base):
                    + "".join(f"<li>{a(s.get('name') or '', s.get('link'))}"
                              + (f", {E(s.get('note'))}" if text(s.get("note")) else "") + "</li>" for s in srcs)
                    + "</ul></details>")
+    foot = []
+    if text(data.get("reviewer")):
+        foot.append((L["reviewer"], E(data["reviewer"])))
+    latest = data.get("latest") or {}
+    if text(latest.get("name")):
+        foot.append((L["latest"], a(latest["name"], latest.get("link")) + (f", {E(latest.get('at'))}" if text(latest.get("at")) else "")))
+    if foot:
+        out.append('<dl class="meta foot">' + "".join(f"<dt>{E(k)}</dt><dd>{v}</dd>" for k, v in foot) + "</dl>")
     out.append("</main></body></html>\n")
     return "".join(out)
 
@@ -604,14 +667,7 @@ def render_markdown(data, L, lang, base, out_path):
     asked = data.get("asked") or {}
     if text(asked.get("by")) or text(asked.get("at")):
         out.append(f"- {L['asked']}: " + md_link(", ".join(x for x in (text(asked.get("by")), text(asked.get("at"))) if x), asked.get("link")))
-    if text(data.get("reviewer")):
-        out.append(f"- {L['reviewer']}: {text(data['reviewer'])}")
     out.append(f"- {L['as_of']}: {text(data['as_of'])}")
-    latest = data.get("latest") or {}
-    if text(latest.get("name")):
-        out.append(f"- {L['latest']}: {md_link(latest['name'], latest.get('link'))}" + (f", {text(latest.get('at'))}" if text(latest.get("at")) else ""))
-    if data.get("unread"):
-        out.append(f"- {L['unread']}: " + ", ".join(text(u) for u in data["unread"]))
     brief = data.get("brief")
     if brief:
         out += ["", f"## {L['brief']}", "", f"- **{L['b_what']}** {md_text(brief['what'])}"]
@@ -631,14 +687,27 @@ def render_markdown(data, L, lang, base, out_path):
     out += ["", f"> **{verdict(lang, own, fixes, len(items) - fixes)}**"]
     n = data.get("surfaces_last")
     if n and not own:
-        out.append(f"> {surfaces_line(lang, n, items[n - 1]['title'])}")
+        out += [">", f"> {surfaces_line(lang, n, items[n - 1]['title'])}"]
+    g = grounds(L, data)
+    if g:
+        out += [">", f"> {g}"]
+    if items:
+        out += ["", f"*{L['gloss']}*"]
+    prev = data.get("previous")
+    if prev and prev.get("items"):
+        out += ["", f"## {md_link(previous_line(L, prev), prev.get('link'))}", "", f"<details><summary>{L['earlier_n'].format(n=len(prev['items']))}</summary>", ""]
+        out += md_table({"head": ["#", L["earlier"], L["status"], L["note"]],
+                         "rows": [[k, r.get("title"), L["statuses"][r["status"]], r.get("note")] for k, r in enumerate(prev["items"], 1)]})
+        out += ["", "</details>"]
     if items:
         out += ["", f"## {L['items']}", "", f"| # | {L['type']} | {L['area']} | {L['title']} |", "|---|---|---|---|"]
         out += [f"| {k} | {L[i['kind']]} | {md_cell(i.get('area'))} | [{md_cell(i['title'])}](#{k}) |" for k, i in enumerate(items, 1)]
     for k, item in enumerate(items, 1):
         out += ["", f'<a id="{k}"></a>', f"### {k}. {text(item['title'])}", "",
-                f"`{L[item['kind']]}`" + (f" `{text(item['area'])}`" if text(item.get("area")) else ""), "",
-                f"- **{L['problem']}** {md_text(item['problem'])}"]
+                f"`{L[item['kind']]}`" + (f" `{text(item['area'])}`" if text(item.get("area")) else ""), ""]
+        if item.get("where"):
+            out.append(f"- **{L['where']}** " + ", ".join(md_link(w.get("name"), w.get("link")) for w in item["where"]))
+        out.append(f"- **{L['problem']}** {md_text(item['problem'])}")
         if text(item.get("if_left")):
             out.append(f"- **{L['if_left']}** {md_text(item['if_left'])}")
         evidence = item.get("evidence") or []
@@ -661,14 +730,17 @@ def render_markdown(data, L, lang, base, out_path):
             out.append("</details>")
         if text(item.get("looked")):
             out += ["", f"<details><summary>{L['looked']}</summary>", "", md_text(item["looked"]), "", "</details>"]
-    for key in ("before_handover", "not_checked"):
-        lines = [md_text(x) for x in data.get(key) or [] if text(x)]
-        if lines:
-            out += ["", f"## {L['before' if key == 'before_handover' else key]}", ""] + [f"- {x}" for x in lines]
+    lines = [md_text(x) for x in data.get("before_handover") or [] if text(x)]
+    if lines:
+        out += ["", f"## {L['before']}", ""] + [f"- {x}" for x in lines]
+    lines = [md_text(x) for x in data.get("not_checked") or [] if text(x)]
+    if data.get("unread"):
+        lines.insert(0, f"{L['unread']}: " + ", ".join(text(u) for u in data["unread"]))
+    if lines:
+        out += ["", f"## {L['not_checked']}", ""] + [f"- {x}" for x in lines]
     left = data.get("left_out") or []
-    out += ["", f"## {L['left_out']} ({len(left)})"]
     if left:
-        out += ["", f"<details><summary>{L['left_out']}</summary>", ""]
+        out += ["", f"## {L['left_out']} ({len(left)})", "", f"<details><summary>{L['left_out']}</summary>", ""]
         out += md_table({"head": [L["what"], L["why"]], "rows": [[r.get("what"), r.get("why")] for r in left]})
         out += ["", "</details>"]
     srcs = data.get("sources") or []
@@ -676,6 +748,14 @@ def render_markdown(data, L, lang, base, out_path):
         out += ["", f"## {L['sources']} ({len(srcs)})", "", f"<details><summary>{L['sources']}</summary>", ""]
         out += [f"- {md_link(s.get('name') or '', s.get('link'))}" + (f", {md_text(s.get('note'))}" if text(s.get("note")) else "") for s in srcs]
         out += ["", "</details>"]
+    foot = []
+    if text(data.get("reviewer")):
+        foot.append(f"{L['reviewer']}: {text(data['reviewer'])}")
+    latest = data.get("latest") or {}
+    if text(latest.get("name")):
+        foot.append(f"{L['latest']}: {md_link(latest['name'], latest.get('link'))}" + (f", {text(latest.get('at'))}" if text(latest.get("at")) else ""))
+    if foot:
+        out += ["", "---", ""] + [f"{x}  " for x in foot]
     return "\n".join(out) + "\n"
 
 
