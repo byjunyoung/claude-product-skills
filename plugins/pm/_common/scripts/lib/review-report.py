@@ -433,7 +433,7 @@ def html_brief(L, base, brief):
     if text(brief.get("why")):
         rows.append((L["b_why"], E(brief["why"])))
     rows.append((L["b_flow"], '<ol class="flow">' + "".join(f"<li>{E(x)}</li>" for x in brief["flow"]) + "</ol>"))
-    scope = "".join(f'<span class="src">{E(L["b_" + k])}</span><span>{E(", ".join(text(x) for x in brief.get(k) or []))}</span>'
+    scope = "".join(f'<span class="src">{E(L["b_" + k])}</span><span>{"<br>".join(E(x) for x in brief.get(k) or [])}</span>'
                     for k in ("in", "out") if brief.get(k))
     if scope:
         rows.append((L["b_scope"], f'<div class="scope">{scope}</div>'))
@@ -621,7 +621,7 @@ def render_markdown(data, L, lang, base, out_path):
         out += [f"  {j}. {md_text(x)}" for j, x in enumerate(brief["flow"], 1)]
         for k in ("in", "out"):
             if brief.get(k):
-                out.append(f"- **{L['b_' + k]}** " + ", ".join(md_text(x) for x in brief[k]))
+                out.append(f"- **{L['b_' + k]}** " + "; ".join(md_text(x) for x in brief[k]))
         if brief.get("links"):
             out.append(f"- **{L['b_links']}** " + ", ".join(md_link(x.get("name"), x.get("link")) for x in brief["links"]))
         cap = brief.get("capture")
