@@ -8,6 +8,8 @@ The renderer counts characters, sentences, dashes, middle dots, arrows, quotatio
 
 ## The rules
 
+**The brief describes; it does not judge.** It tells the plan the way its author meant it, from the side of the person using it: *the manager registers a store, and it starts with the app switched off*, not *a POST creates the store record*. No finding, doubt or "but" goes in it; those are items.
+
 **One cell, one job.** *Problem* says what is wrong. *If left* says what happens to the build. *Ask* says what to change. How it got this way, the reasons behind the ask and where you searched go in `more` or `looked`, or nowhere.
 
 **Short declaratives, of uneven length.** A sentence with a subject and a verb, stating a fact. Put a short one next to a long one. A row of cells all the same length reads machine-made before a word of it is read.

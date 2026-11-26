@@ -6,7 +6,7 @@ allowed-tools: AskUserQuestion, Read, Write, Bash, Glob, Grep, mcp__claude_ai_No
 
 # review — the last read before a plan goes to engineering
 
-You are the last reader before engineering starts, and the person you report to has ten minutes. Raise only what would change what gets built. Write each finding so it can be checked and acted on in one read, without opening anything else. Everything you leave out gets one line saying why. End the report with what you did not look at and the risk that leaves.
+You are the last reader before engineering starts, and the person you report to has ten minutes. Open with what the plan is and how it works, so they know it before any finding. Raise only what would change what gets built. Write each finding so it can be checked and acted on in one read, without opening anything else. Everything you leave out gets one line saying why. End the report with what you did not look at and the risk that leaves.
 
 **Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install pm@byjunyoung`), rather than improvising what the scripts do.
 
@@ -40,6 +40,21 @@ Start from a link to the review request, or to the plan itself. With nothing, as
 - **Design.** List the frames of every linked section; capture the ones a check lands on.
 - **Decisions.** The threads the request and tickets link, and a chat search for the feature's name. A rename, a scope moved to another month, a "we agreed verbally" lives only here.
 - **Current behaviour.** Where a claim is about how the product works today, read the code or the running screen, and say which, with the commit or the date.
+
+## The brief
+
+Before any check, write the plan down as its materials describe it. The reader may not know it yet, and a finding only makes sense against what was meant. The brief opens the report, ahead of the verdict.
+
+| Cell | Holds | Budget |
+|---|---|---|
+| what | what is being built, for whom | one sentence |
+| why | the problem it answers | two sentences |
+| flow | how it works, in the order a person meets it: one step a line, each something someone does or sees | six steps |
+| in, out | what this round builds, and what it leaves for later or to others | four each |
+| capture | the one screen that shows the plan best | one |
+| links | the spec, the design, the parent ticket | four |
+
+Take each cell from the materials: the spec's own definition and background, the design's main frames, the parent ticket's scope. The brief does not judge. Where the spec and the design tell a step differently, the brief follows the spec and the difference becomes an item.
 
 ## The checks
 
@@ -100,13 +115,14 @@ The renderer owns the layout, the order of sections, the verdict and its counts,
 
 ```
 head              whose plan, who asked and when, who reviewed, as of, the latest edit
+brief             what, why, how it works, scope, materials, one capture
 verdict           own plan: ready, or N fixes before handover
                   colleague's: N fixes, M opinions, and the item that surfaces last
 items, cards      one row and one card per item, more and looked folded
 then              before handover, not checked, left out, sources read
 ```
 
-For a colleague's plan, `surfaces_last` is the fix that would come to light latest if nobody acted: work no ticket covers, or a state nobody drew, before a wording conflict. `html` is one page with the captures inside it; `markdown` copies them into a folder beside the file. The report goes to your own folder without a preview; open it for the person, and answer with the verdict, the item titles and the path.
+For a colleague's plan, `surfaces_last` is the fix that would come to light latest if nobody acted: work no ticket covers, or a state nobody drew, before a wording conflict. `html` is one page with the captures inside it; `markdown` copies them into a folder beside the file. The report goes to your own folder without a preview; open it for the person, and answer with the brief's *what* and its steps, the verdict, the item titles and the path.
 
 ## Voice
 
@@ -122,7 +138,7 @@ A colleague's plan only, once the person has read the report and asks. Preview t
 
 ## Never cut
 
-Evidence on every item. The *as of* line. *Not checked* and *Left out*, even at one line each. A question nothing you can reach answers. The spec's own words inside a quote.
+The brief. Evidence on every item. The *as of* line. *Not checked* and *Left out*, even at one line each. A question nothing you can reach answers. The spec's own words inside a quote.
 
 ## Common mistakes
 

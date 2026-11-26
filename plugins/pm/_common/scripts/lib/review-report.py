@@ -19,6 +19,7 @@ DATA.json (title, as_of and items are required; leave out what does not apply)
   reviewer         who ran the review
   as_of            when the review started
   latest           {name, at, link}: the material edited last
+  brief            the plan itself, before any finding: see below
   unread           [str] sources the run could not read
   surfaces_last    the item number the verdict names, for a colleague's plan
   ticket_url       the tracker's address for one ticket, with {n} for its number; every #123 on the
@@ -28,6 +29,14 @@ DATA.json (title, as_of and items are required; leave out what does not apply)
   not_checked      [str] what the review did not look at, and the risk that leaves
   left_out         [{what, why}]
   sources          [{name, link, note}]
+
+brief (what and flow are required): what the plan is and how it works, as its materials describe it
+  what             one sentence: what is being built, for whom
+  why              the problem it answers
+  flow             [str] how it works, in the order a person meets it, one step each
+  in, out          [str] what this round builds, and what it leaves for later or to others
+  capture          {source, link, image}: the one screen that shows the plan best
+  links            [{name, link}] the spec, the design, the parent ticket
 
 item (kind, title, problem and ask are required; evidence may be [])
   kind             "fix" | "opinion"
@@ -61,10 +70,12 @@ EVIDENCE_KINDS = ("spec", "design", "ticket", "code", "chat", "screen")
 
 # Characters per cell. Scripts that pack a word into fewer characters get these as they are;
 # every other language gets twice as many.
-BUDGET = {"title": 40, "area": 12, "problem": 150, "if_left": 90, "ask": 120, "option": 80,
+BUDGET = {"brief_what": 80, "brief_why": 150, "step": 70, "scope": 50,
+          "title": 40, "area": 12, "problem": 150, "if_left": 90, "ask": 120, "option": 80,
           "quote": 160, "source": 70, "line": 100, "what": 60, "why": 100}
-SENTENCES = {"problem": 2, "if_left": 1, "ask": 1}
+SENTENCES = {"problem": 2, "if_left": 1, "ask": 1, "brief_what": 1, "brief_why": 2}
 SHOWN_EVIDENCE = 2
+BRIEF_LIMITS = {"flow": 6, "in": 4, "out": 4, "links": 4}
 OPTIONS = 3
 DENSE = {"ko", "ja", "zh"}
 
@@ -79,6 +90,8 @@ LABELS = {
         "as_of": "As of", "latest": "Last edited", "unread": "Could not read",
         "type": "Type", "area": "Area", "title": "Title", "what": "Candidate", "why": "Why it is out",
         "ready": "Ready to hand over",
+        "brief": "The plan", "b_what": "What", "b_why": "Why", "b_flow": "How it works",
+        "b_scope": "Scope", "b_in": "In", "b_out": "Out", "b_links": "Materials",
         "kinds": {"spec": "Spec", "design": "Design", "ticket": "Ticket", "code": "Code",
                   "chat": "Chat", "screen": "Screen"},
     },
@@ -92,6 +105,8 @@ LABELS = {
         "as_of": "기준 시각", "latest": "마지막으로 고친 자료", "unread": "못 읽은 자료",
         "type": "구분", "area": "영역", "title": "제목", "what": "후보", "why": "뺀 이유",
         "ready": "넘겨도 됩니다",
+        "brief": "기획 브리핑", "b_what": "무엇", "b_why": "왜", "b_flow": "동작",
+        "b_scope": "범위", "b_in": "넣는 것", "b_out": "빼는 것", "b_links": "자료",
         "kinds": {"spec": "스펙", "design": "시안", "ticket": "일감", "code": "코드",
                   "chat": "대화", "screen": "화면"},
     },
@@ -236,6 +251,22 @@ def load(path):
     url = text(data.get("ticket_url"))
     if url and ("{n}" not in url or not re.match(r"https?://", url)):
         raise BadData("`ticket_url` is an http(s) address with {n} where the number goes")
+    brief = data.get("brief")
+    if brief is not None:
+        if not isinstance(brief, dict) or not text(brief.get("what")):
+            raise BadData("`brief` needs `what`")
+        flow = brief.get("flow")
+        if not isinstance(flow, list) or not flow or not all(isinstance(x, str) and x.strip() for x in flow):
+            raise BadData("`brief.flow` must be a list of steps")
+        for key in ("in", "out"):
+            if not isinstance(brief.get(key) or [], list):
+                raise BadData(f"`brief.{key}` must be a list")
+        if not isinstance(brief.get("links") or [], list) or not all(
+                isinstance(x, dict) and text(x.get("name")) for x in brief.get("links") or []):
+            raise BadData("`brief.links` must be a list of {name, link}")
+        cap = brief.get("capture")
+        if cap is not None and not isinstance(cap, dict):
+            raise BadData("`brief.capture` is {source, link, image}")
     n = data.get("surfaces_last")
     if n is not None and not (isinstance(n, int) and 1 <= n <= len(data["items"])):
         raise BadData("`surfaces_last` must be an item number")
@@ -244,6 +275,18 @@ def load(path):
 
 def check(data, lang):
     b = Budget(lang)
+    brief = data.get("brief")
+    if brief:
+        b.cell("brief", "brief_what", text(brief.get("what")))
+        b.cell("brief", "brief_why", text(brief.get("why")))
+        for key, cell in (("flow", "step"), ("in", "scope"), ("out", "scope")):
+            rows = brief.get(key) or []
+            if len(rows) > BRIEF_LIMITS[key]:
+                b.warnings.append(f"brief {key}: {len(rows)} lines, budget {BRIEF_LIMITS[key]}")
+            for x in rows:
+                b.cell(f"brief {key}", cell, text(x))
+        if len(brief.get("links") or []) > BRIEF_LIMITS["links"]:
+            b.warnings.append(f"brief links: {len(brief['links'])}, budget {BRIEF_LIMITS['links']}")
     for i, item in enumerate(data["items"], 1):
         where = f"item {i}"
         for key in ("title", "area", "problem", "if_left", "ask"):
@@ -324,6 +367,11 @@ details{margin-top:12px;font-size:14px}
 summary{cursor:pointer;color:var(--muted);font-weight:600}
 details>*:not(summary){margin-top:8px}
 .note{margin:8px 0 0}
+.brief{border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 18px}
+.brief h2{margin:0 0 12px}
+ol.flow{margin:0;padding-left:1.4em}
+ol.flow li+li{margin-top:2px}
+.scope{display:grid;grid-template-columns:max-content 1fr;gap:2px 10px}
 .caption{font-size:13px;color:var(--muted);margin:10px 0 4px}
 ul.plain{margin:0;padding-left:1.2em}
 @media (max-width:520px){.cells{grid-template-columns:1fr;gap:2px}.cells dd{margin-bottom:10px}.meta{grid-template-columns:1fr;gap:0}.meta dd{margin-bottom:6px}}
@@ -380,6 +428,27 @@ def html_more(L, base, entry):
     return html_evidence(L, base, entry)
 
 
+def html_brief(L, base, brief):
+    rows = [(L["b_what"], E(brief["what"]))]
+    if text(brief.get("why")):
+        rows.append((L["b_why"], E(brief["why"])))
+    rows.append((L["b_flow"], '<ol class="flow">' + "".join(f"<li>{E(x)}</li>" for x in brief["flow"]) + "</ol>"))
+    scope = "".join(f'<span class="src">{E(L["b_" + k])}</span><span>{E(", ".join(text(x) for x in brief.get(k) or []))}</span>'
+                    for k in ("in", "out") if brief.get(k))
+    if scope:
+        rows.append((L["b_scope"], f'<div class="scope">{scope}</div>'))
+    if brief.get("links"):
+        rows.append((L["b_links"], ", ".join(a(x.get("name"), x.get("link")) for x in brief["links"])))
+    out = f'<section class="brief"><h2>{E(L["brief"])}</h2><dl class="cells">'
+    out += "".join(f"<dt>{E(k)}</dt><dd>{v}</dd>" for k, v in rows) + "</dl>"
+    cap = brief.get("capture")
+    if cap:
+        p = image_path(base, cap)
+        out += f'<div class="ev" style="margin-top:12px"><div class="src">{a(cap.get("source") or "", cap.get("link"))}</div>'
+        out += (f'<img src="{data_uri(p)}" alt="{E(cap.get("source") or "", False)}">' if p else "") + "</div>"
+    return out + "</section>"
+
+
 def render_html(data, L, lang, base):
     items = data["items"]
     own = text(data.get("plan")) in ("", "own")
@@ -403,6 +472,8 @@ def render_html(data, L, lang, base):
         meta.append((L["unread"], E(", ".join(text(u) for u in data["unread"]))))
     out += [f"<dt>{E(k)}</dt><dd>{v}</dd>" for k, v in meta]
     out.append("</dl>")
+    if data.get("brief"):
+        out.append(html_brief(L, base, data["brief"]))
 
     ok = own and not fixes
     out.append(f'<div class="verdict{" ok" if ok else ""}">{E(verdict(lang, own, fixes, opinions))}')
@@ -541,6 +612,22 @@ def render_markdown(data, L, lang, base, out_path):
         out.append(f"- {L['latest']}: {md_link(latest['name'], latest.get('link'))}" + (f", {text(latest.get('at'))}" if text(latest.get("at")) else ""))
     if data.get("unread"):
         out.append(f"- {L['unread']}: " + ", ".join(text(u) for u in data["unread"]))
+    brief = data.get("brief")
+    if brief:
+        out += ["", f"## {L['brief']}", "", f"- **{L['b_what']}** {md_text(brief['what'])}"]
+        if text(brief.get("why")):
+            out.append(f"- **{L['b_why']}** {md_text(brief['why'])}")
+        out.append(f"- **{L['b_flow']}**")
+        out += [f"  {j}. {md_text(x)}" for j, x in enumerate(brief["flow"], 1)]
+        for k in ("in", "out"):
+            if brief.get(k):
+                out.append(f"- **{L['b_' + k]}** " + ", ".join(md_text(x) for x in brief[k]))
+        if brief.get("links"):
+            out.append(f"- **{L['b_links']}** " + ", ".join(md_link(x.get("name"), x.get("link")) for x in brief["links"]))
+        cap = brief.get("capture")
+        if cap:
+            p = image_path(base, cap)
+            out += ["", md_link(cap.get("source") or "", cap.get("link"))] + ([f"![{text(cap.get('source'))}]({assets(p)})"] if p else [])
     out += ["", f"> **{verdict(lang, own, fixes, len(items) - fixes)}**"]
     n = data.get("surfaces_last")
     if n and not own:

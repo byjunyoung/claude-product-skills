@@ -134,8 +134,28 @@ h = subprocess.run([sys.executable, str(SCRIPT), "--help"], capture_output=True,
 check("--help prints the shape of DATA.json", h.returncode == 0 and "surfaces_last" in h.stdout and "inferred" in h.stdout)
 check("--help prints the budgets in numbers", "problem 150" in h.stdout and "problem 2" in h.stdout)
 
+# The brief: the plan before the findings
+BRIEF = {"what": "Head office registers and edits stores in one screen.", "why": "Store settings are hard-coded today.",
+         "flow": ["Register a store", "Set its status", "Save the kiosk setup"], "in": ["registration"], "out": ["the app list"],
+         "links": [{"name": "Spec", "link": "https://example.com/spec"}],
+         "capture": {"source": "Store list", "image": "shot.png"}}
+r, out = run(doc(brief=BRIEF))
+page = out.read_text()
+check("a brief renders", r.returncode == 0 and "<h2>The plan</h2>" in page and "<dt>How it works</dt>" in page, r.stderr)
+check("the brief comes before the verdict", page.index("The plan") < page.index('class="verdict'))
+check("the brief carries its capture", page.count("data:image/png;base64,") == 1)
+r, _ = run(doc(brief=dict(BRIEF, flow=[f"step {k}" for k in range(8)])))
+check("a flow over six steps is flagged", "brief flow: 8 lines, budget 6" in r.stderr, r.stderr)
+r, _ = run(doc(brief=dict(BRIEF, what="It registers stores. It edits them.")))
+check("a two-sentence what is flagged", "brief brief_what: 2 sentences" in r.stderr, r.stderr)
+r, out = run(doc(brief=BRIEF), fmt="markdown")
+md = out.read_text()
+check("markdown brief before the verdict", md.index("## The plan") < md.index("> **") and "  2. Set its status" in md)
+
 # Bad data: exit 2, nothing written
 for label, data in (("items missing", {"title": "t", "as_of": "now"}),
+                    ("brief without flow", doc(brief={"what": "x"})),
+                    ("brief without what", doc(brief={"flow": ["a"]})),
                     ("more entry without a kind", doc(items=[item(more=[{"source": "x"}])])),
                     ("more table with a row that is not a list", doc(items=[item(more=[{"table": {"head": ["a"], "rows": ["b"]}}])])),
                     ("left_out without a reason", doc(left_out=[{"what": "x"}])),
