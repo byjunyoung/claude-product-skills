@@ -498,7 +498,7 @@ Seven things it holds to.
 
 A plan reaches engineering as spec entries, a design and tickets written at different times, and the gaps between them are cheap to close now and expensive once building has started. `/pm:review` reads all three — and the threads where the decisions were made — just before handover: a colleague's plan when they ask for a review, or your own before you say it is ready. It checks for eight kinds of gap, from a state the spec names that is not drawn to work no engineering ticket covers, and keeps only what would change what gets built; what it leaves out is listed with the reason.
 
-Every finding carries what it rests on — the spec quoted word for word, a capture of the part of the screen in question, the ticket by its title, a code reference, a quoted message — so the reader can check it without opening anything else. The report is one HTML page with the captures inside it, and its first line says whether the plan can be handed over. A reply to a colleague is drafted only after you have read the report and ask for one, and it is never sent.
+Every finding is four short cells: the problem, what happens to the build if it is left, the evidence, and the ask. The evidence is what it rests on (the spec quoted word for word, a capture of the part of the screen in question, a ticket line, a code reference, a quoted message), so the reader can check it without opening anything else; anything longer is folded under the card. A bundled script renders the report from those cells, so it has the same shape every time, and holds each cell to a budget. The report is one HTML page with the captures inside it, and its first line says whether the plan can be handed over. A reply to a colleague is drafted only after you have read the report and ask for one, and it is never sent.
 
 ### After a release — telling the people who run it
 
@@ -835,7 +835,7 @@ plugins/
       conventions.example.yaml           config schema + bundled defaults
       trackers/                          one file per tracker — notion, github, markdown; the contract and a template
       sources/                           one file per chat or calendar — slack, google-calendar; contract and template
-      scripts/lib/                       config resolution, preflight (copies of fig's, held identical), adapter lookup
+      scripts/lib/                       config resolution, preflight (copies of fig's, held identical), adapter lookup, review report rendering
 tools/
   verify.py                    consistency check (repo tool, not shipped)
   test/                        fixtures — arrow geometry, config resolution
