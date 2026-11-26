@@ -3,6 +3,7 @@
 
     python3 review-report.py DATA.json --out PATH [--lang LANG] [--format html|markdown]
     stdout: the written path, then one summary line
+    python3 review-report.py --help         this text, the shape of DATA.json included
     exit 0 written · 1 written, with cells over budget (each on stderr) · 2 usage or bad data
 
 pm-only — not one of the byte-identical shared files. The layout, the verdict's counts and every
@@ -11,7 +12,7 @@ different page skeletons, and cards that grew past two thousand characters. A ce
 still written, so the page can be looked at, but exit 1 means the review is not finished: the
 overflow moves to the item's `more`, the budget does not move. Stdlib only.
 
-DATA.json
+DATA.json (title, as_of and items are required; leave out what does not apply)
   title            the feature, in the plan's own words
   plan             "own", or the author's name
   asked            {by, at, link} for a colleague's plan
@@ -20,13 +21,15 @@ DATA.json
   latest           {name, at, link}: the material edited last
   unread           [str] sources the run could not read
   surfaces_last    the item number the verdict names, for a colleague's plan
+  ticket_url       the tracker's address for one ticket, with {n} for its number; every #123 on the
+                   page then links to its ticket
   items            [item]
   before_handover  [str]
   not_checked      [str] what the review did not look at, and the risk that leaves
   left_out         [{what, why}]
   sources          [{name, link, note}]
 
-item
+item (kind, title, problem and ask are required; evidence may be [])
   kind             "fix" | "opinion"
   area, title      short noun phrases
   problem          what is wrong
@@ -44,8 +47,13 @@ evidence
   quote            the words as written (for code, the lines)
   image            a capture, relative to DATA.json
   inferred         true where this is your reasoning rather than something you found
+
+Besides length and sentence count, a prose cell is flagged for a dash setting off an aside, a list
+strung on middle dots, an arrow standing in for a verb, more than two quotations, or a ticket number
+standing alone: a cell names the ticket and keeps the number in brackets, as in "the server ticket
+(#12)". Text inside quotation marks or backticks is not read for any of these.
 """
-import argparse, base64, html, json, re, shutil, sys
+import argparse, base64, html, json, re, shutil, sys, textwrap
 from pathlib import Path
 
 KINDS = ("fix", "opinion")
@@ -90,6 +98,14 @@ LABELS = {
 }
 
 
+def budget_help():
+    cells = ", ".join(f"{k} {v}" for k, v in BUDGET.items())
+    told = (f"Budgets, in characters for {', '.join(sorted(DENSE))} and twice as many for other languages: {cells}. "
+            f"Sentences: " + ", ".join(f"{k} {v}" for k, v in SENTENCES.items())
+            + f". Evidence on a card: {SHOWN_EVIDENCE}. Options: {OPTIONS}.")
+    return textwrap.fill(told, 100)
+
+
 def verdict(lang, own, fixes, opinions):
     if lang == "ko":
         if own:
@@ -118,11 +134,14 @@ DASH = re.compile(r"[—–]")
 DOT_LIST = re.compile(r"\s·\s")
 ARROW = re.compile(r"→|⇒|->")
 QUOTE_OPEN = re.compile(r"[「“『‘]")
+BRACKETED = re.compile(r"\([^()]*\)")
+BARE_NUMBER = re.compile(r"(?<![\w/])#\d+")
 
 
 def sentences(text):
-    n = len(re.findall(r"[.!?。](?=\s|$)", text.strip()))
-    return n + (0 if re.search(r"[.!?。]$", text.strip()) else 1)
+    t = text.strip()
+    n = len(re.findall(r"(?<!\d)[.!?。](?=\s|$)", t))
+    return n + (0 if re.search(r"(?<!\d)[.!?。]$", t) else 1)
 
 
 class Budget:
@@ -138,8 +157,11 @@ class Budget:
             self.warnings.append(f"{where} {key}: {len(text)} characters, budget {limit}")
         if key in SENTENCES and sentences(text) > SENTENCES[key]:
             self.warnings.append(f"{where} {key}: {sentences(text)} sentences, budget {SENTENCES[key]}")
-        if not prose:
-            return
+        if prose:
+            self.style(where, key, text)
+
+    def style(self, where, key, text):
+        """What the cells' sentences are held to; the folded notes are held to it too, without a length."""
         bare = QUOTED.sub("", text)
         if DASH.search(bare):
             self.warnings.append(f"{where} {key}: a dash sets off an aside; use a comma, brackets or a new sentence")
@@ -147,6 +169,8 @@ class Budget:
             self.warnings.append(f"{where} {key}: a list strung on ' · '; use commas")
         if ARROW.search(bare):
             self.warnings.append(f"{where} {key}: an arrow inside a sentence; write the step out")
+        if BARE_NUMBER.search(BRACKETED.sub("", bare)):
+            self.warnings.append(f"{where} {key}: a ticket number standing alone; name the ticket, number in brackets")
         quotes = len(QUOTE_OPEN.findall(text)) + text.count('"') // 2
         if quotes > 2:
             self.warnings.append(f"{where} {key}: {quotes} quotations; exact wording belongs in the evidence")
@@ -186,6 +210,32 @@ def load(path):
         for j, ev in enumerate(item.get("evidence") or [], 1):
             if not isinstance(ev, dict) or ev.get("kind") not in EVIDENCE_KINDS:
                 raise BadData(f"item {i} evidence {j}: kind must be one of {', '.join(EVIDENCE_KINDS)}")
+        for j, m in enumerate(item.get("more") or [], 1):
+            where = f"item {i} more {j}"
+            if not isinstance(m, dict):
+                raise BadData(f"{where} is not an object")
+            if "table" in m:
+                t = m["table"]
+                if not (isinstance(t, dict) and isinstance(t.get("head", []), list)
+                        and isinstance(t.get("rows", []), list) and all(isinstance(r, list) for r in t.get("rows", []))):
+                    raise BadData(f"{where}: a table is {{caption, head: [...], rows: [[...], ...]}}")
+            elif "note" in m:
+                if not text(m["note"]):
+                    raise BadData(f"{where}: an empty note")
+            elif m.get("kind") not in EVIDENCE_KINDS:
+                raise BadData(f"{where}: a table, a note, or evidence whose kind is one of {', '.join(EVIDENCE_KINDS)}")
+        if not isinstance(item.get("options") or [], list):
+            raise BadData(f"item {i}: `options` must be a list")
+    for key in ("before_handover", "not_checked", "unread"):
+        if not isinstance(data.get(key) or [], list) or not all(isinstance(x, str) for x in data.get(key) or []):
+            raise BadData(f"`{key}` must be a list of sentences")
+    for key, need in (("left_out", ("what", "why")), ("sources", ("name",))):
+        rows = data.get(key) or []
+        if not isinstance(rows, list) or not all(isinstance(r, dict) and all(text(r.get(k)) for k in need) for r in rows):
+            raise BadData(f"`{key}` must be a list of objects, each with {', '.join(need)}")
+    url = text(data.get("ticket_url"))
+    if url and ("{n}" not in url or not re.match(r"https?://", url)):
+        raise BadData("`ticket_url` is an http(s) address with {n} where the number goes")
     n = data.get("surfaces_last")
     if n is not None and not (isinstance(n, int) and 1 <= n <= len(data["items"])):
         raise BadData("`surfaces_last` must be an item number")
@@ -209,6 +259,11 @@ def check(data, lang):
         for ev in shown:
             b.cell(where, "quote", text(ev.get("quote")), prose=False)
             b.cell(where, "source", text(ev.get("source")), prose=False)
+        for j, m in enumerate(item.get("more") or [], 1):
+            if text(m.get("note")):
+                b.style(f"{where} more {j}", "note", text(m["note"]))
+        if text(item.get("looked")):
+            b.style(where, "looked", text(item["looked"]))
     for key, label in (("before_handover", "before handover"), ("not_checked", "not checked")):
         for line in data.get(key) or []:
             b.cell(label, "line", text(line))
@@ -274,12 +329,20 @@ ul.plain{margin:0;padding-left:1.2em}
 @media (max-width:520px){.cells{grid-template-columns:1fr;gap:2px}.cells dd{margin-bottom:10px}.meta{grid-template-columns:1fr;gap:0}.meta dd{margin-bottom:6px}}
 """
 
-E = lambda s: html.escape(text(s) if not isinstance(s, (int, float)) else str(s))
+TICKET_URL = ""
+
+
+def E(s, link_tickets=True):
+    out = html.escape(text(s) if not isinstance(s, (int, float)) else str(s))
+    if TICKET_URL and link_tickets:
+        out = re.sub(r"(?<![\w/&])#(\d+)",
+                     lambda m: f'<a href="{html.escape(TICKET_URL.replace("{n}", m.group(1)))}">#{m.group(1)}</a>', out)
+    return out
 
 
 def a(label, link):
     link = safe_link(link)
-    return f'<a href="{E(link)}">{E(label)}</a>' if link else E(label)
+    return f'<a href="{E(link, False)}">{E(label, False)}</a>' if link else E(label)
 
 
 def data_uri(p):
@@ -301,10 +364,10 @@ def html_evidence(L, base, ev):
     out = f'<div class="ev"><div class="src">{tag}{a(ev.get("source") or "", ev.get("link"))}{inferred}</div>'
     q = text(ev.get("quote"))
     if q:
-        out += f"<pre><code>{E(q)}</code></pre>" if ev["kind"] == "code" else f"<blockquote>{E(q)}</blockquote>"
+        out += f"<pre><code>{E(q, False)}</code></pre>" if ev["kind"] == "code" else f"<blockquote>{E(q)}</blockquote>"
     p = image_path(base, ev)
     if p:
-        out += f'<img src="{data_uri(p)}" alt="{E(ev.get("source") or "")}">'
+        out += f'<img src="{data_uri(p)}" alt="{E(ev.get("source") or "", False)}">'
     return out + "</div>"
 
 
@@ -324,7 +387,7 @@ def render_html(data, L, lang, base):
     opinions = len(items) - fixes
     out = [f'<!doctype html><html lang="{E(lang)}"><head><meta charset="utf-8">'
            f'<meta name="viewport" content="width=device-width,initial-scale=1">'
-           f'<title>{E(data["title"])}</title><style>{CSS}</style></head><body><main>',
+           f'<title>{E(data["title"], False)}</title><style>{CSS}</style></head><body><main>',
            f'<h1>{E(data["title"])}</h1><dl class="meta">']
     meta = [(L["plan"], E(L["own"] if own else data.get("plan")))]
     asked = data.get("asked") or {}
@@ -353,7 +416,7 @@ def render_html(data, L, lang, base):
                    f'<th>{E(L["area"])}</th><th>{E(L["title"])}</th></tr></thead><tbody>')
         for k, item in enumerate(items, 1):
             out.append(f'<tr><td class="n">{k}</td><td><span class="tag {item["kind"]}">{E(L[item["kind"]])}</span></td>'
-                       f'<td>{E(item.get("area"))}</td><td><a href="#i{k}">{E(item["title"])}</a></td></tr>')
+                       f'<td>{E(item.get("area"))}</td><td><a href="#i{k}">{E(item["title"], False)}</a></td></tr>')
         out.append("</tbody></table></div>")
 
     for k, item in enumerate(items, 1):
@@ -405,8 +468,15 @@ def render_html(data, L, lang, base):
 
 # --- markdown -----------------------------------------------------------------------------------
 
+def md_text(v):
+    t = text(v)
+    if TICKET_URL:
+        t = re.sub(r"(?<![\w/\[])#(\d+)", lambda m: f"[#{m.group(1)}]({TICKET_URL.replace('{n}', m.group(1))})", t)
+    return t
+
+
 def md_cell(v):
-    return text(v).replace("|", "\\|").replace("\n", " ")
+    return md_text(v).replace("|", "\\|").replace("\n", " ")
 
 
 def md_link(label, link):
@@ -481,16 +551,16 @@ def render_markdown(data, L, lang, base, out_path):
     for k, item in enumerate(items, 1):
         out += ["", f'<a id="{k}"></a>', f"### {k}. {text(item['title'])}", "",
                 f"`{L[item['kind']]}`" + (f" `{text(item['area'])}`" if text(item.get("area")) else ""), "",
-                f"- **{L['problem']}** {text(item['problem'])}"]
+                f"- **{L['problem']}** {md_text(item['problem'])}"]
         if text(item.get("if_left")):
-            out.append(f"- **{L['if_left']}** {text(item['if_left'])}")
+            out.append(f"- **{L['if_left']}** {md_text(item['if_left'])}")
         evidence = item.get("evidence") or []
         out.append(f"- **{L['evidence']}**" + ("" if evidence else f" `{L['needed']}`"))
         for ev in evidence:
             out += md_evidence(L, base, ev, assets)
-        out.append(f"- **{L['ask']}** {text(item['ask'])}")
+        out.append(f"- **{L['ask']}** {md_text(item['ask'])}")
         for j, o in enumerate(item.get("options") or [], 1):
-            out.append(f"  {j}. {text(o)}" + (f" `{L['recommended']}`" if j == 1 else ""))
+            out.append(f"  {j}. {md_text(o)}" + (f" `{L['recommended']}`" if j == 1 else ""))
         more = item.get("more") or []
         if more:
             out += ["", f"<details><summary>{L['more']} ({len(more)})</summary>", ""]
@@ -498,14 +568,14 @@ def render_markdown(data, L, lang, base, out_path):
                 if "table" in m:
                     out += md_table(m["table"]) + [""]
                 elif "note" in m:
-                    out += [(f"`{L['inferred']}` " if m.get("inferred") else "") + text(m["note"]), ""]
+                    out += [(f"`{L['inferred']}` " if m.get("inferred") else "") + md_text(m["note"]), ""]
                 else:
                     out += md_evidence(L, base, m, assets, indent="") + [""]
             out.append("</details>")
         if text(item.get("looked")):
-            out += ["", f"<details><summary>{L['looked']}</summary>", "", text(item["looked"]), "", "</details>"]
+            out += ["", f"<details><summary>{L['looked']}</summary>", "", md_text(item["looked"]), "", "</details>"]
     for key in ("before_handover", "not_checked"):
-        lines = [text(x) for x in data.get(key) or [] if text(x)]
+        lines = [md_text(x) for x in data.get(key) or [] if text(x)]
         if lines:
             out += ["", f"## {L['before' if key == 'before_handover' else key]}", ""] + [f"- {x}" for x in lines]
     left = data.get("left_out") or []
@@ -517,7 +587,7 @@ def render_markdown(data, L, lang, base, out_path):
     srcs = data.get("sources") or []
     if srcs:
         out += ["", f"## {L['sources']} ({len(srcs)})", "", f"<details><summary>{L['sources']}</summary>", ""]
-        out += [f"- {md_link(s.get('name') or '', s.get('link'))}" + (f", {text(s.get('note'))}" if text(s.get("note")) else "") for s in srcs]
+        out += [f"- {md_link(s.get('name') or '', s.get('link'))}" + (f", {md_text(s.get('note'))}" if text(s.get("note")) else "") for s in srcs]
         out += ["", "</details>"]
     return "\n".join(out) + "\n"
 
@@ -532,7 +602,7 @@ class Parser(argparse.ArgumentParser):
 
 
 def main():
-    ap = Parser(description="Render a /pm:review report from its findings.")
+    ap = Parser(description=__doc__ + "\n" + budget_help(), formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("data")
     ap.add_argument("--out", required=True)
     ap.add_argument("--lang", default="en")
@@ -544,8 +614,10 @@ def main():
     L = LABELS[lang]
     base = Path(args.data).resolve().parent
     out_path = Path(args.out)
+    global TICKET_URL
     try:
         data = load(args.data)
+        TICKET_URL = text(data.get("ticket_url"))
         warnings = check(data, lang)
         body = (render_html(data, L, lang, base) if args.format == "html"
                 else render_markdown(data, L, lang, base, out_path))

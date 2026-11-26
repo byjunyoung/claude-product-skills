@@ -12,12 +12,7 @@ You are the last reader before engineering starts, and the person you report to 
 
 This skill finds and reports. It does not fix: a fix to the spec goes through `/pm:prd`, to a ticket through `/pm:task`, to the design through the design-side skills.
 
-## Whose plan
-
-- **A colleague's.** Someone asked for a review, usually a chat message linking the spec, the design and the parent ticket. The report goes to the person running this first; a reply on the request is drafted only after they have read it and ask for one.
-- **Your own.** You are about to say it is ready for engineering. The report is your list of fixes and its verdict says whether the plan can go. There is no reply step.
-
-The request's author decides which. The checks, the ladder and the report are the same.
+**Whose plan.** A colleague's, when they ask for a review: the report goes to the person running this, and a reply on the request is drafted only once they have read it and ask. Or your own, before you say it is ready: the report is your list of fixes, with no reply step. Everything else is the same.
 
 ## Config
 
@@ -33,24 +28,22 @@ Tickets are read through `task.mirror.type`'s adapter — or `task.record.type`'
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/adapter.py --name pm-conventions.yaml --kind trackers --type {task.mirror.type} --role mirror
 ```
 
-Chat goes through `sources.chat_type`'s adapter (`--kind sources --role chat`); Slack ships. **Exit 3 or 4 means no usable adapter** — say it in the person's words ("this tool isn't supported yet; `/pm:setup` can add it from what's connected here"), never the exit code, and carry on with what can be read. A source the run could not read goes in the report's `unread`, at the top.
+Chat goes through `sources.chat_type`'s adapter (`--kind sources --role chat`); Slack ships. **Exit 3 or 4 means no usable adapter** — say it in the person's words ("this tool isn't supported yet; `/pm:setup` can add it from what's connected here"), never the exit code, and carry on with what can be read. The source you could not read goes in the report's `unread`.
 
 ## Before you check
 
-Start from a link to the review request, or to the plan itself: spec entries, a design section, the parent ticket. With nothing, ask for one of them. Then read all of it.
+Start from a link to the review request, or to the plan itself. With nothing, ask for one. Then read all of it, noting when each piece was last edited; the latest edit and the time you started are the report's *as of*.
 
-- **The request and every reply under it.** A later reply can take part of the plan out or put it back ("that part isn't ready yet" … "please review it now"). A part held back comes back in when a later reply asks for the review and its material was edited after the hold-back; otherwise it stays out, and *Left out* says so.
-- **Spec.** Each linked entry at its latest revision, with its status and the link between revisions. Entries the plan changed but did not link come from the parent ticket and the spec's change log.
-- **Tickets.** The parent and every child: each child's scope, and the QA section (`task.contract.sections.qa`) of whichever ticket holds it.
-- **Design.** List the frames of every linked section first; capture the ones a check lands on.
-- **Decisions.** The threads the request and tickets link, and a chat search for the feature's name. A rename, a scope moved to another month, a "we agreed verbally" lives here and nowhere else.
-- **Current behaviour.** Where a claim is about how the product works today, read the code or the running screen when either is reachable, and say which, with the commit or the date.
-
-Note each material's last-edited time. The latest of those and the time you started are the report's *as of*.
+- **The request and every reply under it.** A later reply can take part of the plan out or put it back. A part held back returns when a later reply asks for the review and its material changed after the hold-back; otherwise it stays out, and *Left out* says so.
+- **Spec.** Each linked entry at its latest revision, its status and the link between revisions, plus entries the plan changed without linking (the parent ticket and the spec's change log name them).
+- **Tickets.** The parent and every child: each child's scope, and the QA section (`task.contract.sections.qa`) wherever it sits.
+- **Design.** List the frames of every linked section; capture the ones a check lands on.
+- **Decisions.** The threads the request and tickets link, and a chat search for the feature's name. A rename, a scope moved to another month, a "we agreed verbally" lives only here.
+- **Current behaviour.** Where a claim is about how the product works today, read the code or the running screen, and say which, with the commit or the date.
 
 ## The checks
 
-Run all eight on every plan. Each produces candidates, not findings.
+Run all eight. Each produces candidates, not findings.
 
 | # | Check | What it looks like |
 |---|---|---|
@@ -59,11 +52,11 @@ Run all eight on every plan. Each produces candidates, not findings.
 | 3 | Work no engineering ticket covers | the plan needs a server change and a screen change; the children cover only one. A person named in a thread is not coverage; a ticket whose scope names the work is |
 | 4 | A reference that does not resolve | "same as screen X" where screen X has no such thing; a design link to a node that no longer exists |
 | 5 | The same value on another screen | a total the plan changes is also shown on a dashboard the spec never mentions |
-| 6 | A name or pattern the product already has | raw system values shown where the product already has display names for them; a dialog whose buttons do not say what they do |
+| 6 | A name or pattern the product already has | raw system values where the product already has display names; a dialog whose buttons do not say what they do |
 | 7 | Changed differently within the same work | two spec entries got a new revision and a third was edited in place |
-| 8 | Ready to hand over | every linked spec entry is in one of `review.ready_statuses`; every rule QA has to see happen is in the QA section; each sentence in `review.ready_checks` holds |
+| 8 | Ready to hand over | every linked entry is in one of `review.ready_statuses`; every rule QA has to see happen is in the QA section; each sentence in `review.ready_checks` holds |
 
-Check 8 is skipped where `review.ready_statuses` is `null`, and its third part where `review.ready_checks` is empty. What it finds goes under *Before handover*, not among the items. For a colleague's plan still under review, entries in a draft status are expected there.
+Check 8 is skipped where `review.ready_statuses` is `null`, its third part where `review.ready_checks` is empty, and what it finds goes under *Before handover*, not among the items.
 
 ## What stays
 
@@ -72,9 +65,9 @@ Take each candidate through these in order:
 1. **Would the answer change what gets built** — the engineering scope, the spec, the design? Wording in the request message, a stale line in a progress note, a fix that builds the same thing: out.
 2. **Was it settled already** in a thread, a ticket or a later reply? Out, with where.
 3. **Can you find out yourself** — read the code, open the frame, search the chat? Then find out. A question goes to the author only when nothing you can reach answers it, and never when the answer would not change the build.
-4. **Fact or preference?** A **fix** is a mismatch, a gap or a dead reference, between the materials or between the plan and a rule the product already follows on its screens. A spec decision that breaks such a rule is still a fix: the conflict is the fact. An **opinion** rests on preference and overturns a decision the spec states; its first piece of evidence is that decision, quoted. An opinion with nothing it would fix is out.
+4. **Fact or preference?** A **fix** is a mismatch, a gap or a dead reference, between the materials or between the plan and a rule the product already follows on its screens; a spec decision that breaks such a rule is still a fix. An **opinion** rests on preference and overturns a decision the spec states; its first evidence is that decision, quoted. An opinion that would fix nothing is out.
 
-Everything out goes in *Left out*, one line with its reason. That line is what keeps the author from asking whether you looked.
+Everything out goes in *Left out*, one line with its reason, so nobody has to ask whether you looked.
 
 ## The item
 
@@ -86,80 +79,56 @@ Each finding is four cells. What does not fit goes in `more`, folded under the c
 | problem | what is wrong, and between which materials | two sentences |
 | if left | what gets built, or does not, if nobody acts | one sentence |
 | evidence | the one or two things that prove it | two pieces |
-| ask | what to change and where, the recommendation first. Options only where the choice is real | one sentence, three options |
+| ask | what to change and where, the recommendation first; options only where the choice is real | one sentence, three options |
 | more | the full comparison, further quotes, code, what you inferred | folded |
 | looked | where you looked, behind a claim that something is not there | folded |
 
-The renderer holds the character budget of each cell, and the report is not finished while one is over.
-
-## Evidence
-
-Every item carries at least one piece. Without one it is rendered *evidence needed*, or dropped.
-
-| Kind | What goes in it |
-|---|---|
-| `spec` | The sentence that decides it, verbatim, with the entry, the section and the link |
-| `design` | A capture of the smallest node that shows it (the button row, the caption, the cell) with the node link; where no node fits, the frame's image cropped to the region. Saved the moment it is looked at, named `{item}-{what it shows}` |
-| `ticket` | The line, verbatim, with the ticket's title as written, its number and link |
-| `code` | Path, line range and commit; the lines themselves as the quote |
-| `chat` | Author, time and link; the words as written |
-| `screen` | The running screen: where, as which role, when |
-
-What you infer is marked `inferred`, apart from what you found.
+Evidence is one of: `spec`, the deciding sentence verbatim with the entry, section and link; `design`, a capture of the smallest node that shows it (the frame cropped where no node fits) with the node link, saved when looked at as `{item}-{what it shows}`; `ticket`, the line verbatim; `code`, path, lines and commit; `chat`, author, time, link and the words as written; `screen`, the running screen, where, as whom, when. What you reasoned rather than found is marked `inferred`. An item with no evidence is rendered *evidence needed*, or dropped.
 
 ## The report
 
-Write the findings as a JSON file, review.json, beside the captures. The shape is at the top of the renderer: head fields, then each item's cells, evidence, `more` and `looked`, then `before_handover`, `not_checked`, `left_out` and `sources`. Then render:
+Write the findings as a JSON file, review.json, beside the captures. Its shape is what `--help` prints. Give it `ticket_url`, the tracker's address for one ticket with `{n}` for the number, and every ticket number on the page links. Then render:
 
 ```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/review-report.py --help
 python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/review-report.py review.json \
   --out <review.report_dir, or ./reviews>/<date>-<slug(feature)>.<html|md> \
   --lang <meta.language> --format <review.format>
 ```
 
-The renderer owns the layout, the order of sections, the verdict and its counts, and the budgets. Exit 1 lists each cell over budget, and each sentence carrying a dash aside, a list strung on middle dots, an arrow or a pile of quotations. Rewrite those cells and render again. Exit 2 is bad data and nothing is written.
+The renderer owns the layout, the order of sections, the verdict and its counts, and the budgets. Exit 1 lists each cell over budget, and each sentence carrying a dash aside, a list strung on middle dots, an arrow, a pile of quotations or a ticket number with no name. Rewrite those cells and render again. Exit 2 is bad data and nothing is written.
 
 ```
 head              whose plan, who asked and when, who reviewed, as of, the latest edit
 verdict           own plan: ready, or N fixes before handover
                   colleague's: N fixes, M opinions, and the item that surfaces last
-items             number, fix or opinion, area, title
-cards             one per item, the four cells, with more and looked folded
-before handover   what check 8 found
-not checked       what you did not look at, and the risk
-left out          folded, one line each
-sources read      folded
+items, cards      one row and one card per item, more and looked folded
+then              before handover, not checked, left out, sources read
 ```
 
-For a colleague's plan, `surfaces_last` is the fix that would come to light latest if nobody acted on it: work no ticket covers, or a state nobody drew, before a wording conflict.
-
-`html` (the default) is one page with the captures inside it, so it opens with a double-click and travels as one file; `markdown` copies the captures into a folder beside the file. The report goes to your own folder, so it is written without a preview. Open it for the person afterwards. The response carries the verdict, the item titles and the file's path.
+For a colleague's plan, `surfaces_last` is the fix that would come to light latest if nobody acted: work no ticket covers, or a state nobody drew, before a wording conflict. `html` is one page with the captures inside it; `markdown` copies them into a folder beside the file. The report goes to your own folder without a preview; open it for the person, and answer with the verdict, the item titles and the path.
 
 ## Voice
 
-Read `voice.md` before writing the first cell. The renderer catches length and punctuation. It cannot catch a sentence that is short and still reads as if a machine wrote it.
+Read `voice.md` before writing the first cell. The renderer catches length and punctuation. It cannot catch a short sentence that still reads as if a machine wrote it.
 
 ## The reply
 
-A colleague's plan only, after the person has read the report and asks for it. Preview the full text, then go, then save it as a draft on the request's thread with the chat tool's draft call. Never sent.
+A colleague's plan only, once the person has read the report and asks. Preview the full text, then go, then save it as a draft on the request's thread with the chat tool's draft call. Never sent.
 
-- The fixes first, one line each in the order of the report, then the opinions, marked as such.
-- The reply stands on its own for someone who never opens the report; the report goes with it as an attachment the person adds.
-- Find an earlier review reply by the same person in that channel and follow its shape and voice.
+- The fixes first, one line each in the report's order, then the opinions, marked as such.
+- It stands on its own for someone who never opens the report; the person attaches the report.
+- Follow the shape and voice of an earlier review reply by the same person in that channel.
 
 ## Never cut
 
-Evidence on every item. The *as of* line. *Not checked* and *Left out*, even when each is one line. A question that nothing you can reach answers. The spec's own words inside a quote.
+Evidence on every item. The *as of* line. *Not checked* and *Left out*, even at one line each. A question nothing you can reach answers. The spec's own words inside a quote.
 
 ## Common mistakes
 
 | What happened | Instead |
 |---|---|
-| A card read as an essay: four paragraphs, a table, a search log and a four-part ask | Four cells; the table, the log and the rest in `more` and `looked` |
-| The report listed conclusions and the reader had to ask what each one rested on | Evidence on every card, before anyone asks |
-| A ticket's full title, tags and all, repeated in every sentence | The full title once, in the evidence; a short name and the number in the cells |
+| A card read as an essay: four paragraphs, a table, a search log and a four-part ask | Four cells; the rest in `more` and `looked` |
 | A tidy-up of the request message's wording went in as an item | Left out: the build does not change |
 | A question went to the author that the code or the frame would have answered | Read it; ask only what nothing reachable answers |
-| "There is no X" after one search | `looked` names where, or keep looking |
 | An item flagged as missing had been settled in a later reply | Read every reply under the request before the checks |
-| A preference written as a fix | An opinion, with the decision it overturns as its first evidence |

@@ -4,7 +4,7 @@ Read before writing the first cell (`SKILL.md`, *Voice*).
 
 **The reader is between two other things.** The plan's author, or whoever acts on the report, knows the product better than you and has not read what you read. They should get each item from its title and its four cells, and open `more` only to check. A cell that needs a second read has failed, however correct it is.
 
-The renderer counts characters, sentences, dashes, middle dots, arrows and quotation marks. Everything below is what it cannot count.
+The renderer counts characters, sentences, dashes, middle dots, arrows, quotation marks and ticket numbers left without a name. Everything below is what it cannot count.
 
 ## The rules
 
@@ -22,13 +22,13 @@ The renderer counts characters, sentences, dashes, middle dots, arrows and quota
 
 **Quotations live in evidence.** The plan's exact words go in an evidence quote, as written. A cell names the thing in plain words, *the hide checkbox's label*, instead of quoting it, unless the wording is itself the finding. Then quote that one phrase, once.
 
-**A ticket is named by what it is.** In evidence: its title as written, its number, its link. In a cell: a short name the reader recognises, and the number, such as *the store server ticket (#682)*. Never a bare number, and never the full title with its bracketed tags in a sentence.
+**A ticket is named by what it is.** In evidence: its title as written, its number, its link. In a cell, and in the folded notes: a short name the reader recognises, and the number in brackets, such as *the store server ticket (#682)*. Never a bare number, and never the full title with its bracketed tags in a sentence. With `ticket_url` set, each number on the page links to its ticket.
 
 **Identifiers stay out of the cells.** Revision ids, node ids, commit hashes, file paths and version ids belong to an evidence `source` or to `more`. A cell says *an archived revision*, *the list frame*, *the main branch*.
 
 **Say it once.** A fact in *problem* is not repeated in *ask*. A quote on the card is not paraphrased in the cell beside it.
 
-**State what you found; mark what you reasoned.** A found fact carries no "may", "might" or "seems". A conclusion you reasoned to goes in evidence or `more`, marked `inferred`.
+**State what you found; mark what you reasoned.** A found fact carries no "may", "might" or "seems". A conclusion you reasoned to goes in evidence or `more`, marked `inferred`. *If left* is a consequence and is written plainly; where it rests on a calculation rather than something seen, it says so in a few words and the calculation goes in `more`, marked `inferred`.
 
 **The ask starts with the change.** A verb, the place, then the recommendation: *Open a server ticket for registering and editing under the parent.* Where there is a real choice, the options are listed under it, recommended first, each one line. The reason for the recommendation is one clause in `more` when it does not fit.
 

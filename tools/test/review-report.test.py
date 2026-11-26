@@ -110,8 +110,37 @@ md = out.read_text()
 check("markdown links the copied capture", "](report/shot.png)" in md and (out.parent / "report" / "shot.png").is_file(), md)
 check("markdown has the four cells", all(f"**{c}**" in md for c in ("Problem", "If left", "Evidence", "Ask")))
 
+# Ticket numbers: named in a cell, linked on the page
+r, _ = run(doc(items=[item(ask="Open a ticket under #12 before handover.")]))
+check("a ticket number standing alone is flagged", "ticket number standing alone" in r.stderr, r.stderr)
+r, out = run(doc(ticket_url="https://example.com/issues/{n}",
+                 items=[item(ask="Open a ticket under the store setup epic (#12).")]))
+page = out.read_text()
+check("a named ticket with its number in brackets passes", r.returncode == 0, r.stderr)
+check("ticket numbers link through ticket_url", '<a href="https://example.com/issues/12">#12</a>' in page)
+r, out = run(doc(ticket_url="https://example.com/issues/{n}", items=[item(
+    evidence=[{"kind": "code", "source": "a.css:1", "quote": "color: #123456;"}])]))
+check("numbers inside code are not linked", "issues/123456" not in out.read_text())
+r, out = run(doc(ticket_url="https://example.com/issues/{n}",
+                 items=[item(ask="Open a ticket under the store setup epic (#12).")]), fmt="markdown")
+check("markdown links ticket numbers too", "[#12](https://example.com/issues/12)" in out.read_text())
+
+# A full stop after a digit does not end a sentence
+r, _ = run(doc(items=[item(ask="Link section 05. Maintenance under the parent.")]))
+check("a numbered heading is not a second sentence", "sentences" not in r.stderr, r.stderr)
+
+# --help carries the data shape
+h = subprocess.run([sys.executable, str(SCRIPT), "--help"], capture_output=True, text=True)
+check("--help prints the shape of DATA.json", h.returncode == 0 and "surfaces_last" in h.stdout and "inferred" in h.stdout)
+check("--help prints the budgets in numbers", "problem 150" in h.stdout and "problem 2" in h.stdout)
+
 # Bad data: exit 2, nothing written
 for label, data in (("items missing", {"title": "t", "as_of": "now"}),
+                    ("more entry without a kind", doc(items=[item(more=[{"source": "x"}])])),
+                    ("more table with a row that is not a list", doc(items=[item(more=[{"table": {"head": ["a"], "rows": ["b"]}}])])),
+                    ("left_out without a reason", doc(left_out=[{"what": "x"}])),
+                    ("not_checked that is not a list of sentences", doc(not_checked="x")),
+                    ("ticket_url without {n}", doc(ticket_url="https://example.com/issues/")),
                     ("unknown kind", doc(items=[item(kind="nit")])),
                     ("missing ask", doc(items=[item(ask="")])),
                     ("unknown evidence kind", doc(items=[item(evidence=[{"kind": "rumour"}])])),
