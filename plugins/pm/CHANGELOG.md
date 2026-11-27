@@ -1,5 +1,10 @@
 # pm
 
+## 0.50.0 — 2026-11-27
+
+- **`/pm:review` is withdrawn.** It shipped in 0.48.0, and a redesign of its report followed (a brief of the plan, a table of decisions with a recommendation each, a card per decision, a bundled renderer). Its maintainer chose to drop the skill rather than keep either version. The redesign stays unmerged on the branch `worktree-pm-review-readable` for whoever picks the idea up again
+- Removed with it: the skill folder; the top-level `review` block of `conventions.example.yaml` (`report_dir`, `format`, `ready_statuses`, `ready_checks`); its rows in the skills tables and in *What each skill needs*; and its section in this plugin's README and in both root READMEs, along with the plugin description's clause about it and the sentence on where its report and reply went. Both root READMEs now carry a removal note under the `pm` skills table, the way `/fig:diff` has one under `fig`'s. `log.review`, which is `/pm:log-review`'s, stays. No other skill or script read the skill or its keys. A `review` block left in a team's own config is merged as before and read by nothing. `resolve-config.py` and `preflight.py` are untouched and still identical with `fig`'s
+
 ## 0.49.0 — 2026-11-26
 
 - **New skill — `/pm:review`.** A plan reaches engineering as spec entries, a design and tickets written at different times, and the gaps between them were being found by engineering after building had started. The skill is the last read before handover — of a colleague's plan when they ask for a review, or of your own before you say it is ready. It reads the request and every reply under it, the spec entries at their latest revision, the parent ticket and its children, the design sections and the threads where decisions were made, and runs eight checks: disagreement between spec, tickets and design; a state the spec names that is not drawn; work no engineering ticket covers; a reference that does not resolve; the same value on a screen the plan never mentions; a name or pattern the product already has; entries changed differently within the same work; and readiness to hand over
