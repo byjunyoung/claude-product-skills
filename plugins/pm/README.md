@@ -1,6 +1,6 @@
 # pm
 
-A bundle for product specs and the tasks that come out of them. Write the spec, draft the task, file it, review the plan before engineering builds it, keep both sides reconciled, tell the people who run the product what a release changes — and keep a record of what you actually did.
+A bundle for product specs and the tasks that come out of them. Write the spec, draft the task, file it, keep both sides reconciled, tell the people who run the product what a release changes — and keep a record of what you actually did.
 
 You type these the way you type anything else to Claude — `/pm:prd`, and it asks you what it cannot work out on its own. Nothing here asks you to write code.
 
@@ -14,7 +14,6 @@ claude plugin install pm@byjunyoung
 | `/pm:setup` | Lays out a local start — folders and your first settings file — and attaches a tracker when there is one |
 | `/pm:prd` | Writes a new requirements document, or extends one — in language its readers can act on |
 | `/pm:task` | Three modes. `draft` turns a request — a chat thread, a page, a conversation — into a task with its context table, a markdown file by default; `publish` files one task as a ticket wherever engineering tracks its work, once a tracker is attached; `sync` reconciles the planning list against that tracker |
-| `/pm:review` | The last read before a plan goes to engineering — a colleague's, or your own. Each finding comes with the spec line, design capture, code or message it rests on, and the report says whether the plan can be handed over |
 | `/pm:release-notes` | Turns engineering's release notice into notes the people who run the product can act on — per feature, the change as a sentence, a recording of the real screen, who it reaches and what they have to do — and leaves a short reply on the notice as a draft |
 | `/pm:log` | Writes a day's work log as a file, from your task records, calendar and chat. Runs only when called by name |
 | `/pm:log-review` | Turns a period of those logs into accomplishment statements |
@@ -62,12 +61,6 @@ How to work with one tool is written in one file, and the tool's name in your se
 It is the default. With no settings file at all, a task is a markdown file under `./tasks`, a spec is one under `./docs/prd`, and the daily log is on. `/pm:setup` lays this out as one repository — `docs/prd/`, `tasks/`, `logs/`, `highlights/` and a README saying what lives where — that needs no other tool, with git as the audit trail. The settings file goes into that repository as `pm-conventions.yaml`, and it carries only what you answered: a setting nobody asked about stays out, so the plugin's own defaults keep applying, later changes to them included. From then on, run the skills in Claude Code opened in that repository — the settings file is read only there.
 
 A tracker attaches later as the mirror, on whichever machine can see it, with the task files untouched. Until one does, `/pm:task publish` and `/pm:task sync` say the tasks are kept as records only, and stop.
-
-## Review
-
-`/pm:review` starts from a link to a review request, or from the plan itself — spec entries, a design section, the parent ticket. It reads the request and every reply under it, each spec entry at its latest revision, the parent ticket and its children, the design and the threads where decisions were made, and looks for eight kinds of gap: spec, tickets and design disagreeing; a state the spec names that is not drawn; work no engineering ticket covers; a reference that does not resolve; the same value on a screen the plan never mentions; a name or pattern the product already has; entries changed differently within the same work; and whether the plan is ready to hand over. Only what would change what gets built stays in. Everything else is listed as left out, with the reason, so nobody has to ask whether you looked.
-
-Every finding carries what it rests on — the spec quoted word for word, a capture of the part of the screen in question, a ticket line written as its title and number, a code reference, a quoted message. The report is one HTML page with the captures inside it, written to `review.report_dir`, and its first line is the verdict. Which spec statuses count as ready comes from `review.ready_statuses`, and any extra sentences your team's handover gate requires from `review.ready_checks`. For a colleague's plan, a reply on their request is drafted only once you have read the report and ask for one.
 
 ## Release notes
 
@@ -172,7 +165,7 @@ Three layers merge, so **only the lines you actually want to change have to be w
 
 ## What it runs and sends
 
-Everything runs on your machine, with `python3` (and `node` for the Notion-log importer only). It writes local markdown files unless your config names a tracker or a doc tool; then it reaches Notion, Slack or Google Calendar through connectors you have connected, and GitHub through those connectors or the `gh` command line. `/pm:review` writes its report into a local folder and reads the tools above; a reply, when you ask for one, is saved as a chat draft and never sent. `/pm:release-notes` also drives Claude in Chrome: it runs a script in the page that blocks every request other than a read while it records, saves the recordings into a local folder, and, where the notes go to Notion, uploads them there with `curl`. At the start of a session a hook runs `git fetch` on the folder your config lives in, where that folder is a git repository, and changes no file unless you set `CLAUDE_SHARED_CONFIG=pull`; `off` turns it off. Nothing is sent anywhere else, and nothing is collected.
+Everything runs on your machine, with `python3` (and `node` for the Notion-log importer only). It writes local markdown files unless your config names a tracker or a doc tool; then it reaches Notion, Slack or Google Calendar through connectors you have connected, and GitHub through those connectors or the `gh` command line. `/pm:release-notes` also drives Claude in Chrome: it runs a script in the page that blocks every request other than a read while it records, saves the recordings into a local folder, and, where the notes go to Notion, uploads them there with `curl`. At the start of a session a hook runs `git fetch` on the folder your config lives in, where that folder is a git repository, and changes no file unless you set `CLAUDE_SHARED_CONFIG=pull`; `off` turns it off. Nothing is sent anywhere else, and nothing is collected.
 
 ## The other half
 
