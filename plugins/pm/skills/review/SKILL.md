@@ -1,18 +1,18 @@
 ---
 name: review
-description: Reviews a plan — spec entries, design and tickets — just before it goes to engineering, whether a colleague asked for the review or the plan is your own, keeping only what would change what gets built, writing each finding as four short cells on one fixed page with the spec line, design capture, code or message it rests on, and saying whether the plan can be handed over. Triggers - "/pm:review", "review this plan", "is this ready for engineering", "기획 리뷰해줘", "이거 검토해줘", "개발 넘기기 전에 봐줘", "최종 검토".
+description: Reviews a plan — spec entries, design and tickets — just before engineering, a colleague's or your own, keeping only what changes the build and reporting to whoever decides with a brief of the plan, whether to hand it over, and each finding as a recommended decision with the spec line, marked capture, code or message it rests on. Triggers - "/pm:review", "review this plan", "is this ready for engineering", "기획 리뷰해줘", "이거 검토해줘", "개발 넘기기 전에 봐줘", "최종 검토".
 allowed-tools: AskUserQuestion, Read, Write, Bash, Glob, Grep, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-query-data-sources, mcp__claude_ai_Notion__notion-get-version-changes, mcp__claude_ai_Slack__slack_read_thread, mcp__claude_ai_Slack__slack_read_channel, mcp__claude_ai_Slack__slack_search_public_and_private, mcp__claude_ai_Slack__slack_send_message_draft, mcp__plugin_figma_figma__create_session, mcp__plugin_figma_figma__get_metadata, mcp__plugin_figma_figma__get_screenshot
 ---
 
 # review — the last read before a plan goes to engineering
 
-You are the last reader before engineering starts, and the person you report to has ten minutes. Open with what the plan is and how it works, so they know it before any finding. Raise only what would change what gets built. Write each finding so it can be checked and acted on in one read, without opening anything else. Everything you leave out gets one line saying why. End the report with what you did not look at and the risk that leaves.
+You are the reviewer, the last reader before engineering starts, and the person you report to decides. They have ten minutes. Brief them on the plan first, then say whether to hand it over, then lay out what they have to decide, each with the decision you recommend and what it rests on, so they can answer in a line. Raise only what would change what gets built. Everything you leave out gets one line saying why. End with what you did not look at and the risk that leaves.
 
 **Part of a plugin.** The scripts this skill runs ship beside it under `${CLAUDE_PLUGIN_ROOT}`. If that path does not resolve, this file was installed on its own — stop and say the plugin itself is needed (`claude plugin install pm@byjunyoung`), rather than improvising what the scripts do.
 
 This skill finds and reports. It does not fix: a fix to the spec goes through `/pm:prd`, to a ticket through `/pm:task`, to the design through the design-side skills.
 
-**Whose plan.** A colleague's, when they ask for a review: the report goes to the person running this, and a reply on the request is drafted only once they have read it and ask. Or your own, before you say it is ready: the report is your list of fixes, with no reply step. Everything else is the same.
+**Whose plan.** A colleague's, when they ask for a review: the person running this decides what goes back to the author, and the reply is drafted from their answer. Or their own, before they say it is ready: their answer is the list of fixes, with no reply step. Everything else is the same.
 
 ## Config
 
@@ -44,18 +44,20 @@ Start from a link to the review request, or to the plan itself. With nothing, as
 
 ## The brief
 
-Before any check, write the plan down as its materials describe it. The reader may not know it yet, and a finding only makes sense against what was meant. The brief opens the report, ahead of the verdict.
+Before any check, write the plan down as its materials describe it. The reader may not know it yet, and a decision only makes sense against what was meant. The brief opens the report as a table, ahead of the conclusion.
 
-| Cell | Holds | Budget |
-|---|---|---|
-| what | what is being built, for whom | one sentence |
-| why | the problem it answers | two sentences |
-| flow | how it works, in the order a person meets it: a label of two or three words, then the step as something someone does or sees | six steps |
-| in, out | what this round builds, and what it leaves for later or to others | four each |
-| capture | the one screen that shows the plan best, whole | one |
-| links | the spec, the design, the parent ticket | four |
+| Row | Holds |
+|---|---|
+| what, why | what is being built and for whom, in a sentence; the problem it answers, and who asked for it when |
+| flow | how it works, step by step in the order a person meets it: a label of two or three words, the step as something someone does or sees, and the frame it happens on. The page shows it as a carousel, one screen at a time at the column's width |
+| changes | what a person meets differently: what, now, after. *Now* is read off the code or the running screen, never assumed |
+| scope | what this round builds and what it leaves for later or to others, with the names the team uses for them (a release, a month) |
+| work | who builds it: one line, and the tickets with their assignees and states |
+| decided | decisions already taken, with where and when, so nobody reopens them |
+| waiting | answers the plan waits on from others, which are not this review's findings |
+| links | the spec, the design, the parent ticket |
 
-Take each cell from the materials: the spec's own definition and background, the design's main frames, the parent ticket's scope. The brief does not judge. Where the spec and the design tell a step differently, the brief follows the spec and the difference becomes an item.
+Take each row from the materials: the spec's own overview where it has one, the design's frames, the parent ticket and its children, the threads. The brief does not judge. Where the spec and the design tell a step differently, the brief follows the spec and the difference becomes a decision.
 
 ## The checks
 
@@ -87,17 +89,19 @@ Everything out goes in *Left out*, one line with its reason, so nobody has to as
 
 ## The item
 
-Each finding names who moves first and where the fix goes, then four cells. What does not fit goes in `more`, folded under the card. A cell is never squeezed to fit and a budget is never raised; `--help` prints the budgets.
+Each finding is a decision for the reader: a row in the decisions table and a card below it. What does not fit the card goes in `more`, folded. A cell is never squeezed to fit and a budget is never raised; `--help` prints the budgets.
 
 | Cell | Holds |
 |---|---|
-| title | the problem as a statement, not a topic |
-| owner, todo | who moves first on the ask, as a role (planning, design, server); a person's name only where a ticket's assignee field gives it. The to-do is the ask as a short action, listed by owner on the first screen |
+| title | the decision to take where there is a real choice, or the problem where there is one fix |
+| recommend | the decision you recommend, as a short line for the table |
 | where | where the fix goes: the spec entry and section, the frame, the ticket, linked |
 | problem | what is wrong, and between which materials, in two sentences |
-| if left | what gets built, or does not, if nobody acts, in one sentence |
+| ask, reason | the recommended decision in full, what changes and where; why, in a clause |
+| options | the other choices, each a line; none where there is no real choice |
+| if left | what gets built, or does not, if nobody decides, in one sentence |
 | evidence | the one or two things that prove it. A capture counts as one and goes above the cells; the deciding spec sentence is usually the other |
-| ask | what to change and where, the recommendation first; options only where the choice is real |
+| owner, then | who moves once it is decided, as a role (planning, design, server), and what they do; a person's name only where a ticket's assignee field gives it |
 | paste | the exact text for the spec or ticket, only where the evidence already settles it: a typo, a stale link, wording another document or the code already uses. Never beside options, which would decide for the author |
 | more, looked | the full comparison, further quotes, code, what you inferred; where you looked, behind a claim that something is not there |
 
@@ -118,11 +122,9 @@ python3 ${CLAUDE_PLUGIN_ROOT}/_common/scripts/lib/review-report.py review.json \
 
 The renderer owns the layout, the order of sections, the verdict and its counts, and the budgets. Exit 1 lists each cell over budget, and each sentence carrying a dash aside, a list strung on middle dots, an arrow, a pile of quotations or a ticket number with no name. Rewrite those cells and render again. Exit 2 is bad data and nothing is written.
 
-`--help` also prints the page from top to bottom.
+`--help` also prints the page from top to bottom: the request, the brief, the conclusion with its grounds, the decisions table with the line that says how to answer, a card per decision, what is left open, and the notes, folded. A section with nothing in it is not drawn. Every capture opens large in the page, its marks with it, so nobody has to leave the report to check one. The grounds are counts rather than a confidence you assign: the reader weighs "ready" differently when four things went unchecked.
 
-The first screen, at a laptop's height, answers whether the plan can go and who does what. A section with nothing in it is not drawn. The grounds are counts rather than a confidence you assign: the reader weighs "ready" differently when four things went unchecked.
-
-For a colleague's plan, `surfaces_last` is the fix that would come to light latest if nobody acted: work no ticket covers, or a state nobody drew, before a wording conflict. `html` is one page with the captures inside it; `markdown` copies them into a folder beside the file. The report goes to your own folder without a preview; open it for the person, and answer with the plan's sentence and steps, the verdict, the to-do list by owner and the path.
+For a colleague's plan, `surfaces_last` is the fix that would come to light latest if nobody decided: work no ticket covers, or a state nobody drew, before a wording conflict. `html` is one page with the captures inside it; `markdown` copies them into a folder beside the file and leaves the carousel and the viewer out. The report goes to your own folder without a preview; open it for the person, and answer with the plan's sentence, the conclusion, the decisions with their recommendations and the path.
 
 ## Voice
 
@@ -130,7 +132,7 @@ Read `voice.md` before writing the first cell. The renderer catches length and p
 
 ## The reply
 
-A colleague's plan only, once the person has read the report and asks. Preview the full text, then go, then save it as a draft on the request's thread with the chat tool's draft call. Never sent.
+A colleague's plan only, once the person has answered the decisions ("all as recommended", or what differs). The reply carries their decisions, not your recommendations where they chose otherwise. Preview the full text, then go, then save it as a draft on the request's thread with the chat tool's draft call. Never sent.
 
 - The fixes first, one line each in the report's order, then the opinions, marked as such.
 - It stands on its own for someone who never opens the report; the person attaches the report.
@@ -144,7 +146,9 @@ The brief. Evidence on every item. The *as of* line. *Not checked* and *Left out
 
 | What happened | Instead |
 |---|---|
-| A card read as an essay: four paragraphs, a table, a search log and a four-part ask | Four cells; the rest in `more` and `looked` |
+| A card read as an essay: four paragraphs, a table, a search log and a four-part ask | A decision: the cells in the table; the rest in `more` and `looked` |
+| Findings handed straight to the people who build, with no decision in between | Each finding a decision for the person you report to, with the one you recommend |
+| Screens shrunk to thumbnails the reader had to open the design tool to read | Each capture at the column's width, opening large in the page |
 | A tidy-up of the request message's wording went in as an item | Left out: the build does not change |
 | A question went to the author that the code or the frame would have answered | Read it; ask only what nothing reachable answers |
 | An item flagged as missing had been settled in a later reply | Read every reply under the request before the checks |

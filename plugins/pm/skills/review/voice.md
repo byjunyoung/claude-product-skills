@@ -2,15 +2,19 @@
 
 Read before writing the first cell (`SKILL.md`, *Voice*).
 
-**The reader is between two other things.** The plan's author, or whoever acts on the report, knows the product better than you and has not read what you read. They should get each item from its title and its four cells, and open `more` only to check. A cell that needs a second read has failed, however correct it is.
+**The reader decides, and has ten minutes.** The person you report to knows the product better than you and has not read what you read. They should understand the plan from the brief, take each decision from its row in the decisions table, and open a card only to check. A cell that needs a second read has failed, however correct it is.
 
 The renderer counts characters, sentences, dashes, middle dots, arrows, quotation marks and ticket numbers left without a name. Everything below is what it cannot count.
 
 ## The rules
 
-**The brief describes; it does not judge.** It tells the plan the way its author meant it, from the side of the person using it: *the manager registers a store, and it starts with the app switched off*, not *a POST creates the store record*. No finding, doubt or "but" goes in it; those are items.
+**The brief describes; it does not judge.** It tells the plan the way its author meant it, from the side of the person using it: *the manager registers a store, and it starts with the app switched off*, not *a POST creates the store record*. No finding, doubt or "but" goes in it; those are decisions. *Now* in the changes table is what the code or the running screen does today, not what you assume.
 
-**One cell, one job.** *Problem* says what is wrong. *If left* says what happens to the build. *Ask* says what to change. How it got this way, the reasons behind the ask and where you searched go in `more` or `looked`, or nowhere.
+**A title is the decision to take.** Where there is a real choice, ask it: *who drops the orders a bulk remake cannot make*. Where there is one fix, name the problem: *December's design carries January's buttons*. Either way it fits the decisions table's row.
+
+**The recommendation is the decision, not the problem.** The short line in the table is a verb and its object: *send them through the selected-remake path*. The full sentence on the card says what changes and where; the reason is one clause beside it.
+
+**One cell, one job.** *Problem* says what is wrong. *Recommended* says what to decide. *If undecided* says what happens to the build. *Then* says who moves and what they do. How it got this way and where you searched go in `more` or `looked`, or nowhere.
 
 **Short declaratives, of uneven length.** A sentence with a subject and a verb, stating a fact. Put a short one next to a long one. A row of cells all the same length reads machine-made before a word of it is read.
 
@@ -26,27 +30,23 @@ The renderer counts characters, sentences, dashes, middle dots, arrows, quotatio
 
 **A ticket is named by what it is.** In evidence: its title as written, its number, its link. In a cell, and in the folded notes: a short name the reader recognises, and the number in brackets, such as *the store server ticket (#682)*. Never a bare number, and never the full title with its bracketed tags in a sentence. With `ticket_url` set, each number on the page links to its ticket.
 
-**The to-do is the ask cut to its verb and object.** *Add the field to the payment response*, not a restatement of the problem. It is read in a list of others under one role, so it starts with the verb.
-
 **A paste is the spec's sentence, not yours.** Written in the register the spec itself is written in, ready to drop in where `to` says. Where you would have to choose the wording, there is no paste.
 
 **The location names the place, not the problem.** *Spec, order status and remake, requirements, the bulk remake row*, linked. What is wrong there is the problem cell's job.
 
 **Identifiers stay out of the cells.** Revision ids, node ids, commit hashes, file paths and version ids belong to an evidence `source` or to `more`. A cell says *an archived revision*, *the list frame*, *the main branch*.
 
-**Say it once.** A fact in *problem* is not repeated in *ask*. A quote on the card is not paraphrased in the cell beside it.
+**Say it once.** A fact in *problem* is not repeated in *recommended*. A quote on the card is not paraphrased in the cell beside it.
 
-**State what you found; mark what you reasoned.** A found fact carries no "may", "might" or "seems". A conclusion you reasoned to goes in evidence or `more`, marked `inferred`. *If left* is a consequence and is written plainly; where it rests on a calculation rather than something seen, it says so in a few words and the calculation goes in `more`, marked `inferred`.
-
-**The ask starts with the change.** A verb, the place, then the recommendation: *Open a server ticket for registering and editing under the parent.* Where there is a real choice, the options are listed under it, recommended first, each one line. The reason for the recommendation is one clause in `more` when it does not fit.
+**State what you found; mark what you reasoned.** A found fact carries no "may", "might" or "seems". A conclusion you reasoned to goes in evidence or `more`, marked `inferred`. *If undecided* is a consequence and is written plainly; where it rests on a calculation rather than something seen, it says so in a few words and the calculation goes in `more`, marked `inferred`.
 
 **No headline sentences.** A cell does not end on a punchline, a contrast built for effect, or a summary of itself. The sentence you are pleased with is the one to check first.
 
-**One register for the whole report.** The language is `meta.language`. Use the register the team's own documents are written in and hold it in every cell; a report that changes register between cards reads stitched together.
+**The register is a report to the person who decides.** The language is `meta.language`. Sentences are written as you would report to someone senior who will act on them, the same in every cell (in Korean, the polite declarative); table lines, labels, the decision titles and the recommendation lines are short phrases. A report that changes register between cards reads stitched together.
 
 ## Before and after
 
-One finding, as it came out of a run before the cells had budgets, and as four cells.
+One finding, as it came out of a run before the cells had budgets, and as a decision.
 
 ```
 Before
@@ -58,11 +58,14 @@ Before
   before handover, open server tickets. Suggested grouping: ① … ② … ③ … ④ …
 
 After
-  title      Only maintenance mode has a server ticket
-  problem    Registering, editing, groups and device setup have no server ticket.
-  if left    The screens ship and nothing they save reaches the server.
-  evidence   Store setup (#140): 39 children, one server ticket
-             Spec, system account: "Created on registration, follows the store's status."
-  ask        Open four server tickets under the parent before handover.
-  more       the 12-row table of work and coverage; looked: the six queries
+  decisions row   Who builds the store's server side │ Open four server tickets │ no other option │ planning
+  card
+    problem       Registering, editing, groups and device setup have no server ticket.
+    recommended   Open four server tickets under the parent before handover.
+                  Why: what the screens save reaches nobody without them.
+    if undecided  The screens ship and nothing they save reaches the server.
+    evidence      Store setup (#140): 39 children, one server ticket
+                  Spec, system account: "Created on registration, follows the store's status."
+    then          planning: open the tickets and link them to the parent
+    more          the 12-row table of work and coverage; looked: the six queries
 ```
